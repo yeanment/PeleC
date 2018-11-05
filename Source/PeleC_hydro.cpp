@@ -1,6 +1,6 @@
 #include "PeleC.H"
 #include "PeleC_F.H"
-
+#include <AMReX_Gpu.H>
 using namespace amrex;
 
 /**
@@ -122,12 +122,21 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
 
             set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
-      
-	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
-		    statein.dataPtr(), ARLIM_3D(statein.loVect()), ARLIM_3D(statein.hiVect()),
-		    q.dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
-		    qaux.dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()));
-      
+#ifdef GPU
+// Off load to GPU 
+    	AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx, {   
+    	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
+    		    statein.dataPtr(), ARLIM_3D(statein.loVect()), ARLIM_3D(statein.hiVect()),
+    		    q.dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
+    		    qaux.dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()));
+            });
+#else
+    	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
+    		    statein.dataPtr(), ARLIM_3D(statein.loVect()), ARLIM_3D(statein.hiVect()),
+    		    q.dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
+    		    qaux.dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()));
+
+#endif 
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
             //
