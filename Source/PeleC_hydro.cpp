@@ -196,7 +196,11 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    if (!Geometry::IsCartesian()) {
 		pradial.resize(amrex::surroundingNodes(bx,0),1);
 	    }
-
+        
+#ifdef GPU 
+        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, 
+#endif
+        {
 	    pc_umdrv
 		(&is_finest_level, &time,
 		 lo, hi, domain_lo, domain_hi,
@@ -229,7 +233,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 		 E_added_flux,
 		 mass_lost, xmom_lost, ymom_lost, zmom_lost,
 		 eden_lost, xang_lost, yang_lost, zang_lost);
-
+#ifdef GPU 
+         }); 
+#endif
 	    courno = std::max(courno,cflLoc);
 
             if (do_reflux  && sub_iteration == sub_ncycle-1 )
