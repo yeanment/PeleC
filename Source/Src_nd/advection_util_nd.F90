@@ -386,7 +386,7 @@ contains
 
   end subroutine compute_cfl
 
-
+!AMREX_CUDA_FORT_DEVICE
   subroutine ctoprim(lo, hi, &
                      uin, uin_lo, uin_hi, &
                      q,     q_lo,   q_hi, &
@@ -471,113 +471,8 @@ contains
              eos_state % aux      = q(i,j,k,QFX:QFX+naux-1)
 ! TODO Make this GPU-izable 
              call eos_re(eos_state)
-! eos_re(eos_state) filles the eos_state struct for use 
+! eos_re(eos_state) fills the eos_state struct for use 
 ! The PelePhysics 
-             q(i,j,k,QTEMP)  = eos_state % T
-             q(i,j,k,QREINT) = eos_state % e * q(i,j,k,QRHO)
-             q(i,j,k,QPRES)  = eos_state % p
-             q(i,j,k,QGAME)  = q(i,j,k,QPRES) / q(i,j,k,QREINT) + ONE
-
-             qaux(i,j,k,QDPDR)  = eos_state % dpdr_e
-             qaux(i,j,k,QDPDE)  = eos_state % dpde
-
-             qaux(i,j,k,QGAMC)  = eos_state % gam1
-             qaux(i,j,k,QC   )  = eos_state % cs
-             qaux(i,j,k,QCSML)  = max(small, small * qaux(i,j,k,QC))
-             qaux(i,j,k,QRSPEC)  = R/eos_state % wbar
-          enddo
-       enddo
-    enddo
-
-    call destroy(eos_state)
-
-  end subroutine ctoprim
-
-AMREX_CUDA_FORT_DEVICE  subroutine ctoprim(lo, hi, &
-                     uin, uin_lo, uin_hi, &
-                     q,     q_lo,   q_hi, &
-                     qaux, qa_lo,  qa_hi) bind(C, name = "ctoprim")
-
-    use fundamental_constants_module, only: k_B, n_A
-    use actual_network, only : nspec, naux
-    use eos_module, only : eos_re
-    use eos_type_module
-    use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
-                                   QVAR, QRHO, QU, QV, QW, &
-                                   QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
-                                   QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
-                                   npassive, upass_map, qpass_map
-    use bl_constants_module, only: ZERO, HALF, ONE
-    use pelec_util_module, only: position
-    implicit none
-
-    integer, intent(in) :: lo(3), hi(3)
-    integer, intent(in) :: uin_lo(3), uin_hi(3)
-    integer, intent(in) :: q_lo(3), q_hi(3)
-    integer, intent(in) :: qa_lo(3), qa_hi(3)
-
-    double precision, intent(in   ) :: uin(uin_lo(1):uin_hi(1),uin_lo(2):uin_hi(2),uin_lo(3):uin_hi(3),NVAR)
-    double precision, intent(inout) :: q(q_lo(1):q_hi(1),q_lo(2):q_hi(2),q_lo(3):q_hi(3),QVAR)
-    double precision, intent(inout) :: qaux(qa_lo(1):qa_hi(1),qa_lo(2):qa_hi(2),qa_lo(3):qa_hi(3),NQAUX)
-
-    double precision, parameter :: small = 1.d-8
-    double precision, parameter :: R = k_B*n_A
-
-    integer          :: i, j, k
-    integer          :: n, nq, ipassive
-    double precision :: kineng, rhoinv
-    double precision :: vel(3)
-
-    type (eos_t) :: eos_state
-
-    do k = lo(3), hi(3)
-       do j = lo(2), hi(2)
-          do i = lo(1), hi(1)
-
-             q(i,j,k,QRHO) = uin(i,j,k,URHO)
-
-             rhoinv = ONE/q(i,j,k,QRHO)
-             vel = uin(i,j,k,UMX:UMZ) * rhoinv
-
-             q(i,j,k,QU:QW) = vel
-
-             kineng = HALF * q(i,j,k,QRHO) * (q(i,j,k,QU)**2 + q(i,j,k,QV)**2 + q(i,j,k,QW)**2)
-
-             q(i,j,k,QREINT) = (uin(i,j,k,UEDEN) - kineng) * rhoinv
-
-             q(i,j,k,QTEMP) = uin(i,j,k,UTEMP)
-          enddo
-       enddo
-    enddo
-
-    ! Load passively advected quatities into q
-    do ipassive = 1, npassive
-       n  = upass_map(ipassive)
-       nq = qpass_map(ipassive)
-       do k = lo(3),hi(3)
-          do j = lo(2),hi(2)
-             do i = lo(1),hi(1)
-                q(i,j,k,nq) = uin(i,j,k,n)/q(i,j,k,QRHO)
-             enddo
-          enddo
-       enddo
-    enddo
-
-    call build(eos_state)
-
-    ! get gamc, p, T, c, csml using q state
-    do k = lo(3), hi(3)
-       do j = lo(2), hi(2)
-          do i = lo(1), hi(1)
-
-             eos_state % T        = q(i,j,k,QTEMP )
-             eos_state % rho      = q(i,j,k,QRHO  )
-             eos_state % e        = q(i,j,k,QREINT)
-             eos_state % massfrac = q(i,j,k,QFS:QFS+nspec-1)
-             eos_state % aux      = q(i,j,k,QFX:QFX+naux-1)
-
-             call eos_re(eos_state)
-
              q(i,j,k,QTEMP)  = eos_state % T
              q(i,j,k,QREINT) = eos_state % e * q(i,j,k,QRHO)
              q(i,j,k,QPRES)  = eos_state % p
