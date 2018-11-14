@@ -90,9 +90,12 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #endif
     {
 	FArrayBox flux[BL_SPACEDIM];
-
 	FArrayBox pradial(Box::TheUnitBox(),1);
+
+#ifndef GPU 
 	FArrayBox q, qaux, src_q;
+#endif
+
 	IArrayBox bcMask;
 
 	Real cflLoc = -1.0e+200;
@@ -113,22 +116,27 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
 	    FArrayBox &source_in  = sources_for_hydro[mfi];
 	    FArrayBox &source_out = hydro_source[mfi];
-
+#ifdef GPU 
+        Gpu::AsyncFab q(qbx, QVAR); 
+        Gpu::AsyncFab qaux(qbx, NQUAX); 
+        Gpu::AsyncFab src_q(qbx, QVAR); 
+#else       
 	    q.resize(qbx, QVAR);
 	    qaux.resize(qbx, NQAUX);
 	    src_q.resize(qbx, QVAR);
+#endif
 	    bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
                             // First integer is bc_type, second integer about slip/no-slip wall 
 	    bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
 
-            set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
+        set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
 #ifdef GPU
 // Off load to GPU 
     	AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx, {   
-    	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
+    	    ctoprim(ARLIM_3D(tbx.loVect()), ARLIM_3D(tbx.hiVect()),
     		    statein.dataPtr(), ARLIM_3D(statein.loVect()), ARLIM_3D(statein.hiVect()),
-    		    q.dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
-    		    qaux.dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()));
+    		    q.fabPtr().dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
+    		    qaux.fabPtr().dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()));
             });
 #else
     	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
