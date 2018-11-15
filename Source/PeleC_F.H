@@ -82,6 +82,7 @@ extern "C"
 
   void get_tagging_params(const int* name, const int* namlen);
 
+AMREX_GPU_DEVICE
   void ctoprim(const int* lo, const int* hi,
 	       const amrex::Real* u, const int* u_lo, const int* u_hi,
 	       const amrex::Real* q, const int* q_lo, const int* q_hi,

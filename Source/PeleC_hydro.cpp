@@ -92,9 +92,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	FArrayBox flux[BL_SPACEDIM];
 	FArrayBox pradial(Box::TheUnitBox(),1);
 
-#ifndef GPU 
-	FArrayBox q, qaux, src_q;
-#endif
+//#ifndef AMREX_USE_CUDA 
+	FArrayBox* q, *qaux, *src_q;
+//#endif
 
 	IArrayBox bcMask;
 
@@ -111,32 +111,35 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
 
-	    const FArrayBox &statein  = S[mfi];
+	    const FArrayBox *statein  = &S[mfi];
 	    FArrayBox &stateout = S_new[mfi];
 
 	    FArrayBox &source_in  = sources_for_hydro[mfi];
 	    FArrayBox &source_out = hydro_source[mfi];
-#ifdef GPU 
-        Gpu::AsyncFab q(qbx, QVAR); 
-        Gpu::AsyncFab qaux(qbx, NQUAX); 
+/*#ifdef AMREX_USE_CUDA 
+        Gpu::AsyncFab q(qbx, QVAR);
+        FArrayBox* q_fab = q.fabPtr();  
+        Gpu::AsyncFab qaux(qbx, NQAUX); 
+        FArrayBox* qaux_fab = qaux.fabPtr();
         Gpu::AsyncFab src_q(qbx, QVAR); 
-#else       
-	    q.resize(qbx, QVAR);
-	    qaux.resize(qbx, NQAUX);
-	    src_q.resize(qbx, QVAR);
-#endif
+        FArrayBox* srcq_fab = src_q.fabPtr(); 
+#else   */
+	    q->resize(qbx, QVAR);
+	    qaux->resize(qbx, NQAUX);
+	    src_q->resize(qbx, QVAR);
+// #endif
 	    bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
                             // First integer is bc_type, second integer about slip/no-slip wall 
-	    bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
+        bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
 
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
-#ifdef GPU
+#ifdef AMREX_USE_CUDA
 // Off load to GPU 
     	AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx, {   
-    	    ctoprim(ARLIM_3D(tbx.loVect()), ARLIM_3D(tbx.hiVect()),
-    		    statein.dataPtr(), ARLIM_3D(statein.loVect()), ARLIM_3D(statein.hiVect()),
-    		    q.fabPtr().dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
-    		    qaux.fabPtr().dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()));
+    	    ctoprim(BL_TO_FORTRAN_BOX(tbx),
+    		    BL_TO_FORTRAN_ANYD(*statein),
+    		    BL_TO_FORTRAN_ANYD(*q),
+    		    BL_TO_FORTRAN_ANYD(*qaux));
             });
 #else
     	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
@@ -165,6 +168,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
             }
 #elif (BL_SPACEDIM == 2)
+#ifndef AMREX_USE_CUDA
 	    if (geom.isAnyPeriodic() && i_nscbc == 1)
 	    {
 	      impose_NSCBC_with_perio(lo, hi, domain_lo, domain_hi,
@@ -182,13 +186,14 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 				    BL_TO_FORTRAN(bcMask),
 				    &time, dx, &dt);
 	    }
+#endif
 #else
 	    if (i_nscbc == 1)
 	    {
 	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
 	    }
 #endif
-
+#ifndef AMREX_USE_CUDA
 	    srctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
 		      q.dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
 		      qaux.dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()),
@@ -206,9 +211,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    }
         
 #ifdef GPU 
-        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, 
+        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
 #endif
-        {
+        
 	    pc_umdrv
 		(&is_finest_level, &time,
 		 lo, hi, domain_lo, domain_hi,
@@ -243,6 +248,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 		 eden_lost, xang_lost, yang_lost, zang_lost);
 #ifdef GPU 
          }); 
+#endif
 #endif
 	    courno = std::max(courno,cflLoc);
 

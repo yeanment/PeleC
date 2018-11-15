@@ -386,7 +386,7 @@ contains
 
   end subroutine compute_cfl
 
-!AMREX_CUDA_FORT_DEVICE
+AMREX_LAUNCH_
   subroutine ctoprim(lo, hi, &
                      uin, uin_lo, uin_hi, &
                      q,     q_lo,   q_hi, &
