@@ -23,16 +23,16 @@ module meth_params_module
   integer, parameter     :: nb_nscbc_params = 4
 
   ! NTHERM: number of thermodynamic variables
-  integer, save :: NTHERM, NVAR
-  integer, save :: URHO, UMX, UMY, UMZ, UMR, UML, UMP, UEDEN, UEINT, UTEMP, UFA, UFS, UFX
-  integer, save :: USHK
+  integer, managed, save :: NTHERM, NVAR
+  integer, managed, save :: URHO, UMX, UMY, UMZ, UMR, UML, UMP, UEDEN, UEINT, UTEMP, UFA, UFS, UFX
+  integer, managed, save :: USHK
 
   ! QTHERM: number of primitive variables
-  integer, save :: QTHERM, QVAR
-  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
-  integer, save :: QFS=9
-  integer, save :: NQAUX, QGAMC, QC, QCSML, QDPDR, QDPDE, QRSPEC
-  integer, save :: QFA, QFX
+  integer, managed, save :: QTHERM, QVAR
+  integer, managed, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
+  integer, managed, save :: QFS=9
+  integer, managed, save :: NQAUX, QGAMC, QC, QCSML, QDPDR, QDPDE, QRSPEC
+  integer, managed, save :: QFA, QFX
   !integer, save :: QRHO, QU, QV, QW, QPRES, QREINT, QTEMP, QGAME
   !integer, save :: QFA, QFS, QFX
 
@@ -42,7 +42,7 @@ module meth_params_module
   integer, save :: NQ         
 
   integer, save :: npassive
-  integer, save, allocatable :: qpass_map(:), upass_map(:)
+  integer, managed, save, allocatable :: qpass_map(:), upass_map(:)
 
   ! These are used for the Godunov state
   ! Note that the velocity indices here are picked to be the same value

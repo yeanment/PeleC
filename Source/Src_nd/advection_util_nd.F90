@@ -386,7 +386,7 @@ contains
 
   end subroutine compute_cfl
 
-AMREX_LAUNCH_
+AMREX_LAUNCH
   subroutine ctoprim(lo, hi, &
                      uin, uin_lo, uin_hi, &
                      q,     q_lo,   q_hi, &
@@ -422,7 +422,7 @@ AMREX_LAUNCH_
     double precision :: kineng, rhoinv
     double precision :: vel(3)
 
-    type (eos_t) :: eos_state
+    type (eos_t) :: eos_state(nspec)
 
     do k = lo(3), hi(3)
        do j = lo(2), hi(2)
@@ -457,7 +457,7 @@ AMREX_LAUNCH_
        enddo
     enddo
 
-    call build(eos_state)
+!    call eos_build(eos_state)
 
     ! get gamc, p, T, c, csml using q state
     do k = lo(3), hi(3)
@@ -489,7 +489,7 @@ AMREX_LAUNCH_
        enddo
     enddo
 
-    call destroy(eos_state)
+ !   call eos_destroy(eos_state)
 
   end subroutine ctoprim
 
