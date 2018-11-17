@@ -29,7 +29,7 @@ module meth_params_module
 
   ! QTHERM: number of primitive variables
   integer, managed, save :: QTHERM, QVAR
-  integer, managed, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
+  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
   integer, managed, save :: QFS=9
   integer, managed, save :: NQAUX, QGAMC, QC, QCSML, QDPDR, QDPDE, QRSPEC
   integer, managed, save :: QFA, QFX
@@ -41,7 +41,7 @@ module meth_params_module
   ! NQ will be the total number of primitive variables, hydro + radiation
   integer, save :: NQ         
 
-  integer, save :: npassive
+  integer, managed, save :: npassive
   integer, managed, save, allocatable :: qpass_map(:), upass_map(:)
 
   ! These are used for the Godunov state

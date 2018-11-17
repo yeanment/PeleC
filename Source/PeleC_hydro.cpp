@@ -141,6 +141,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     		    BL_TO_FORTRAN_ANYD(*q),
     		    BL_TO_FORTRAN_ANYD(*qaux));
             });
+        Gpu::Device::synchronize();
 #else
     	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
     		    statein.dataPtr(), ARLIM_3D(statein.loVect()), ARLIM_3D(statein.hiVect()),

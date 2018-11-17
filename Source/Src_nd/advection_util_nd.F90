@@ -9,7 +9,7 @@ module advection_util_module
 
 contains
 
-  subroutine enforce_minimum_density(uin,uin_lo,uin_hi, &
+   subroutine enforce_minimum_density(uin,uin_lo,uin_hi, &
                                      uout,uout_lo,uout_hi, &
                                      vol,vol_lo,vol_hi, &
                                      lo,hi,mass_added,eint_added, &
@@ -205,7 +205,7 @@ contains
     use network, only: nspec, naux
     use meth_params_module, only: NVAR, URHO, UMX, UMY, UMZ, UTEMP, UEINT, UEDEN, UFS, small_temp, small_dens, npassive, upass_map
     use eos_type_module
-    use eos_module, only: eos_rt
+    use eos_module!, only: eos_rt
     use pelec_util_module, only: position
     implicit none
 
@@ -245,7 +245,7 @@ contains
     eos_state % massfrac = new_state(UFS:UFS+nspec-1) / small_dens
     eos_state % aux      = new_state(UFS:UFS+naux-1) / small_dens
 
-    call eos_rt(eos_state)
+!    call eos_rt(eos_state)
 
     new_state(URHO ) = eos_state % rho
     new_state(UTEMP) = eos_state % T
@@ -386,15 +386,14 @@ contains
 
   end subroutine compute_cfl
 
-AMREX_LAUNCH
-  subroutine ctoprim(lo, hi, &
+AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
                      uin, uin_lo, uin_hi, &
                      q,     q_lo,   q_hi, &
                      qaux, qa_lo,  qa_hi) bind(C, name = "ctoprim")
 
     use fundamental_constants_module, only: k_B, n_A
     use actual_network, only : nspec, naux
-    use eos_module, only : eos_re
+    use eos_module!, only : eos_re_d
     use eos_type_module
     use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
                                    QVAR, QRHO, QU, QV, QW, &
@@ -422,8 +421,7 @@ AMREX_LAUNCH
     double precision :: kineng, rhoinv
     double precision :: vel(3)
 
-    type (eos_t) :: eos_state(nspec)
-
+    type (eos_t) :: eos_state
     do k = lo(3), hi(3)
        do j = lo(2), hi(2)
           do i = lo(1), hi(1)
@@ -457,7 +455,7 @@ AMREX_LAUNCH
        enddo
     enddo
 
-!    call eos_build(eos_state)
+    !call build(eos_state)
 
     ! get gamc, p, T, c, csml using q state
     do k = lo(3), hi(3)
@@ -470,7 +468,7 @@ AMREX_LAUNCH
              eos_state % massfrac = q(i,j,k,QFS:QFS+nspec-1)
              eos_state % aux      = q(i,j,k,QFX:QFX+naux-1)
 ! TODO Make this GPU-izable 
-             call eos_re(eos_state)
+             call eos_re_d(eos_state)
 ! eos_re(eos_state) fills the eos_state struct for use 
 ! The PelePhysics 
              q(i,j,k,QTEMP)  = eos_state % T
@@ -489,7 +487,7 @@ AMREX_LAUNCH
        enddo
     enddo
 
- !   call eos_destroy(eos_state)
+!   call destroy(eos_state)
 
   end subroutine ctoprim
 
@@ -649,7 +647,7 @@ AMREX_LAUNCH
     use amrex_mempool_module, only: bl_allocate, bl_deallocate
     use network, only: nspec, naux
     use eos_type_module
-    use eos_module, only: eos_rt
+    !use eos_module, only: eos_rt
 
     implicit none
 
@@ -728,7 +726,7 @@ AMREX_LAUNCH
                 eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) / u(i,j,k,URHO)
                 eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) / u(i,j,k,URHO)
 
-                call eos_rt(eos_state)
+!                call eos_rt(eos_state)
 
                 small_rhoe(i,j,k) = small_dens * eos_state % e
 

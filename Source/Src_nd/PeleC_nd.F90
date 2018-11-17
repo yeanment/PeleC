@@ -371,7 +371,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   use meth_params_module
   use network, only : nspec, naux
   use parallel, only : parallel_initialize
-  use eos_module, only : eos_init, eos_get_small_dens, eos_get_small_temp
+  use eos_module!, only : eos_init, eos_get_small_dens, eos_get_small_temp
   use transport_module, only : transport_init
   use bl_constants_module, only : ZERO, ONE
 

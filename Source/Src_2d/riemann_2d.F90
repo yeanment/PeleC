@@ -37,7 +37,7 @@ contains
                     idir,ilo,ihi,jlo,jhi,domlo,domhi)
 
     use eos_type_module
-    use eos_module, only: eos_re, eos_rt, mine
+    use eos_module !, only: eos_re, eos_rt, mine
 
     integer, intent(in) :: qpd_l1,qpd_l2,qpd_h1,qpd_h2
     integer, intent(in) :: flx_l1,flx_l2,flx_h1,flx_h2
@@ -115,7 +115,7 @@ contains
           jmax = jhi+1
        endif
 
-       call build(eos_state)
+    !   call build(eos_state)
 
        do j = jmin, jmax
           do i = imin, imax
@@ -135,9 +135,9 @@ contains
 
              if (allow_negative_energy .eq. 0 .and. eos_state % e < mine) then
                 eos_state % T = small_temp
-                call eos_rt(eos_state)
+!                call eos_rt(eos_state)
              else
-                call eos_re(eos_state)
+ !               call eos_re(eos_state)
              endif
 
              qm(i,j,QREINT) = qm(i,j,QRHO)*eos_state%e
@@ -156,9 +156,9 @@ contains
 
              if (allow_negative_energy .eq. 0 .and. eos_state % e < mine) then
                 eos_state % T = small_temp
-                call eos_rt(eos_state)
+ !               call eos_rt(eos_state)
              else
-                call eos_re(eos_state)
+  !              call eos_re(eos_state)
              endif
 
              qp(i,j,QREINT) = qp(i,j,QRHO)*eos_state%e
@@ -168,7 +168,7 @@ contains
           enddo
        enddo
 
-       call destroy(eos_state)
+   !    call destroy(eos_state)
 
     endif
 
