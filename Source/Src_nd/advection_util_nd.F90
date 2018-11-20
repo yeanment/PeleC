@@ -392,14 +392,19 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
                      qaux, qa_lo,  qa_hi) bind(C, name = "ctoprim")
 
     use fundamental_constants_module, only: k_B, n_A
-    use actual_network, only : nspec, naux
-    use eos_module!, only : eos_re_d
+!    use actual_network, only : nspec, naux
+    use eos_module, only : eos_re_d
     use eos_type_module
-    use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
-                                   QVAR, QRHO, QU, QV, QW, &
-                                   QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
-                                   QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
-                                   npassive, upass_map, qpass_map
+    use meth_device_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UTEMP, &
+                                   QVAR, NQAUX, npassive, QDPDE, QDPDR, QGAMC, &
+                                   QC, QCSML, QRSPEC, QFS, QFX
+    use meth_params_module, only : QRHO, QU, QV, QW, QREINT, QPRES, QTEMP, &
+                                   QGAME, upass_map, qpass_map
+!    use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
+!                                   QVAR, QRHO, QU, QV, QW, &
+!                                   QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
+!                                   QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
+!                                   npassive, upass_map, qpass_map
     use bl_constants_module, only: ZERO, HALF, ONE
     use pelec_util_module, only: position
     implicit none
@@ -416,10 +421,11 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
     double precision, parameter :: small = 1.d-8
     double precision, parameter :: R = k_B*n_A
 
-    integer          :: i, j, k
-    integer          :: n, nq, ipassive
-    double precision :: kineng, rhoinv
-    double precision :: vel(3)
+    integer            :: i, j, k
+    integer            :: n, nq, ipassive
+    integer, parameter :: nspec_d = 9, naux_d = 1
+    double precision   :: kineng, rhoinv
+    double precision   :: vel(3)
 
     type (eos_t) :: eos_state
     do k = lo(3), hi(3)
@@ -465,8 +471,8 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
              eos_state % T        = q(i,j,k,QTEMP )
              eos_state % rho      = q(i,j,k,QRHO  )
              eos_state % e        = q(i,j,k,QREINT)
-             eos_state % massfrac = q(i,j,k,QFS:QFS+nspec-1)
-             eos_state % aux      = q(i,j,k,QFX:QFX+naux-1)
+             eos_state % massfrac = q(i,j,k,QFS:QFS+nspec_d-1)
+             eos_state % aux      = q(i,j,k,QFX:QFX+naux_d-1)
 ! TODO Make this GPU-izable 
              call eos_re_d(eos_state)
 ! eos_re(eos_state) fills the eos_state struct for use 

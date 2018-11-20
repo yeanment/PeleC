@@ -391,7 +391,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
 
   integer :: ioproc
 
-  call parallel_initialize()
+!  call parallel_initialize()
 
   !---------------------------------------------------------------------
   ! conserved state components

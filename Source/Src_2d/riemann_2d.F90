@@ -444,7 +444,7 @@ contains
 
     if (cg_blend .eq. 2 .and. cg_maxiter < 5) then
 
-       call bl_error("Error: need cg_maxiter >= 5 to do a bisection search on secant iteration failure.")
+!       call bl_error("Error: need cg_maxiter >= 5 to do a bisection search on secant iteration failure.")
 
     endif
 
@@ -673,7 +673,7 @@ contains
                 print *, 'left state  (r,u,p,re,gc): ', rl, ul, pl, rel, gcl
                 print *, 'right state (r,u,p,re,gc): ', rr, ur, pr, rer, gcr
                 print *, 'cav, smallc:',  cav(i,j), csmall
-                call bl_error("ERROR: non-convergence in the Riemann solver")
+                !call bl_error("ERROR: non-convergence in the Riemann solver")
 
              else if (cg_blend .eq. 1) then
 
@@ -706,13 +706,13 @@ contains
                    print *, 'left state  (r,u,p,re,gc): ', rl, ul, pl, rel, gcl
                    print *, 'right state (r,u,p,re,gc): ', rr, ur, pr, rer, gcr
                    print *, 'cav, smallc:',  cav(i,j), csmall
-                   call bl_error("ERROR: non-convergence in the Riemann solver")
+                   !call bl_error("ERROR: non-convergence in the Riemann solver")
 
                 endif
 
              else
 
-                call bl_error("ERROR: unrecognized cg_blend option.")
+                !call bl_error("ERROR: unrecognized cg_blend option.")
 
              endif
 
