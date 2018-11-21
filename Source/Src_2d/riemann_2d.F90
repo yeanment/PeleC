@@ -1,9 +1,9 @@
 module riemann_module
 
-  use bl_types
-  use bl_constants_module
+  use amrex_constants_module
+  use amrex_error_module
   use riemann_util_module
-
+  use amrex_fort_module, only : amrex_real
   use meth_params_module, only : NQ, QVAR, NVAR, QRHO, QU, QV, QW, &
                                  QPRES, QREINT, QFS, &
                                  QFX, URHO, UMX, UMY, UEDEN, UEINT, &
@@ -20,7 +20,7 @@ module riemann_module
 
   public cmpflx, shock, riemanncg
 
-  real (kind=dp_t), parameter :: smallu = 1.e-12_dp_t
+  real (amrex_real), parameter :: smallu = 1.e-12
 
 contains
 
@@ -210,7 +210,7 @@ contains
                       idir, ilo, ihi, jlo, jhi, domlo, domhi)
 
     else
-       call bl_error("ERROR: invalid value of riemann_solver")
+       call amrex_error("ERROR: invalid value of riemann_solver")
     endif
 
     if (hybrid_riemann == 1) then
@@ -309,7 +309,7 @@ contains
              divU = HALF*(rp*q(i+1,j,QU) - rm*q(i-1,j,QU))/(rc*dx) + &
                     HALF*(q(i,j+1,QV) - q(i,j-1,QV))/dy
           else
-             call bl_error("ERROR: invalid coord_type in shock")
+             call amrex_error("ERROR: invalid coord_type in shock")
           endif
              
           ! find the pre- and post-shock pressures in each direction
@@ -374,7 +374,7 @@ contains
 
     ! this implements the approximate Riemann solver of Colella & Glaz (1985)
 
-    use bl_error_module
+    use amrex_error_module
     use network, only : nspec, naux
     use eos_type_module
     use eos_module
@@ -444,7 +444,7 @@ contains
 
     if (cg_blend .eq. 2 .and. cg_maxiter < 5) then
 
-!       call bl_error("Error: need cg_maxiter >= 5 to do a bisection search on secant iteration failure.")
+!       call amrex_error("Error: need cg_maxiter >= 5 to do a bisection search on secant iteration failure.")
 
     endif
 
@@ -673,7 +673,7 @@ contains
                 print *, 'left state  (r,u,p,re,gc): ', rl, ul, pl, rel, gcl
                 print *, 'right state (r,u,p,re,gc): ', rr, ur, pr, rer, gcr
                 print *, 'cav, smallc:',  cav(i,j), csmall
-                !call bl_error("ERROR: non-convergence in the Riemann solver")
+                !call amrex_error("ERROR: non-convergence in the Riemann solver")
 
              else if (cg_blend .eq. 1) then
 
@@ -706,13 +706,13 @@ contains
                    print *, 'left state  (r,u,p,re,gc): ', rl, ul, pl, rel, gcl
                    print *, 'right state (r,u,p,re,gc): ', rr, ur, pr, rer, gcr
                    print *, 'cav, smallc:',  cav(i,j), csmall
-                   !call bl_error("ERROR: non-convergence in the Riemann solver")
+                   !call amrex_error("ERROR: non-convergence in the Riemann solver")
 
                 endif
 
              else
 
-                !call bl_error("ERROR: unrecognized cg_blend option.")
+                !call amrex_error("ERROR: unrecognized cg_blend option.")
 
              endif
 

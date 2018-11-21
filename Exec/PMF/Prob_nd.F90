@@ -12,7 +12,7 @@ contains
     
     use probdata_module
     use prob_params_module, only: dim
-    use bl_error_module
+    use amrex_error_module
     implicit none
 
     integer :: init, namlen
@@ -92,7 +92,8 @@ contains
     use prob_params_module, only : problo, dim
     use eos_module
     use network, only: nspec
-    use bl_constants_module, only: M_PI, HALF
+    use amrex_constants_module, only: M_PI, HALF
+    use amrex_error_module
 
     implicit none
 
@@ -112,7 +113,7 @@ contains
     type (eos_t) :: eos_state
 
     if (.not. bc_initialized) then
-       call bl_error('bc_init not called prior to pc_initdata')
+       call amrex_error('bc_init not called prior to pc_initdata')
     endif
 
     call build(eos_state)

@@ -1,7 +1,7 @@
 module riemann_util_module
 
-  use bl_types
-  use bl_constants_module
+  use amrex_fort_module, only : amrex_real 
+  use amrex_constants_module
 
   implicit none
 
@@ -428,8 +428,8 @@ contains
          NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, &
          npassive, upass_map, qpass_map
 
-    real (kind=dp_t), intent(in)  :: q(QVAR)
-    real (kind=dp_t), intent(out) :: U(NVAR)
+    real (amrex_real), intent(in)  :: q(QVAR)
+    real (amrex_real), intent(out) :: U(NVAR)
 
     integer :: ipassive, n, nq
 
@@ -464,11 +464,11 @@ contains
          npassive, upass_map, qpass_map
 
     integer, intent(in) :: idir
-    real (kind=dp_t), intent(in)  :: S_k, S_c
-    real (kind=dp_t), intent(in)  :: q(QVAR)
-    real (kind=dp_t), intent(out) :: U(NVAR)
+    real (amrex_real), intent(in)  :: S_k, S_c
+    real (amrex_real), intent(in)  :: q(QVAR)
+    real (amrex_real), intent(out) :: U(NVAR)
 
-    real (kind=dp_t) :: hllc_factor, u_k
+    real (amrex_real) :: hllc_factor, u_k
     integer :: ipassive, n, nq
 
     if (idir == 1) then
@@ -518,12 +518,12 @@ contains
     use prob_params_module, only : coord_type
 
     integer, intent(in) :: idir, ndim, bnd_fac
-    real (kind=dp_t), intent(in) :: U(NVAR)
-    real (kind=dp_t), intent(in) :: p
-    real (kind=dp_t), intent(out) :: F(NVAR)
+    real (amrex_real), intent(in) :: U(NVAR)
+    real (amrex_real), intent(in) :: p
+    real (amrex_real), intent(out) :: F(NVAR)
 
     integer :: ipassive, n
-    real (kind=dp_t) :: u_flx
+    real (amrex_real) :: u_flx
 
     if (idir == 1) then
        u_flx = U(UMX)/U(URHO)
@@ -604,7 +604,7 @@ contains
 
     ! Yuck.
     double precision, parameter:: small = 1.d-8
-    real (kind=dp_t), parameter :: smallu = 1.e-12_dp_t
+    real (amrex_real), parameter :: smallu = 1.e-12
 
 
     ! Double yuck.
@@ -843,8 +843,8 @@ contains
 
     ! Yuck.
     double precision, parameter:: small = 1.d-8
-    real (kind=dp_t), parameter :: smallu = 1.e-12_dp_t
-    real (kind=dp_t), parameter :: Hsmallu = 0.5e-12_dp_t
+    real (amrex_real), parameter :: smallu = 1.e-12
+    real (amrex_real), parameter :: Hsmallu = 0.5e-12
 
 
     ! Double yuck.

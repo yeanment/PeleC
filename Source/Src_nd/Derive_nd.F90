@@ -50,7 +50,7 @@ contains
     use network, only : nspec, naux
     use eos_module
     use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -104,7 +104,7 @@ contains
     use network, only : nspec, naux
     use eos_module
     use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -193,7 +193,7 @@ contains
     !
     ! This routine will derive the radial velocity.
     !
-    use bl_constants_module
+    use amrex_constants_module
     use prob_params_module, only: center
 
     implicit none
@@ -270,7 +270,7 @@ contains
     use network, only: nspec, naux
     use eos_module
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -319,7 +319,7 @@ contains
                          domhi,dx,xlo,time,dt,bc,level,grid_no) &
                          bind(C, name="pc_dereint1")
 
-    use bl_constants_module
+    use amrex_constants_module
     use meth_params_module, only: URHO, UMX, UMY, UMZ, UEDEN 
 
     implicit none
@@ -396,7 +396,7 @@ contains
     use network, only: nspec, naux
     use eos_module
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -448,7 +448,7 @@ contains
     use network, only: nspec, naux
     use eos_module
     use meth_params_module, only: URHO, UMX, UMZ, UEINT, UTEMP, UFS, UFX
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -500,7 +500,7 @@ contains
     use network, only: nspec, naux
     use eos_module
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -549,7 +549,7 @@ contains
                                  domhi,dx,xlo,time,dt,bc,level,grid_no) &
                                  bind(C, name="pc_derenuctimescale")
 
-    use bl_constants_module, only: ZERO, ONE
+    use amrex_constants_module, only: ZERO, ONE
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use network, only: nspec, naux
     use prob_params_module, only: dim
@@ -658,7 +658,7 @@ contains
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use network, only: nspec, naux
     use eos_module
-    use bl_constants_module
+    use amrex_constants_module
     
     implicit none
 
@@ -743,7 +743,7 @@ contains
     ! This routine will calculate vorticity
     !     
 
-    use bl_constants_module
+    use amrex_constants_module
     use prob_params_module, only: dg
 
     implicit none
@@ -824,7 +824,7 @@ contains
     ! This routine will calculate the divergence of velocity.
     !
 
-    use bl_constants_module
+    use amrex_constants_module
     use prob_params_module, only: dg
 
     implicit none
@@ -877,7 +877,7 @@ contains
 !     for the forcing term, i.e. probin, *somehow*
 !
 
-    use bl_constants_module, only: ZERO, HALF, M_PI, TWO
+    use amrex_constants_module, only: ZERO, HALF, M_PI, TWO
     use probdata_module
 
     implicit none
@@ -1067,7 +1067,7 @@ contains
 !     for the forcing term, i.e. probin, *somehow*
 !
 
-    use bl_constants_module, only: ZERO, HALF, M_PI, TWO
+    use amrex_constants_module, only: ZERO, HALF, M_PI, TWO
     use probdata_module
 
     implicit none
@@ -1233,7 +1233,7 @@ contains
 !     for the forcing term, i.e. probin, *somehow*
 !
 
-    use bl_constants_module, only: ZERO, HALF, M_PI, TWO
+    use amrex_constants_module, only: ZERO, HALF, M_PI, TWO
     use probdata_module
 
     implicit none
@@ -1371,7 +1371,7 @@ contains
 !     for the forcing term, i.e. probin, *somehow*
 !
 
-    use bl_constants_module, only: ZERO, HALF, M_PI, TWO
+    use amrex_constants_module, only: ZERO, HALF, M_PI, TWO
     use probdata_module
 
     implicit none
@@ -1508,7 +1508,7 @@ contains
     ! This routine will derive kinetic energy = 1/2 rho (u^2 + v^2 + w^2)
     !
 
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -1547,7 +1547,7 @@ contains
     ! This routine will derive enstrophy  = 1/2 rho (x_vorticity^2 + y_vorticity^2 + z_vorticity^2)
     !
 
-    use bl_constants_module
+    use amrex_constants_module
     use prob_params_module, only: dg
     use meth_params_module, only: URHO, UMX, UMY, UMZ
 

@@ -18,7 +18,8 @@ contains
                                    QREINT, QPRES, &
                                    npassive, qpass_map, small_dens, small_pres, ppm_type, use_pslope
     use slope_module, only : uslope, pslope, multid_slope
-    use bl_constants_module
+    use amrex_constants_module
+    use amrex_error_module
 
     implicit none
 
@@ -64,7 +65,7 @@ contains
 
     if (ppm_type .ne. 0) then
        print *,'Oops -- shouldnt be in trace with ppm_type != 0'
-       call bl_error("Error:: trace_2d.f90")
+       call amrex_error("Error:: trace_2d.f90")
     end if
     
     dtdx = dt/dx
@@ -118,7 +119,7 @@ contains
        enddo
 
     else
-       call bl_error("ERROR: invalid value of islope")
+       call amrex_error("ERROR: invalid value of islope")
        
     endif
 

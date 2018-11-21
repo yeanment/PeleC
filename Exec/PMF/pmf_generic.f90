@@ -1,10 +1,10 @@
 module pmf_module
   implicit none
-  character(len=72) :: pmf_filename = ''
-  integer :: pmf_init = 0, pmf_M, pmf_N, pmf_do_average = 0
-  double precision, allocatable :: pmf_X(:)
-  double precision, allocatable ::  pmf_Y(:,:)
-  character (len=20), allocatable :: pmf_names(:)
+  character(len=72), save :: pmf_filename = ''
+  integer, save :: pmf_init = 0, pmf_M, pmf_N, pmf_do_average = 0
+  double precision, save,  allocatable :: pmf_X(:)
+  double precision, save,  allocatable ::  pmf_Y(:,:)
+  character (len=20), save, allocatable :: pmf_names(:)
 
 contains
 
@@ -106,6 +106,8 @@ contains
 
     !  Now mark that we have read the data
     pmf_init = 1
+    print*, pmf_M
+    stop
   end subroutine read_pmf
 
   function pmf_ncomp() result(ncomp)
@@ -288,6 +290,7 @@ subroutine initialize_pmf(filename)
   if (pmf_names(3) .ne. "u")  stop 'pmf data file not compatible with pmf data reader, u must be third variable'
   do n=1,nspecies
      if (n .ne. get_species_index(pmf_names(4+n))) then
+	print*, nspecies, n 
         stop 'pmf data file not compatible with current chemistry model, wrong species'
      endif
   enddo

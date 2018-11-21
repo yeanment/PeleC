@@ -370,10 +370,9 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
 
   use meth_params_module
   use network, only : nspec, naux
-  use parallel, only : parallel_initialize
   use eos_module!, only : eos_init, eos_get_small_dens, eos_get_small_temp
   use transport_module, only : transport_init
-  use bl_constants_module, only : ZERO, ONE
+  use amrex_constants_module, only : ZERO, ONE
 
   implicit none
 
@@ -625,7 +624,7 @@ subroutine set_problem_params(dm,physbc_lo_in,physbc_hi_in,&
 
   ! Passing data from C++ into f90
 
-  use bl_constants_module, only: ZERO
+  use amrex_constants_module, only: ZERO
   use prob_params_module
   implicit none
 

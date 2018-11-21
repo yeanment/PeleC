@@ -135,7 +135,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
 #ifdef AMREX_USE_CUDA
 // Off load to GPU 
-    	AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx, {   
+        amrex::Print() << "Launching CTOPRIM" << std::endl;
     	    ctoprim(BL_TO_FORTRAN_BOX(tbx),
     		    BL_TO_FORTRAN_ANYD(*statein),
     		    BL_TO_FORTRAN_ANYD(*q),
@@ -144,9 +144,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         Gpu::Device::synchronize();
 #else
     	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
-    		    statein.dataPtr(), ARLIM_3D(statein.loVect()), ARLIM_3D(statein.hiVect()),
-    		    q.dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
-    		    qaux.dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()));
+    		    statein->dataPtr(), ARLIM_3D(statein->loVect()), ARLIM_3D(statein->hiVect()),
+    		    q->dataPtr(), ARLIM_3D(q->loVect()), ARLIM_3D(q->hiVect()),
+    		    qaux->dataPtr(), ARLIM_3D(qaux->loVect()), ARLIM_3D(qaux->hiVect()));
 
 #endif 
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
@@ -173,17 +173,17 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    if (geom.isAnyPeriodic() && i_nscbc == 1)
 	    {
 	      impose_NSCBC_with_perio(lo, hi, domain_lo, domain_hi,
-				      BL_TO_FORTRAN(statein),
-				      BL_TO_FORTRAN(q),
-				      BL_TO_FORTRAN(qaux),
+				      BL_TO_FORTRAN(*statein),
+				      BL_TO_FORTRAN(*q),
+				      BL_TO_FORTRAN(*qaux),
 				      BL_TO_FORTRAN(bcMask),
 				      &time, dx, &dt);
         
 	    } else if (!geom.isAnyPeriodic() && i_nscbc == 1){
 	      impose_NSCBC_mixed_BC(lo, hi, domain_lo, domain_hi,
-				    BL_TO_FORTRAN(statein),
-				    BL_TO_FORTRAN(q),
-				    BL_TO_FORTRAN(qaux),
+				    BL_TO_FORTRAN(*statein),
+				    BL_TO_FORTRAN(*q),
+				    BL_TO_FORTRAN(*qaux),
 				    BL_TO_FORTRAN(bcMask),
 				    &time, dx, &dt);
 	    }
@@ -196,10 +196,10 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #endif
 #ifndef AMREX_USE_CUDA
 	    srctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
-		      q.dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
-		      qaux.dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()),
+		      q->dataPtr(), ARLIM_3D(q->loVect()), ARLIM_3D(q->hiVect()),
+		      qaux->dataPtr(), ARLIM_3D(qaux->loVect()), ARLIM_3D(qaux->hiVect()),
 		      source_in.dataPtr(), ARLIM_3D(source_in.loVect()), ARLIM_3D(source_in.hiVect()),
-		      src_q.dataPtr(), ARLIM_3D(src_q.loVect()), ARLIM_3D(src_q.hiVect()));
+		      src_q->dataPtr(), ARLIM_3D(src_q->loVect()), ARLIM_3D(src_q->hiVect()));
 
             // Allocate fabs for fluxes
 	    for (int i = 0; i < BL_SPACEDIM ; i++)  {
@@ -218,11 +218,11 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    pc_umdrv
 		(&is_finest_level, &time,
 		 lo, hi, domain_lo, domain_hi,
-		 BL_TO_FORTRAN(statein), 
+		 BL_TO_FORTRAN(*statein), 
 		 BL_TO_FORTRAN(stateout),
-		 BL_TO_FORTRAN(q),
-		 BL_TO_FORTRAN(qaux),
-		 BL_TO_FORTRAN(src_q),
+		 BL_TO_FORTRAN(*q),
+		 BL_TO_FORTRAN(*qaux),
+		 BL_TO_FORTRAN(*src_q),
 		 BL_TO_FORTRAN(source_out),
 		 BL_TO_FORTRAN(bcMask),
 		 dx, &dt,

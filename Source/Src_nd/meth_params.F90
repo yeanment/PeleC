@@ -12,7 +12,7 @@
 
 module meth_params_module
 
-  use bl_error_module
+  use amrex_error_module
 
   implicit none
 
@@ -42,7 +42,11 @@ module meth_params_module
   integer, save :: NQ         
 
   integer, save :: npassive
+#ifdef AMREX_USE_CUDA
   integer, managed, save, allocatable :: qpass_map(:), upass_map(:)
+#else
+  integer, save, allocatable :: qpass_map(:), upass_map(:)
+#endif
 
   ! These are used for the Godunov state
   ! Note that the velocity indices here are picked to be the same value
