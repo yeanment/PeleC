@@ -29,7 +29,7 @@ contains
 
     ! Call EOS for the purpose of computing sound speed
 
-    call build(eos_state)
+!    call build(eos_state)
 
     do k = lo(3), hi(3)
        do j = lo(2), hi(2)
@@ -70,7 +70,7 @@ contains
        enddo
     enddo
 
-    call destroy(eos_state)
+!    call destroy(eos_state)
 
   end subroutine pc_estdt
 

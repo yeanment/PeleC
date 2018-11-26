@@ -121,8 +121,6 @@ contains
 
     !  Now mark that we have read the data
     pmf_init = 1
-    print*, pmf_M
-    stop
   end subroutine read_pmf
 
   function pmf_ncomp() result(ncomp)
