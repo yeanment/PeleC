@@ -197,8 +197,6 @@ PeleC::variableCleanUp ()
   }
 #endif
 
-  close_network();
-
   clear_grid_info();
 
   clear_prob();
@@ -1715,18 +1713,6 @@ PeleC::derive (const std::string& name,
     if (1) {
       AmrLevel::derive(name,time,mf,dcomp);
     }
-}
-
-void
-PeleC::init_network ()
-{
-  pc_network_init();
-}
-
-void
-PeleC::close_network ()
-{
-  pc_network_close();
 }
 
 void

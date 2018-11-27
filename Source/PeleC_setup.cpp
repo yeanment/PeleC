@@ -152,9 +152,6 @@ PeleC::variableSetUp ()
     // Initialize the runtime parameters for any of the external code
     init_extern();
 
-    // Initialize the network
-    init_network();
-
 #ifdef REACTIONS
     // Initialize the reactor
     if (do_react == 1) {

@@ -14,7 +14,7 @@ contains
     
  
     use bl_error_module
-    use network, only : nspec
+    use chemistry_module, only : nspecies
     use eos_module
     use fundamental_constants_module, only: k_B, n_A
 
@@ -116,7 +116,7 @@ contains
     
    eos_state %  T = U_ext(UTEMP)
    eos_state %  rho = U_ext(URHO)
-   eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+   eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
    call eos_rt(eos_state)
    INLET_VX_Xdir = U_ext(UMX)/U_ext(URHO)
    INLET_VY_Xdir = U_ext(UMY)/U_ext(URHO)
@@ -132,7 +132,7 @@ contains
    
    eos_state %  T = U_ext(UTEMP)
    eos_state %  rho = U_ext(URHO)
-   eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+   eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
    call eos_rt(eos_state)
    INLET_VX_Ydir = U_ext(UMX)/U_ext(URHO)
    INLET_VY_Ydir = U_ext(UMY)/U_ext(URHO)
@@ -376,7 +376,7 @@ contains
 
          eos_state % p        = q(i,j,QPRES )
          eos_state % rho      = q(i,j,QRHO  )
-         eos_state % massfrac = q(i,j,QFS:QFS+nspec-1)
+         eos_state % massfrac = q(i,j,QFS:QFS+nspecies-1)
          eos_state % aux      = q(i,j,QFX:QFX+naux-1)
 
          call eos_rp(eos_state)
@@ -398,7 +398,7 @@ contains
          uin(i,j,UEDEN) = eos_state % rho  &
             * (eos_state % e + 0.5d0 * (uin(i,j,UMX)**2 + uin(i,j,UMY)**2))
          uin(i,j,UTEMP) = eos_state % T
-         do n=1, nspec
+         do n=1, nspecies
            uin(i,j,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
          end do
          
@@ -432,7 +432,7 @@ contains
 
    eos_state %  T = U_ext(UTEMP)
    eos_state %  rho = U_ext(URHO)
-   eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+   eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
    call eos_rt(eos_state)
    INLET_VX_Xdir = U_ext(UMX)/U_ext(URHO)
    INLET_VY_Xdir = U_ext(UMY)/U_ext(URHO)
@@ -449,7 +449,7 @@ contains
 
    eos_state %  T = U_ext(UTEMP)
    eos_state %  rho = U_ext(URHO)
-   eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+   eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
    call eos_rt(eos_state)
    INLET_VX_Ydir = U_ext(UMX)/U_ext(URHO)
    INLET_VY_Ydir = U_ext(UMY)/U_ext(URHO)
@@ -695,7 +695,7 @@ contains
        
          eos_state % p        = q(i,j,QPRES )
          eos_state % rho      = q(i,j,QRHO  )
-         eos_state % massfrac = q(i,j,QFS:QFS+nspec-1)
+         eos_state % massfrac = q(i,j,QFS:QFS+nspecies-1)
          eos_state % aux      = q(i,j,QFX:QFX+naux-1)
 
          call eos_rp(eos_state)
@@ -717,7 +717,7 @@ contains
          uin(i,j,UEDEN) = eos_state % rho  &
             * (eos_state % e + 0.5d0 * (uin(i,j,UMX)**2 + uin(i,j,UMY)**2))
          uin(i,j,UTEMP) = eos_state % T
-         do n=1, nspec
+         do n=1, nspecies
            uin(i,j,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
          end do
 
@@ -753,7 +753,7 @@ contains
 
    eos_state %  T = U_ext(UTEMP)
    eos_state %  rho = U_ext(URHO)
-   eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+   eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
    call eos_rt(eos_state)
    INLET_VX_Xdir = U_ext(UMX)/U_ext(URHO)
    INLET_VY_Xdir = U_ext(UMY)/U_ext(URHO)
@@ -770,7 +770,7 @@ contains
 
    eos_state %  T = U_ext(UTEMP)
    eos_state %  rho = U_ext(URHO)
-   eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+   eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
    call eos_rt(eos_state)
    INLET_VX_Ydir = U_ext(UMX)/U_ext(URHO)
    INLET_VY_Ydir = U_ext(UMY)/U_ext(URHO)
@@ -1045,7 +1045,7 @@ contains
          
          eos_state % p        = q(i,j,QPRES )
          eos_state % rho      = q(i,j,QRHO  )
-         eos_state % massfrac = q(i,j,QFS:QFS+nspec-1)
+         eos_state % massfrac = q(i,j,QFS:QFS+nspecies-1)
          eos_state % aux      = q(i,j,QFX:QFX+naux-1)
 
          call eos_rp(eos_state)
@@ -1067,7 +1067,7 @@ contains
          uin(i,j,UEDEN) = eos_state % rho  &
             * (eos_state % e + 0.5d0 * (uin(i,j,UMX)**2 + uin(i,j,UMY)**2))
          uin(i,j,UTEMP) = eos_state % T
-         do n=1, nspec
+         do n=1, nspecies
            uin(i,j,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
          end do
          
@@ -1103,7 +1103,7 @@ contains
 
    eos_state %  T = U_ext(UTEMP)
    eos_state %  rho = U_ext(URHO)
-   eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+   eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
    call eos_rt(eos_state)
    INLET_VX_Xdir = U_ext(UMX)/U_ext(URHO)
    INLET_VY_Xdir = U_ext(UMY)/U_ext(URHO)
@@ -1121,7 +1121,7 @@ contains
 
    eos_state %  T = U_ext(UTEMP)
    eos_state %  rho = U_ext(URHO)
-   eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+   eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
    call eos_rt(eos_state)
    INLET_VX_Ydir = U_ext(UMX)/U_ext(URHO)
    INLET_VY_Ydir = U_ext(UMY)/U_ext(URHO)
@@ -1400,7 +1400,7 @@ contains
        
          eos_state % p        = q(i,j,QPRES )
          eos_state % rho      = q(i,j,QRHO  )
-         eos_state % massfrac = q(i,j,QFS:QFS+nspec-1)
+         eos_state % massfrac = q(i,j,QFS:QFS+nspecies-1)
          eos_state % aux      = q(i,j,QFX:QFX+naux-1)
 
          call eos_rp(eos_state)
@@ -1422,7 +1422,7 @@ contains
          uin(i,j,UEDEN) = eos_state % rho  &
             * (eos_state % e + 0.5d0 * (uin(i,j,UMX)**2 + uin(i,j,UMY)**2))
          uin(i,j,UTEMP) = eos_state % T
-         do n=1, nspec
+         do n=1, nspecies
            uin(i,j,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
          end do
 
@@ -1477,7 +1477,7 @@ contains
      
      eos_state %  T = U_ext(UTEMP)
      eos_state %  rho = U_ext(URHO)
-     eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+     eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
      call eos_rt(eos_state)
      INLET_VX = U_ext(UMX)/U_ext(URHO)
      INLET_VY = U_ext(UMY)/U_ext(URHO)
@@ -1604,7 +1604,7 @@ contains
      
        eos_state % p        = q(hop,j,QPRES )
        eos_state % rho      = q(hop,j,QRHO  )
-       eos_state % massfrac = q(hop,j,QFS:QFS+nspec-1)
+       eos_state % massfrac = q(hop,j,QFS:QFS+nspecies-1)
        eos_state % aux      = q(hop,j,QFX:QFX+naux-1)
 
        call eos_rp(eos_state)
@@ -1626,7 +1626,7 @@ contains
        uin(hop,j,UEDEN) = eos_state % rho  &
           * (eos_state % e + 0.5d0 * (uin(hop,j,UMX)**2 + uin(hop,j,UMY)**2))
        uin(hop,j,UTEMP) = eos_state % T
-       do n=1, nspec
+       do n=1, nspecies
           uin(hop,j,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
        end do   
        
@@ -1679,7 +1679,7 @@ contains
      
      eos_state %  T = U_ext(UTEMP)
      eos_state %  rho = U_ext(URHO)
-     eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+     eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
      call eos_rt(eos_state)
      INLET_VX = U_ext(UMX)/U_ext(URHO)
      INLET_VY = U_ext(UMY)/U_ext(URHO)
@@ -1806,7 +1806,7 @@ contains
      
        eos_state % p        = q(hop,j,QPRES )
        eos_state % rho      = q(hop,j,QRHO  )
-       eos_state % massfrac = q(hop,j,QFS:QFS+nspec-1)
+       eos_state % massfrac = q(hop,j,QFS:QFS+nspecies-1)
        eos_state % aux      = q(hop,j,QFX:QFX+naux-1)
 
        call eos_rp(eos_state)
@@ -1828,7 +1828,7 @@ contains
        uin(hop,j,UEDEN) = eos_state % rho  &
           * (eos_state % e + 0.5d0 * (uin(hop,j,UMX)**2 + uin(hop,j,UMY)**2))
        uin(hop,j,UTEMP) = eos_state % T
-       do n=1, nspec
+       do n=1, nspecies
           uin(hop,j,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
        end do 
      enddo
@@ -1883,7 +1883,7 @@ endif
      
      eos_state %  T = U_ext(UTEMP)
      eos_state %  rho = U_ext(URHO)
-     eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+     eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
      call eos_rt(eos_state)
      INLET_VX = U_ext(UMX)/U_ext(URHO)
      INLET_VY = U_ext(UMY)/U_ext(URHO)
@@ -2006,7 +2006,7 @@ endif
      
        eos_state % p        = q(i,hop,QPRES )
        eos_state % rho      = q(i,hop,QRHO  )
-       eos_state % massfrac = q(i,hop,QFS:QFS+nspec-1)
+       eos_state % massfrac = q(i,hop,QFS:QFS+nspecies-1)
        eos_state % aux      = q(i,hop,QFX:QFX+naux-1)
 
        call eos_rp(eos_state)
@@ -2028,7 +2028,7 @@ endif
        uin(i,hop,UEDEN) = eos_state % rho  &
           * (eos_state % e + 0.5d0 * (uin(i,hop,UMX)**2 + uin(i,hop,UMY)**2))
        uin(i,hop,UTEMP) = eos_state % T
-       do n=1, nspec
+       do n=1, nspecies
           uin(i,hop,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
        end do   
 
@@ -2082,7 +2082,7 @@ endif
      
      eos_state %  T = U_ext(UTEMP)
      eos_state %  rho = U_ext(URHO)
-     eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+     eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
      call eos_rt(eos_state)
      INLET_VX = U_ext(UMX)/U_ext(URHO)
      INLET_VY = U_ext(UMY)/U_ext(URHO)
@@ -2208,7 +2208,7 @@ endif
      
        eos_state % p        = q(i,hop,QPRES )
        eos_state % rho      = q(i,hop,QRHO  )
-       eos_state % massfrac = q(i,hop,QFS:QFS+nspec-1)
+       eos_state % massfrac = q(i,hop,QFS:QFS+nspecies-1)
        eos_state % aux      = q(i,hop,QFX:QFX+naux-1)
 
        call eos_rp(eos_state)
@@ -2230,7 +2230,7 @@ endif
        uin(i,hop,UEDEN) = eos_state % rho  &
           * (eos_state % e + 0.5d0 * (uin(i,hop,UMX)**2 + uin(i,hop,UMY)**2))
        uin(i,hop,UTEMP) = eos_state % T
-       do n=1, nspec
+       do n=1, nspecies
           uin(i,hop,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
        end do 
        
@@ -2252,7 +2252,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
     
  
     use bl_error_module
-    use network, only : nspec
+    use chemistry_module, only : nspecies
     use eos_module
     use fundamental_constants_module, only: k_B, n_A
 
@@ -2365,7 +2365,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
 
      eos_state %  T = U_ext(UTEMP)
      eos_state %  rho = U_ext(URHO)
-     eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+     eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
      call eos_rt(eos_state)
      INLET_VX = U_ext(UMX)/U_ext(URHO)
      INLET_VY = U_ext(UMY)/U_ext(URHO)
@@ -2494,7 +2494,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
      
        eos_state % p        = q(hop,j,QPRES )
        eos_state % rho      = q(hop,j,QRHO  )
-       eos_state % massfrac = q(domlo(1),j,QFS:QFS+nspec-1)
+       eos_state % massfrac = q(domlo(1),j,QFS:QFS+nspecies-1)
        eos_state % aux      = q(domlo(1),j,QFX:QFX+naux-1)
 
        call eos_rp(eos_state)
@@ -2516,7 +2516,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
        uin(hop,j,UEDEN) = eos_state % rho  &
           * (eos_state % e + 0.5d0 * (uin(hop,j,UMX)**2 + uin(hop,j,UMY)**2))
        uin(hop,j,UTEMP) = eos_state % T
-       do n=1, nspec
+       do n=1, nspecies
           uin(hop,j,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
        end do   
        
@@ -2564,7 +2564,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
      
      eos_state %  T = U_ext(UTEMP)
      eos_state %  rho = U_ext(URHO)
-     eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+     eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
      call eos_rt(eos_state)
      INLET_VX = U_ext(UMX)/U_ext(URHO)
      INLET_VY = U_ext(UMY)/U_ext(URHO)
@@ -2691,7 +2691,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
      
        eos_state % p        = q(hop,j,QPRES )
        eos_state % rho      = q(hop,j,QRHO  )
-       eos_state % massfrac = q(domhi(1),j,QFS:QFS+nspec-1)
+       eos_state % massfrac = q(domhi(1),j,QFS:QFS+nspecies-1)
        eos_state % aux      = q(domhi(1),j,QFX:QFX+naux-1)
 
        call eos_rp(eos_state)
@@ -2713,7 +2713,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
        uin(hop,j,UEDEN) = eos_state % rho  &
           * (eos_state % e + 0.5d0 * (uin(hop,j,UMX)**2 + uin(hop,j,UMY)**2))
        uin(hop,j,UTEMP) = eos_state % T
-       do n=1, nspec
+       do n=1, nspecies
           uin(hop,j,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
        end do 
      enddo
@@ -2761,7 +2761,7 @@ endif
      
      eos_state %  T = U_ext(UTEMP)
      eos_state %  rho = U_ext(URHO)
-     eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+     eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
      call eos_rt(eos_state)
      INLET_VX = U_ext(UMX)/U_ext(URHO)
      INLET_VY = U_ext(UMY)/U_ext(URHO)
@@ -2883,7 +2883,7 @@ endif
      
        eos_state % p        = q(i,hop,QPRES )
        eos_state % rho      = q(i,hop,QRHO  )
-       eos_state % massfrac = q(i,domlo(2),QFS:QFS+nspec-1)
+       eos_state % massfrac = q(i,domlo(2),QFS:QFS+nspecies-1)
        eos_state % aux      = q(i,domlo(2),QFX:QFX+naux-1)
 
        call eos_rp(eos_state)
@@ -2905,7 +2905,7 @@ endif
        uin(i,hop,UEDEN) = eos_state % rho  &
           * (eos_state % e + 0.5d0 * (uin(i,hop,UMX)**2 + uin(i,hop,UMY)**2))
        uin(i,hop,UTEMP) = eos_state % T
-       do n=1, nspec
+       do n=1, nspecies
           uin(i,hop,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
        end do   
 
@@ -2952,7 +2952,7 @@ endif
      
      eos_state %  T = U_ext(UTEMP)
      eos_state %  rho = U_ext(URHO)
-     eos_state % massfrac(1:nspec) = u_ext(UFS:UFS+nspec-1) / U_ext(URHO)
+     eos_state % massfrac(1:nspecies) = u_ext(UFS:UFS+nspecies-1) / U_ext(URHO)
      call eos_rt(eos_state)
      INLET_VX = U_ext(UMX)/U_ext(URHO)
      INLET_VY = U_ext(UMY)/U_ext(URHO)
@@ -3076,7 +3076,7 @@ endif
      
        eos_state % p        = q(i,hop,QPRES )
        eos_state % rho      = q(i,hop,QRHO  )
-       eos_state % massfrac = q(i,domhi(2),QFS:QFS+nspec-1)
+       eos_state % massfrac = q(i,domhi(2),QFS:QFS+nspecies-1)
        eos_state % aux      = q(i,domhi(2),QFX:QFX+naux-1)
 
        call eos_rp(eos_state)
@@ -3098,7 +3098,7 @@ endif
        uin(i,hop,UEDEN) = eos_state % rho  &
           * (eos_state % e + 0.5d0 * (uin(i,hop,UMX)**2 + uin(i,hop,UMY)**2))
        uin(i,hop,UTEMP) = eos_state % T
-       do n=1, nspec
+       do n=1, nspecies
           uin(i,hop,UFS+n-1) = eos_state % rho  *  eos_state % massfrac(n)
        end do 
        

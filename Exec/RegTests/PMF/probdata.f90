@@ -38,12 +38,11 @@ contains
 
     integer :: iN2, iO2, iH2, nPMF
     double precision :: vt, ek, a, yl, yr, sumY
-    double precision, allocatable :: pmf_vals(:)
+    double precision :: pmf_vals(nspecies+3)
 
     type(eos_t) :: eos_state
 
     call build(eos_state)
-    allocate(pmf_vals(nspec+3))
 
     iN2 = get_species_index("N2")
     iO2 = get_species_index("O2")
@@ -54,8 +53,8 @@ contains
        yl = 0.d0
        yr = 0.d0 ! FIXME: get plo into saved data somehow
        call pmf(yl,yr,pmf_vals,nPMF)
-       eos_state % molefrac(1:nspec) = MAX(0.d0,pmf_vals(4:3+nspec))
-       eos_state % molefrac(iN2) = 1.d0 - (sum(eos_state % molefrac(1:nspec)) - eos_state % molefrac(iN2))
+       eos_state % molefrac(1:nspecies) = MAX(0.d0,pmf_vals(4:3+nspecies))
+       eos_state % molefrac(iN2) = 1.d0 - (sum(eos_state % molefrac(1:nspecies)) - eos_state % molefrac(iN2))
        eos_state % T = pmf_vals(1)
        vn_in = pmf_vals(2)
     else
@@ -91,7 +90,6 @@ contains
     bc_initialized = .true.
 
     call destroy(eos_state)
-    deallocate(pmf_vals)
 
   end subroutine init_bc
 

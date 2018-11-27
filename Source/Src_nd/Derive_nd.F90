@@ -110,7 +110,7 @@ contains
                           domhi,delta,xlo,time,dt,bc,level,grid_no) &
                           bind(C, name="pc_deruplusc")
 
-    use network, only : nspec, naux
+    use chemistry_module, only : nspecies, naux
     use eos_module
     use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
     use bl_constants_module
@@ -142,7 +142,7 @@ contains
              eos_state % e        = dat(i,j,k,UEINT) * rhoInv
              eos_state % T        = dat(i,j,k,UTEMP)
              eos_state % rho      = dat(i,j,k,URHO)
-             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = dat(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -164,7 +164,7 @@ contains
                            domhi,delta,xlo,time,dt,bc,level,grid_no) &
                            bind(C, name="pc_deruminusc")
 
-    use network, only : nspec, naux
+    use chemistry_module, only : nspecies, naux
     use eos_module
     use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
     use bl_constants_module
@@ -196,7 +196,7 @@ contains
              eos_state % e        = dat(i,j,k,UEINT) * rhoInv
              eos_state % T        = dat(i,j,k,UTEMP)
              eos_state % rho      = dat(i,j,k,URHO)
-             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = dat(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -330,7 +330,7 @@ contains
                         domhi,dx,xlo,time,dt,bc,level,grid_no) &
                         bind(C, name="pc_derpres")
 
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use bl_constants_module
@@ -361,7 +361,7 @@ contains
              eos_state % rho      = u(i,j,k,URHO)
              eos_state % T        = u(i,j,k,UTEMP)
              eos_state % e        = u(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -456,7 +456,7 @@ contains
                               domhi,dx,xlo,time,dt,bc,level,grid_no) &
                               bind(C, name="pc_dersoundspeed")
 
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use bl_constants_module
@@ -487,7 +487,7 @@ contains
              eos_state % rho      = u(i,j,k,URHO)
              eos_state % T        = u(i,j,k,UTEMP)
              eos_state % e        = u(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -508,7 +508,7 @@ contains
                               domhi,dx,xlo,time,dt,bc,level,grid_no) &
                               bind(C, name="pc_dermachnumber")
 
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use meth_params_module, only: URHO, UMX, UMZ, UEINT, UTEMP, UFS, UFX
     use bl_constants_module
@@ -539,7 +539,7 @@ contains
              eos_state % rho      = u(i,j,k,URHO)
              eos_state % T        = u(i,j,k,UTEMP)
              eos_state % e        = u(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -560,7 +560,7 @@ contains
                            domhi,dx,xlo,time,dt,bc,level,grid_no) &
                            bind(C, name="pc_derentropy")
 
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use bl_constants_module
@@ -591,7 +591,7 @@ contains
              eos_state % rho      = u(i,j,k,URHO)
              eos_state % T        = u(i,j,k,UTEMP)
              eos_state % e        = u(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -614,7 +614,7 @@ contains
 
     use bl_constants_module, only: ZERO, ONE
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use prob_params_module, only: dim
     use eos_module
 
@@ -655,7 +655,7 @@ contains
                 eos_state % rho      = u(i,j,k,URHO)
                 eos_state % T        = u(i,j,k,UTEMP)
                 eos_state % e        = eint
-                eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+                eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
                 eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
                 call eos_re(eos_state)
@@ -719,7 +719,7 @@ contains
     ! This routine derives the mole fractions of the species.
     !
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use bl_constants_module
     
@@ -751,7 +751,7 @@ contains
              eos_state % rho      = dat(i,j,k,URHO)
              eos_state % T        = dat(i,j,k,UTEMP)
              eos_state % e        = dat(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = dat(i,j,k,UFX:UFX+naux-1) * rhoInv
           
              call eos_ytx(eos_state)

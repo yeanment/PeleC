@@ -1,25 +1,3 @@
-subroutine pc_network_init() bind(C, name="pc_network_init")
-
-  use network, only: network_init
-
-  call network_init()
-
-end subroutine pc_network_init
-
-
-! :::
-! ::: ----------------------------------------------------------------
-! :::
-
-subroutine pc_network_close() bind(C, name="pc_network_close")
-
-  use network, only: network_close
-
-  call network_close()
-
-end subroutine pc_network_close
-
-
 ! :::
 ! ::: ----------------------------------------------------------------
 ! :::
@@ -91,15 +69,15 @@ end subroutine pc_reactor_close
 ! ::: ----------------------------------------------------------------
 ! :::
 
-subroutine get_num_spec(nspec_out) bind(C, name="get_num_spec")
+subroutine get_num_spec(nspecies_out) bind(C, name="get_num_spec")
 
-  use network, only : nspec
+  use chemistry_module, only : nspecies
 
   implicit none
 
-  integer, intent(out) :: nspec_out
+  integer, intent(out) :: nspecies_out
 
-  nspec_out = nspec
+  nspecies_out = nspecies
 
 end subroutine get_num_spec
 
@@ -109,7 +87,7 @@ end subroutine get_num_spec
 
 subroutine get_num_aux(naux_out) bind(C, name="get_num_aux")
 
-  use network, only : naux
+  use chemistry_module, only : naux
 
   implicit none
 
@@ -126,7 +104,7 @@ end subroutine get_num_aux
 subroutine get_spec_names(spec_names_out,ispec,len) &
      bind(C, name="get_spec_names")
 
-  use network, only : spec_names
+  use chemistry_module, only : spec_names
 
   implicit none
 
@@ -152,7 +130,7 @@ end subroutine get_spec_names
 subroutine get_aux_names(aux_names_out,iaux,len) &
      bind(C, name="get_aux_names")
 
-  use network, only : aux_names
+  use chemistry_module, only : aux_names
 
   implicit none
 
@@ -369,9 +347,9 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
      bind(C, name="set_method_params")
 
   use meth_params_module
-  use network, only : nspec, naux
+  use chemistry_module, only : nspecies, naux
   use parallel, only : parallel_initialize
-  use eos_module, only : eos_init, eos_get_small_dens, eos_get_small_temp
+  use eos_module, only : eos_init
   use transport_module, only : transport_init
   use bl_constants_module, only : ZERO, ONE
 
@@ -401,7 +379,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   ! NVAR  : number of total variables in initial system
   NTHERM = 7
 
-  NVAR = NTHERM + nspec + naux + numadv
+  NVAR = NTHERM + nspecies + naux + numadv
 
   nadv = numadv
 
@@ -438,7 +416,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
 
   QTHERM = NTHERM + 1 ! the + 1 is for QGAME which is always defined in primitive mode
 
-  QVAR = QTHERM + nspec + naux + numadv
+  QVAR = QTHERM + nspecies + naux + numadv
   
   ! NQ will be the number of hydro + radiation variables in the primitive
   ! state.  Initialize it just for hydro here
@@ -471,7 +449,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   end if
 
   if (naux >= 1) then
-     QFX = QFS + nspec
+     QFX = QFS + nspecies
 
   else
      QFX = 1
@@ -522,11 +500,11 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   npassive = npassive + nadv
 
   if (QFS > -1) then
-     do ispec = 1, nspec+naux
+     do ispec = 1, nspecies+naux
         upass_map(npassive + ispec) = UFS + ispec - 1
         qpass_map(npassive + ispec) = QFS + ispec - 1
      enddo
-     npassive = npassive + nspec + naux
+     npassive = npassive + nspecies + naux
   endif
 
   !---------------------------------------------------------------------
@@ -555,11 +533,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
 
   diffuse_cutoff_density       = diffuse_cutoff_density_in
 
-  ! Note that the EOS may modify choice in namelist because of its
-  ! internal limitations, so the small_dens and small_temp
-  ! may be modified coming back out of this routine.
-
-  call eos_init(small_dens=small_dens, small_temp=small_temp)
+  call eos_init()
 
   ! Update device variables
 
