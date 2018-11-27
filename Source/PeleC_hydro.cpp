@@ -134,8 +134,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
 #ifdef AMREX_USE_CUDA
-// Off load to GPU 
-        amrex::Print() << "Launching CTOPRIM" << std::endl;
+// Off load to GPU
+
+        AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
     	    ctoprim(BL_TO_FORTRAN_BOX(tbx),
     		    BL_TO_FORTRAN_ANYD(*statein),
     		    BL_TO_FORTRAN_ANYD(*q),
