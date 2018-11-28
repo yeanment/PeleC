@@ -27,13 +27,11 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     sources_for_hydro.setVal(0.0);
 
     int ng = 0; // TODO: This is currently the largest ngrow of the source data...maybe this needs fixing?
-
     for (int n = 0; n < src_list.size(); ++n)
     {
       MultiFab::Saxpy(sources_for_hydro,0.5,*new_sources[src_list[n]],0,0,NUM_STATE,ng);
       MultiFab::Saxpy(sources_for_hydro,0.5,*old_sources[src_list[n]],0,0,NUM_STATE,ng);
     }
-
 #ifdef REACTIONS
     // Add I_R terms to advective forcing
     if (do_react == 1) {
@@ -43,7 +41,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
     }
 #endif
-    
     sources_for_hydro.FillBoundary(geom.periodicity());
 
     hydro_source.setVal(0);
@@ -102,7 +99,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	int is_finest_level = (level == finest_level) ? 1 : 0;
 	const int*  domain_lo = geom.Domain().loVect();
 	const int*  domain_hi = geom.Domain().hiVect();
-
 	for (MFIter mfi(S_new,hydro_tile_size); mfi.isValid(); ++mfi)
 	{
 	    const Box& bx    = mfi.tilebox();
@@ -110,12 +106,11 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
-
 	    const FArrayBox *statein  = &S[mfi];
 	    FArrayBox &stateout = S_new[mfi];
-
 	    FArrayBox &source_in  = sources_for_hydro[mfi];
 	    FArrayBox &source_out = hydro_source[mfi];
+        FArrayBox qtmp, qauxtmp, src_qtmp; 
 /*#ifdef AMREX_USE_CUDA 
         Gpu::AsyncFab q(qbx, QVAR);
         FArrayBox* q_fab = q.fabPtr();  
@@ -124,18 +119,19 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         Gpu::AsyncFab src_q(qbx, QVAR); 
         FArrayBox* srcq_fab = src_q.fabPtr(); 
 #else   */
-	    q->resize(qbx, QVAR);
-	    qaux->resize(qbx, NQAUX);
-	    src_q->resize(qbx, QVAR);
+	    qtmp.resize(qbx, QVAR);
+	    qauxtmp.resize(qbx, NQAUX);
+	    src_qtmp.resize(qbx, QVAR);
+        q = &qtmp; 
+        qaux = &qauxtmp; 
+        src_q = &src_qtmp; 
 // #endif
 	    bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
                             // First integer is bc_type, second integer about slip/no-slip wall 
         bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
-
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
 #ifdef AMREX_USE_CUDA
 // Off load to GPU
-
         AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
     	    ctoprim(BL_TO_FORTRAN_BOX(tbx),
     		    BL_TO_FORTRAN_ANYD(*statein),
