@@ -392,6 +392,7 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
                      qaux, qa_lo,  qa_hi) bind(C, name = "ctoprim")
 
     use fundamental_constants_module, only: k_B, n_A
+    use amrex_fort_module, only: amrex_real 
     use eos_type_module
 #ifdef AMREX_USE_CUDA
     use eos_module, only : eos_re_d
@@ -411,7 +412,7 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
 #endif
 
     use amrex_constants_module, only: ZERO, HALF, ONE
-    use pelec_util_module, only: position
+!    use pelec_util_module, only: position
     implicit none
 
     integer, intent(in) :: lo(3), hi(3)
@@ -419,18 +420,18 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
     integer, intent(in) :: q_lo(3), q_hi(3)
     integer, intent(in) :: qa_lo(3), qa_hi(3)
 
-    double precision, intent(in   ) :: uin(uin_lo(1):uin_hi(1),uin_lo(2):uin_hi(2),uin_lo(3):uin_hi(3),NVAR)
-    double precision, intent(inout) :: q(q_lo(1):q_hi(1),q_lo(2):q_hi(2),q_lo(3):q_hi(3),QVAR)
-    double precision, intent(inout) :: qaux(qa_lo(1):qa_hi(1),qa_lo(2):qa_hi(2),qa_lo(3):qa_hi(3),NQAUX)
+    real(amrex_real), intent(in   ) :: uin(uin_lo(1):uin_hi(1),uin_lo(2):uin_hi(2),uin_lo(3):uin_hi(3),NVAR)
+    real(amrex_real), intent(inout) :: q(q_lo(1):q_hi(1),q_lo(2):q_hi(2),q_lo(3):q_hi(3),QVAR)
+    real(amrex_real), intent(inout) :: qaux(qa_lo(1):qa_hi(1),qa_lo(2):qa_hi(2),qa_lo(3):qa_hi(3),QAUX)
 
-    double precision, parameter :: small = 1.d-8
-    double precision, parameter :: R = k_B*n_A
+    real(amrex_real), parameter :: small = 1.d-8
+    real(amrex_real), parameter :: R = k_B*n_A
 
     integer            :: i, j, k
     integer            :: n, nq, ipassive
     integer, parameter :: nspec_d = 9, naux_d = 1
-    double precision   :: kineng, rhoinv
-    double precision   :: vel(3)
+    real(amrex_real)   :: kineng, rhoinv
+    real(amrex_real)   :: vel(3)
 
     type (eos_t) :: eos_state
     do k = lo(3), hi(3)
@@ -497,15 +498,13 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
              qaux(i,j,k,QGAMC)  = eos_state % gam1
              qaux(i,j,k,QC   )  = eos_state % cs
              qaux(i,j,k,QCSML)  = max(small, small * qaux(i,j,k,QC))
-             qaux(i,j,k,QRSPEC)  = R/eos_state % wbar
+             qaux(i,j,k,QRSPEC) = R/eos_state % wbar
           enddo
        enddo
     enddo
 
 !   call destroy(eos_state)
-
-  end subroutine ctoprim
-
+  end subroutine 
 
   subroutine srctoprim(lo, hi, &
                        q,     q_lo,   q_hi, &

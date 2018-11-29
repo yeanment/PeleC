@@ -1,6 +1,7 @@
 #include "PeleC.H"
 #include "PeleC_F.H"
 #include <AMReX_Gpu.H>
+#include <AMReX_VisMF.H>
 using namespace amrex;
 
 /**
@@ -23,7 +24,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     }
 
     BL_ASSERT(S.nGrow() == NUM_GROW);
-
+    MultiFab Qout(S.boxArray(), S.DistributionMap(), QVAR, 1); 
     sources_for_hydro.setVal(0.0);
 
     int ng = 0; // TODO: This is currently the largest ngrow of the source data...maybe this needs fixing?
@@ -89,10 +90,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	FArrayBox flux[BL_SPACEDIM];
 	FArrayBox pradial(Box::TheUnitBox(),1);
 
-//#ifndef AMREX_USE_CUDA 
+#ifndef AMREX_USE_CUDA 
 	FArrayBox* q, *qaux, *src_q;
-//#endif
-
+#endif
 	IArrayBox bcMask;
 
 	Real cflLoc = -1.0e+200;
@@ -106,39 +106,58 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
-	    const FArrayBox *statein  = &S[mfi];
+	    const FArrayBox *statein  = &(S[mfi]);
 	    FArrayBox &stateout = S_new[mfi];
 	    FArrayBox &source_in  = sources_for_hydro[mfi];
 	    FArrayBox &source_out = hydro_source[mfi];
         FArrayBox qtmp, qauxtmp, src_qtmp; 
-/*#ifdef AMREX_USE_CUDA 
-        Gpu::AsyncFab q(qbx, QVAR);
-        FArrayBox* q_fab = q.fabPtr();  
-        Gpu::AsyncFab qaux(qbx, NQAUX); 
-        FArrayBox* qaux_fab = qaux.fabPtr();
-        Gpu::AsyncFab src_q(qbx, QVAR); 
-        FArrayBox* srcq_fab = src_q.fabPtr(); 
-#else   */
-	    qtmp.resize(qbx, QVAR);
-	    qauxtmp.resize(qbx, NQAUX);
-	    src_qtmp.resize(qbx, QVAR);
-        q = &qtmp; 
-        qaux = &qauxtmp; 
-        src_q = &src_qtmp; 
-// #endif
+#ifdef AMREX_USE_CUDA 
+        Gpu::AsyncFab q_as(qbx, QVAR);
+        FArrayBox* q = q_as.fabPtr();  
+        Gpu::AsyncFab qaux_as(qbx, NQAUX); 
+        FArrayBox* qaux = qaux_as.fabPtr();
+        Gpu::AsyncFab src_q_as(qbx, QVAR); 
+        FArrayBox* src_q = src_q_as.fabPtr(); 
+#else   
+        q->resize(qbx,QVAR); 
+        qaux->resize(qbx,NQAUX); 
+        src_q->src_qtmp(qbx,QVAR); 
+#endif
 	    bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
                             // First integer is bc_type, second integer about slip/no-slip wall 
         bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
 #ifdef AMREX_USE_CUDA
 // Off load to GPU
+        amrex::Print() << "BEFORE CTOPRIM" << std::endl;
+         
         AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
     	    ctoprim(BL_TO_FORTRAN_BOX(tbx),
     		    BL_TO_FORTRAN_ANYD(*statein),
     		    BL_TO_FORTRAN_ANYD(*q),
-    		    BL_TO_FORTRAN_ANYD(*qaux));
+    		    BL_TO_FORTRAN_ANYD(*qaux));// */
             });
         Gpu::Device::synchronize();
+        amrex::Print()<<"AFTER CTOPRIM" << std::endl;
+        auto len = length(bx); 
+        auto loq = lbound(bx);
+        auto qfab = (*q).view(loq);
+        auto ufab = (*statein).view(loq);
+/*        amrex::Print()<<QVAR << '\t' << NUM_STATE << std::endl;
+        std::cin.get();
+        for(int k = 0; k < len.z ; ++k){
+            for(int j = 0; j < len.y ; ++j){
+                for(int i = 0; i < len.x; ++i){
+                   for(int n = 0; n < NUM_STATE; n++){
+                        amrex::Print()<<qfab(i,j,k,n) << '\t' ; 
+                   }
+                   for(int n = 0; n < NUM_STATE; n++){
+                        amrex::Print()<<ufab(i,j,k,n) << '\t' ; 
+                   }
+
+                   amrex::Print()<< std::endl;
+                }}}
+        std::cin.get(); */
 #else
     	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
     		    statein->dataPtr(), ARLIM_3D(statein->loVect()), ARLIM_3D(statein->hiVect()),
@@ -146,6 +165,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     		    qaux->dataPtr(), ARLIM_3D(qaux->loVect()), ARLIM_3D(qaux->hiVect()));
 
 #endif 
+            Qout[mfi].copy(*q);
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
             //
@@ -166,7 +186,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
             }
 #elif (BL_SPACEDIM == 2)
-#ifndef AMREX_USE_CUDA
+        std::cout<< " BCS! " << std::endl; 
 	    if (geom.isAnyPeriodic() && i_nscbc == 1)
 	    {
 	      impose_NSCBC_with_perio(lo, hi, domain_lo, domain_hi,
@@ -184,14 +204,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 				    BL_TO_FORTRAN(bcMask),
 				    &time, dx, &dt);
 	    }
-#endif
 #else
 	    if (i_nscbc == 1)
 	    {
 	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
 	    }
 #endif
-#ifndef AMREX_USE_CUDA
+        std::cout << " Src CTOPRIM " << std::endl;
 	    srctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
 		      q->dataPtr(), ARLIM_3D(q->loVect()), ARLIM_3D(q->hiVect()),
 		      qaux->dataPtr(), ARLIM_3D(qaux->loVect()), ARLIM_3D(qaux->hiVect()),
@@ -209,9 +228,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    }
         
 #ifdef GPU 
-        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+//        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
 #endif
-        
+        std::cout << "PC UMDRV" << std::endl; 
 	    pc_umdrv
 		(&is_finest_level, &time,
 		 lo, hi, domain_lo, domain_hi,
@@ -245,8 +264,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 		 mass_lost, xmom_lost, ymom_lost, zmom_lost,
 		 eden_lost, xang_lost, yang_lost, zang_lost);
 #ifdef GPU 
-         }); 
-#endif
+//         }); 
 #endif
 	    courno = std::max(courno,cflLoc);
 
@@ -273,7 +291,12 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
               }
             }
 	} // MFIter loop
-
+    std::cout<< "END OF MFI" << std::endl;
+#ifdef AMREX_USE_CUDA 
+    VisMF::Write(Qout, "Q_cuda"); 
+#else
+    VisMF::Write(Qout, "Q_cpu"); 
+#endif 
     } // end of OMP parallel region
 
     hydro_source.FillBoundary(geom.periodicity());
