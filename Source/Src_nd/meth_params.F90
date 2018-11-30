@@ -15,7 +15,37 @@ module meth_params_module
   use amrex_error_module
 
   implicit none
+#ifdef AMREX_USE_CUDA
+  integer, managed, save, allocatable :: qpass_map(:), upass_map(:)
+  ! number of ghost cells for the hyperbolic solver
+  integer, parameter     :: NHYP    = 4
 
+  ! Number of parameters for GC-NSCBC
+  integer, parameter     :: nb_nscbc_params = 4
+
+  ! NTHERM: number of thermodynamic variables
+  integer, managed, save, allocatable :: NTHERM, NVAR
+  integer, managed, save, allocatable:: URHO, UMX, UMY, UMZ, UMR, UML, UMP, UEDEN, UEINT, UTEMP, UFA, UFS, UFX
+  integer, managed, save, allocatable:: USHK
+
+  ! QTHERM: number of primitive variables
+  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
+  integer, managed, save, allocatable:: QTHERM, QVAR
+  integer, parameter :: QFS=9
+  integer, managed, save, allocatable:: NQAUX, QGAMC, QC, QCSML, QDPDR, QDPDE, QRSPEC
+  integer, managed, save, allocatable:: QFA, QFX
+  !integer, managed, save, allocatable:: QRHO, QU, QV, QW, QPRES, QREINT, QTEMP, QGAME
+  !integer, managed, save, allocatable:: QFA, QFS, QFX
+
+  integer, managed, save, allocatable:: nadv
+
+  ! NQ will be the total number of primitive variables, hydro + radiation
+  integer, managed, save, allocatable:: NQ         
+
+  integer, managed, save, allocatable:: npassive
+  integer, managed, save, allocatable:: NGDNV, GDRHO, GDU, GDV, GDW, GDPRES, GDGAME
+
+#else
   ! number of ghost cells for the hyperbolic solver
   integer, parameter     :: NHYP    = 4
 
@@ -28,8 +58,8 @@ module meth_params_module
   integer, save :: USHK
 
   ! QTHERM: number of primitive variables
-  integer,  save :: QTHERM, QVAR
   integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
+  integer,  save :: QTHERM, QVAR
   integer, save :: QFS=9
   integer, save :: NQAUX, QGAMC, QC, QCSML, QDPDR, QDPDE, QRSPEC
   integer, save :: QFA, QFX
@@ -42,17 +72,13 @@ module meth_params_module
   integer, save :: NQ         
 
   integer, save :: npassive
-#ifdef AMREX_USE_CUDA
-  integer, managed, save, allocatable :: qpass_map(:), upass_map(:)
-#else
   integer, save, allocatable :: qpass_map(:), upass_map(:)
-#endif
 
   ! These are used for the Godunov state
   ! Note that the velocity indices here are picked to be the same value
   ! as in the primitive variable array
   integer, save :: NGDNV, GDRHO, GDU, GDV, GDW, GDPRES, GDGAME
-
+#endif
 
   ! This for keeping track of particles states, and 
   integer, save :: PLOC, PVEL, PTEMP, PDIA, PRHO, PSPC
@@ -177,6 +203,46 @@ module meth_params_module
   double precision, save :: rot_vec(3)
 
 contains
+#ifdef AMREX_USE_CUDA
+  subroutine pelec_allocate_managed_params() &
+             bind(C,name='pelec_allocate_managed_params')
+ ! Allocate all the managed memory values
+    allocate(NTHERM)
+    allocate(NVAR)
+    allocate(URHO)
+    allocate(UMX) 
+    allocate(UMY) 
+    allocate(UMZ)
+    allocate(UML)
+    allocate(UMP)
+    allocate(UEDEN)
+    allocate(UEINT)
+    allocate(UFA)
+    allocate(UFS)
+    allocate(UFX)
+    allocate(USHK)
+    allocate(QTHERM)
+    allocate(QVAR)
+    allocate(NQAUX)
+    allocate(QGAMC)
+    allocate(QC)
+    allocate(QCSML)
+    allocate(QCSML)
+    allocate(QDPDR)
+    allocate(QDPDE)
+    allocate(QRSPEC)
+    allocate(QFA)
+    allocate(QFX)
+    allocate(nadv)
+    allocate(NQ)
+    allocate(NGDNV)
+    allocate(GDRHO)
+    allocate(GDU)
+    allocate(GDW)
+    allocate(GDPRES)
+    allocate(GDGAME) 
+  end subroutine pelec_allocate_managed_params
+#endif
 
   subroutine set_pelec_method_params() bind(C,name="set_pelec_method_params")
 

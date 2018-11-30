@@ -8,6 +8,7 @@
 extern "C"
 {
 #endif
+  void pelec_allocate_managed_params(); 
 
   void pc_network_init();
 

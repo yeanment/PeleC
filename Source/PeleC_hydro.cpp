@@ -25,6 +25,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
     BL_ASSERT(S.nGrow() == NUM_GROW);
     MultiFab Qout(S.boxArray(), S.DistributionMap(), QVAR, 1); 
+    Qout.setVal(0.0);
     sources_for_hydro.setVal(0.0);
 
     int ng = 0; // TODO: This is currently the largest ngrow of the source data...maybe this needs fixing?
@@ -103,7 +104,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	{
 	    const Box& bx    = mfi.tilebox();
 	    const Box& qbx = amrex::grow(bx, NUM_GROW);
-
+        FArrayBox* qout = &(Qout[mfi]); 
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
 	    const FArrayBox *statein  = &(S[mfi]);
@@ -119,9 +120,12 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         Gpu::AsyncFab src_q_as(qbx, QVAR); 
         FArrayBox* src_q = src_q_as.fabPtr(); 
 #else   
-        q->resize(qbx,QVAR); 
-        qaux->resize(qbx,NQAUX); 
-        src_q->src_qtmp(qbx,QVAR); 
+        FArrayBox qt(qbx,QVAR); 
+        FArrayBox qat(qbx,NQAUX); 
+        FArrayBox sqt(qbx, QVAR); 
+        q = &qt; 
+        qaux = &qat; 
+        src_q = &sqt; 
 #endif
 	    bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
                             // First integer is bc_type, second integer about slip/no-slip wall 
@@ -137,13 +141,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     		    BL_TO_FORTRAN_ANYD(*q),
     		    BL_TO_FORTRAN_ANYD(*qaux));// */
             });
-        Gpu::Device::synchronize();
+        Gpu::Device::streamSynchronize();
         amrex::Print()<<"AFTER CTOPRIM" << std::endl;
-        auto len = length(bx); 
+/*        auto len = length(bx); 
         auto loq = lbound(bx);
         auto qfab = (*q).view(loq);
         auto ufab = (*statein).view(loq);
-/*        amrex::Print()<<QVAR << '\t' << NUM_STATE << std::endl;
+        amrex::Print()<<QVAR << '\t' << NUM_STATE << std::endl;
         std::cin.get();
         for(int k = 0; k < len.z ; ++k){
             for(int j = 0; j < len.y ; ++j){
@@ -165,7 +169,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     		    qaux->dataPtr(), ARLIM_3D(qaux->loVect()), ARLIM_3D(qaux->hiVect()));
 
 #endif 
-            Qout[mfi].copy(*q);
+          AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx,{ 
+            qout->copy(*q);
+          });
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
             //
@@ -230,7 +236,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #ifdef GPU 
 //        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
 #endif
-        std::cout << "PC UMDRV" << std::endl; 
+/*        std::cout << "PC UMDRV" << std::endl; 
 	    pc_umdrv
 		(&is_finest_level, &time,
 		 lo, hi, domain_lo, domain_hi,
@@ -262,7 +268,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 		 zmom_added_flux,
 		 E_added_flux,
 		 mass_lost, xmom_lost, ymom_lost, zmom_lost,
-		 eden_lost, xang_lost, yang_lost, zang_lost);
+		 eden_lost, xang_lost, yang_lost, zang_lost); */
 #ifdef GPU 
 //         }); 
 #endif
@@ -296,7 +302,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     VisMF::Write(Qout, "Q_cuda"); 
 #else
     VisMF::Write(Qout, "Q_cpu"); 
-#endif 
+#endif
+    std::cin.get(); 
     } // end of OMP parallel region
 
     hydro_source.FillBoundary(geom.periodicity());

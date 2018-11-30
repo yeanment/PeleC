@@ -1741,16 +1741,20 @@ PeleC::init_extern ()
   // initialize the external runtime parameters -- these will
   // live in the probin
 
+#ifdef AMREX_USE_CUDA 
+  amrex::Print() << "Allocating Managed Parameters" << std::endl;
+  pelec_allocate_managed_params(); 
+#endif
   amrex::Print() << "reading extern runtime parameters ..." << std::endl;
 
   int probin_file_length = probin_file.length();
   Vector<int> probin_file_name(probin_file_length);
-
+  amrex::Print() << "probinssss " <<std::endl; 
   for (int i = 0; i < probin_file_length; i++)
   {
     probin_file_name[i] = probin_file[i];
   }
-
+  amrex::Print() << "PC_EXTERN_INIT" << std::endl;
   pc_extern_init(probin_file_name.dataPtr(),&probin_file_length);
 }
 

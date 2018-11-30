@@ -396,20 +396,15 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
     use eos_type_module
 #ifdef AMREX_USE_CUDA
     use eos_module, only : eos_re_d
-    use meth_device_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UTEMP, &
-                                   QVAR, NQAUX, npassive, QDPDE, QDPDR, QGAMC, &
-                                   QC, QCSML, QRSPEC, QFS, QFX
-    use meth_params_module, only : QRHO, QU, QV, QW, QREINT, QPRES, QTEMP, &
-                                   QGAME, upass_map, qpass_map
 #else
     use eos_module, only: eos_re
+#endif
     use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
                                    QVAR, QRHO, QU, QV, QW, &
                                    QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
                                    QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
                                    npassive, upass_map, qpass_map
 !    use actual_network, only : nspec, naux
-#endif
 
     use amrex_constants_module, only: ZERO, HALF, ONE
 !    use pelec_util_module, only: position
@@ -422,7 +417,7 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
 
     real(amrex_real), intent(in   ) :: uin(uin_lo(1):uin_hi(1),uin_lo(2):uin_hi(2),uin_lo(3):uin_hi(3),NVAR)
     real(amrex_real), intent(inout) :: q(q_lo(1):q_hi(1),q_lo(2):q_hi(2),q_lo(3):q_hi(3),QVAR)
-    real(amrex_real), intent(inout) :: qaux(qa_lo(1):qa_hi(1),qa_lo(2):qa_hi(2),qa_lo(3):qa_hi(3),QAUX)
+    real(amrex_real), intent(inout) :: qaux(qa_lo(1):qa_hi(1),qa_lo(2):qa_hi(2),qa_lo(3):qa_hi(3),NQAUX)
 
     real(amrex_real), parameter :: small = 1.d-8
     real(amrex_real), parameter :: R = k_B*n_A
@@ -453,7 +448,6 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
           enddo
        enddo
     enddo
-
     ! Load passively advected quatities into q
     do ipassive = 1, npassive
        n  = upass_map(ipassive)
@@ -502,7 +496,6 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
           enddo
        enddo
     enddo
-
 !   call destroy(eos_state)
   end subroutine 
 
