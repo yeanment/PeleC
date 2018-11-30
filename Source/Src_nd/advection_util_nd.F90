@@ -399,12 +399,12 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
 #else
     use eos_module, only: eos_re
 #endif
-    use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
+    use meth_params_module , only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
                                    QVAR, QRHO, QU, QV, QW, &
                                    QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
                                    QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
                                    npassive, upass_map, qpass_map
-!    use actual_network, only : nspec, naux
+    use actual_network, only : nspec, naux
 
     use amrex_constants_module, only: ZERO, HALF, ONE
 !    use pelec_util_module, only: position
@@ -423,7 +423,8 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
     real(amrex_real), parameter :: R = k_B*n_A
 
     integer            :: i, j, k
-    integer            :: n, nq, ipassive
+    integer            :: n, ipassive
+    integer            :: nq
     integer, parameter :: nspec_d = 9, naux_d = 1
     real(amrex_real)   :: kineng, rhoinv
     real(amrex_real)   :: vel(3)
@@ -474,7 +475,7 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
              eos_state % massfrac = q(i,j,k,QFS:QFS+nspec_d-1)
              eos_state % aux      = q(i,j,k,QFX:QFX+naux_d-1)
 #ifdef AMREX_USE_CUDA
-             call eos_re_d(eos_state)
+!             call eos_re_d(eos_state)
 #else
              call eos_re(eos_state) 
 #endif
@@ -483,7 +484,7 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
 ! The PelePhysics 
              q(i,j,k,QTEMP)  = eos_state % T
              q(i,j,k,QREINT) = eos_state % e * q(i,j,k,QRHO)
-             q(i,j,k,QPRES)  = eos_state % p
+             q(i,j,k,QPRES)  = 1.d6 ! eos_state % p
              q(i,j,k,QGAME)  = q(i,j,k,QPRES) / q(i,j,k,QREINT) + ONE
 
              qaux(i,j,k,QDPDR)  = eos_state % dpdr_e

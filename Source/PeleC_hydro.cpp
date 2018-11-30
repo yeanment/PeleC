@@ -143,25 +143,18 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
             });
         Gpu::Device::streamSynchronize();
         amrex::Print()<<"AFTER CTOPRIM" << std::endl;
-/*        auto len = length(bx); 
+        auto len = length(bx); 
         auto loq = lbound(bx);
         auto qfab = (*q).view(loq);
         auto ufab = (*statein).view(loq);
-        amrex::Print()<<QVAR << '\t' << NUM_STATE << std::endl;
-        std::cin.get();
         for(int k = 0; k < len.z ; ++k){
             for(int j = 0; j < len.y ; ++j){
                 for(int i = 0; i < len.x; ++i){
-                   for(int n = 0; n < NUM_STATE; n++){
-                        amrex::Print()<<qfab(i,j,k,n) << '\t' ; 
-                   }
-                   for(int n = 0; n < NUM_STATE; n++){
-                        amrex::Print()<<ufab(i,j,k,n) << '\t' ; 
-                   }
-
+                        amrex::Print()<< "QTEMP =" << qfab(i,j,k,7) << '\t' ; 
+                        amrex::Print()<< "UTEMP =" << ufab(i,j,k,6) << '\t' ; 
                    amrex::Print()<< std::endl;
                 }}}
-        std::cin.get(); */
+        std::cin.get(); 
 #else
     	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
     		    statein->dataPtr(), ARLIM_3D(statein->loVect()), ARLIM_3D(statein->hiVect()),
@@ -236,7 +229,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #ifdef GPU 
 //        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
 #endif
-/*        std::cout << "PC UMDRV" << std::endl; 
+        std::cout << "PC UMDRV" << std::endl; 
 	    pc_umdrv
 		(&is_finest_level, &time,
 		 lo, hi, domain_lo, domain_hi,
@@ -268,7 +261,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 		 zmom_added_flux,
 		 E_added_flux,
 		 mass_lost, xmom_lost, ymom_lost, zmom_lost,
-		 eden_lost, xang_lost, yang_lost, zang_lost); */
+		 eden_lost, xang_lost, yang_lost, zang_lost); // */
 #ifdef GPU 
 //         }); 
 #endif

@@ -50,15 +50,15 @@ end subroutine pc_transport_close
 ! ::: ----------------------------------------------------------------
 ! :::
 
-subroutine pc_extern_init(name,namlen) bind(C, name="pc_extern_init")
+subroutine pc_extern_init(name_in,namlen) bind(C, name="pc_extern_init")
 
   ! initialize the external runtime parameters in
   ! extern_probin_module
 
-  integer :: namlen
-  integer :: name(namlen)
+  integer, intent(in) :: namlen
+  integer, intent(in) :: name_in(namlen)
   print*, "Before Runtime Init!" 
-  call runtime_init(name,namlen)
+  call runtime_init(name_in,namlen)
   print*, "After Runtime init"
 end subroutine pc_extern_init
 
@@ -391,7 +391,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   integer :: ioproc
 
 !  call parallel_initialize()
-
+#ifndef AMREX_USE_CUDA
   !---------------------------------------------------------------------
   ! conserved state components
   !---------------------------------------------------------------------
@@ -488,6 +488,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   QDPDR   = 4
   QDPDE   = 5
   QRSPEC   = 6
+#endif
   ! easy indexing for the passively advected quantities.  This
   ! lets us loop over all groups (advected, species, aux)
   ! in a single loop.
@@ -503,29 +504,37 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
      upass_map(2) = UMZ
      qpass_map(2) = QW
 
+#ifndef AMREX_USE_CUDA
      npassive = 2
+#endif
 
   else if (dm == 2) then
      upass_map(1) = UMZ
      qpass_map(1) = QW
-
+#ifndef AMREX_USE_CUDA
      npassive = 1
+#endif
   else
+#ifndef AMREX_USE_CUDA
      npassive = 0
+#endif
   endif
 
   do iadv = 1, nadv
      upass_map(npassive + iadv) = UFA + iadv - 1
      qpass_map(npassive + iadv) = QFA + iadv - 1
   enddo
+#ifndef AMREX_USE_CUDA
   npassive = npassive + nadv
-
+#endif
   if (QFS > -1) then
      do ispec = 1, nspec+naux
         upass_map(npassive + ispec) = UFS + ispec - 1
         qpass_map(npassive + ispec) = QFS + ispec - 1
      enddo
+#ifndef AMREX_USE_CUDA
      npassive = npassive + nspec + naux
+#endif
   endif
 
   !---------------------------------------------------------------------
@@ -590,7 +599,7 @@ end subroutine clear_method_params
 
 
 subroutine init_godunov_indices() bind(C, name="init_godunov_indices")
-
+#ifndef AMREX_USE_CUDA
   use meth_params_module, only : GDRHO, GDU, GDV, GDW, GDPRES, GDGAME, NGDNV, &
        QU, QV, QW
 
@@ -608,7 +617,7 @@ subroutine init_godunov_indices() bind(C, name="init_godunov_indices")
   if ((QU /= GDU) .or. (QV /= GDV) .or. (QW /= GDW)) then
      call bl_error("ERROR: velocity components for godunov and primitive state are not aligned")
   endif
-
+#endif
 end subroutine init_godunov_indices
 
 ! :::
