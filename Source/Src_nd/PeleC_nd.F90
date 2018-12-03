@@ -384,7 +384,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
                          pfld_p, pfld_ys
   integer, intent(in) :: numadv
   double precision, intent(in) :: diffuse_cutoff_density_in
-  integer :: iadv, ispec
+  integer :: iadv, ispec, countt
 
   integer :: QLAST
 
@@ -506,6 +506,8 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
 
 #ifndef AMREX_USE_CUDA
      npassive = 2
+#else 
+     countt   = 2
 #endif
 
   else if (dm == 2) then
@@ -513,10 +515,14 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
      qpass_map(1) = QW
 #ifndef AMREX_USE_CUDA
      npassive = 1
+#else 
+     countt = 1
 #endif
   else
 #ifndef AMREX_USE_CUDA
      npassive = 0
+#else
+     countt = 1
 #endif
   endif
 
@@ -526,11 +532,18 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   enddo
 #ifndef AMREX_USE_CUDA
   npassive = npassive + nadv
+#else 
+  countt = countt + nadv 
 #endif
   if (QFS > -1) then
      do ispec = 1, nspec+naux
+#ifndef AMREX_USE_CUDA
         upass_map(npassive + ispec) = UFS + ispec - 1
         qpass_map(npassive + ispec) = QFS + ispec - 1
+#else 
+        upass_map(countt + ispec) = UFS + ispec - 1
+        qpass_map(countt + ispec) = QFS + ispec - 1
+#endif
      enddo
 #ifndef AMREX_USE_CUDA
      npassive = npassive + nspec + naux

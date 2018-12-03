@@ -132,9 +132,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
 #ifdef AMREX_USE_CUDA
-// Off load to GPU
-        amrex::Print() << "BEFORE CTOPRIM" << std::endl;
-         
         AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
     	    ctoprim(BL_TO_FORTRAN_BOX(tbx),
     		    BL_TO_FORTRAN_ANYD(*statein),
@@ -142,19 +139,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     		    BL_TO_FORTRAN_ANYD(*qaux));// */
             });
         Gpu::Device::streamSynchronize();
-        amrex::Print()<<"AFTER CTOPRIM" << std::endl;
-        auto len = length(bx); 
-        auto loq = lbound(bx);
-        auto qfab = (*q).view(loq);
-        auto ufab = (*statein).view(loq);
-        for(int k = 0; k < len.z ; ++k){
-            for(int j = 0; j < len.y ; ++j){
-                for(int i = 0; i < len.x; ++i){
-                        amrex::Print()<< "QTEMP =" << qfab(i,j,k,7) << '\t' ; 
-                        amrex::Print()<< "UTEMP =" << ufab(i,j,k,6) << '\t' ; 
-                   amrex::Print()<< std::endl;
-                }}}
-        std::cin.get(); 
 #else
     	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
     		    statein->dataPtr(), ARLIM_3D(statein->loVect()), ARLIM_3D(statein->hiVect()),
@@ -209,7 +193,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
 	    }
 #endif
-        std::cout << " Src CTOPRIM " << std::endl;
 	    srctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
 		      q->dataPtr(), ARLIM_3D(q->loVect()), ARLIM_3D(q->hiVect()),
 		      qaux->dataPtr(), ARLIM_3D(qaux->loVect()), ARLIM_3D(qaux->hiVect()),
@@ -296,7 +279,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #else
     VisMF::Write(Qout, "Q_cpu"); 
 #endif
-    std::cin.get(); 
     } // end of OMP parallel region
 
     hydro_source.FillBoundary(geom.periodicity());

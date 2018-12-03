@@ -475,7 +475,7 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
              eos_state % massfrac = q(i,j,k,QFS:QFS+nspec_d-1)
              eos_state % aux      = q(i,j,k,QFX:QFX+naux_d-1)
 #ifdef AMREX_USE_CUDA
-!             call eos_re_d(eos_state)
+             call eos_re_d(eos_state)
 #else
              call eos_re(eos_state) 
 #endif
@@ -484,7 +484,7 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
 ! The PelePhysics 
              q(i,j,k,QTEMP)  = eos_state % T
              q(i,j,k,QREINT) = eos_state % e * q(i,j,k,QRHO)
-             q(i,j,k,QPRES)  = 1.d6 ! eos_state % p
+             q(i,j,k,QPRES)  = eos_state % p
              q(i,j,k,QGAME)  = q(i,j,k,QPRES) / q(i,j,k,QREINT) + ONE
 
              qaux(i,j,k,QDPDR)  = eos_state % dpdr_e

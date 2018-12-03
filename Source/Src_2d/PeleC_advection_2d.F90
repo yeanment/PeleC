@@ -221,6 +221,7 @@ contains
     ! Construct p div{U} -- this will be used as a source to the internal
     ! energy update.  Note we construct this using the interface states
     ! returned from the Riemann solver.
+
     do j = ilo2,ihi2
        do i = ilo1,ihi1
           pdivu(i,j) = HALF*( &
