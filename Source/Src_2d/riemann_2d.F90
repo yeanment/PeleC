@@ -11,8 +11,7 @@ module riemann_module
                                  NGDNV, small_dens, small_pres, small_temp, &
                                  cg_maxiter, cg_tol, cg_blend, &
                                  npassive, upass_map, qpass_map, &
-                                 riemann_solver, ppm_temp_fix, hybrid_riemann, &
-                                 allow_negative_energy
+                                 riemann_solver, ppm_temp_fix, hybrid_riemann
 
   implicit none
 

@@ -116,16 +116,10 @@ module meth_params_module
   integer         , save :: transverse_use_eos
   integer         , save :: transverse_reset_density
   integer         , save :: transverse_reset_rhoe
-  integer         , save :: dual_energy_update_E_from_e
-  double precision, save :: dual_energy_eta1
-  double precision, save :: dual_energy_eta2
-  double precision, save :: dual_energy_eta3
   integer         , save :: use_pslope
   integer         , save :: fix_mass_flux
   integer         , save :: limit_fluxes_on_small_dens
   integer         , save :: density_reset_method
-  integer         , save :: allow_negative_energy
-  integer         , save :: allow_small_energy
   integer         , save :: first_order_hydro
   character (len=128), save :: xl_ext_bc_type
   character (len=128), save :: xr_ext_bc_type
@@ -158,10 +152,8 @@ module meth_params_module
   !$acc create(plm_iorder, hybrid_riemann, riemann_solver) &
   !$acc create(cg_maxiter, cg_tol, cg_blend) &
   !$acc create(use_flattening, transverse_use_eos, transverse_reset_density) &
-  !$acc create(transverse_reset_rhoe, dual_energy_update_E_from_e, dual_energy_eta1) &
-  !$acc create(dual_energy_eta2, dual_energy_eta3, use_pslope) &
-  !$acc create(fix_mass_flux, limit_fluxes_on_small_dens, density_reset_method) &
-  !$acc create(allow_negative_energy, allow_small_energy, first_order_hydro) &
+  !$acc create(transverse_reset_rhoe, use_pslope, fix_mass_flux) &
+  !$acc create(limit_fluxes_on_small_dens, density_reset_method, first_order_hydro) &
   !$acc create(do_mms, cfl, dtnuc_e) &
   !$acc create(dtnuc_X, dtnuc_mode, dxnuc) &
   !$acc create(do_react, react_T_min, react_T_max) &
@@ -212,16 +204,10 @@ contains
     transverse_use_eos = 0;
     transverse_reset_density = 1;
     transverse_reset_rhoe = 0;
-    dual_energy_update_E_from_e = 1;
-    dual_energy_eta1 = 1.0d0;
-    dual_energy_eta2 = 1.0d-4;
-    dual_energy_eta3 = 1.0d0;
     use_pslope = 1;
     fix_mass_flux = 0;
     limit_fluxes_on_small_dens = 0;
     density_reset_method = 1;
-    allow_negative_energy = 1;
-    allow_small_energy = 1;
     first_order_hydro = 0;
     xl_ext_bc_type = "";
     xr_ext_bc_type = "";
@@ -272,16 +258,10 @@ contains
     call pp%query("transverse_use_eos", transverse_use_eos)
     call pp%query("transverse_reset_density", transverse_reset_density)
     call pp%query("transverse_reset_rhoe", transverse_reset_rhoe)
-    call pp%query("dual_energy_update_E_from_e", dual_energy_update_E_from_e)
-    call pp%query("dual_energy_eta1", dual_energy_eta1)
-    call pp%query("dual_energy_eta2", dual_energy_eta2)
-    call pp%query("dual_energy_eta3", dual_energy_eta3)
     call pp%query("use_pslope", use_pslope)
     call pp%query("fix_mass_flux", fix_mass_flux)
     call pp%query("limit_fluxes_on_small_dens", limit_fluxes_on_small_dens)
     call pp%query("density_reset_method", density_reset_method)
-    call pp%query("allow_negative_energy", allow_negative_energy)
-    call pp%query("allow_small_energy", allow_small_energy)
     call pp%query("first_order_hydro", first_order_hydro)
     call pp%query("xl_ext_bc_type", xl_ext_bc_type)
     call pp%query("xr_ext_bc_type", xr_ext_bc_type)
@@ -314,10 +294,8 @@ contains
     !$acc device(plm_iorder, hybrid_riemann, riemann_solver) &
     !$acc device(cg_maxiter, cg_tol, cg_blend) &
     !$acc device(use_flattening, transverse_use_eos, transverse_reset_density) &
-    !$acc device(transverse_reset_rhoe, dual_energy_update_E_from_e, dual_energy_eta1) &
-    !$acc device(dual_energy_eta2, dual_energy_eta3, use_pslope) &
-    !$acc device(fix_mass_flux, limit_fluxes_on_small_dens, density_reset_method) &
-    !$acc device(allow_negative_energy, allow_small_energy, first_order_hydro) &
+    !$acc device(transverse_reset_rhoe, use_pslope, fix_mass_flux) &
+    !$acc device(limit_fluxes_on_small_dens, density_reset_method, first_order_hydro) &
     !$acc device(do_mms, cfl, dtnuc_e) &
     !$acc device(dtnuc_X, dtnuc_mode, dxnuc) &
     !$acc device(do_react, react_T_min, react_T_max) &

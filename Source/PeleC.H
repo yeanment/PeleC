@@ -566,8 +566,6 @@ protected:
 
     void reflux ();
 
-    void normalize_species (amrex::MultiFab& S_new);
-
     void enforce_consistent_e (amrex::MultiFab& S);
 
     amrex::Real enforce_min_density (amrex::MultiFab& S_old, amrex::MultiFab& S_new);

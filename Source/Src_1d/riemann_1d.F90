@@ -11,8 +11,7 @@ module riemann_module
                                    npassive, upass_map, qpass_map, &
                                    cg_maxiter, cg_tol, cg_blend, &
                                    fix_mass_flux, &
-                                   riemann_solver, ppm_temp_fix, hybrid_riemann, &
-                                   allow_negative_energy
+                                   riemann_solver, ppm_temp_fix, hybrid_riemann
 
   implicit none
 

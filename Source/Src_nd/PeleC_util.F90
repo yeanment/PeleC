@@ -120,8 +120,7 @@ contains
        bind(C, name="reset_internal_e")
 
     use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UFS, UFX, &
-         UTEMP, small_temp, allow_negative_energy, allow_small_energy, &
-         dual_energy_eta2, dual_energy_update_E_from_e
+         UTEMP
     use bl_constants_module
 
     implicit none
@@ -163,7 +162,7 @@ contains
     use eos_type_module
     use eos_module
     use meth_params_module, only : NVAR, URHO, UEDEN, UEINT, UTEMP, &
-         UFS, UFX, allow_negative_energy, dual_energy_update_E_from_e
+         UFS, UFX, small_dens
     use bl_constants_module
 
     implicit none
@@ -178,6 +177,21 @@ contains
     type (eos_t) :: eos_state
 
     call build(eos_state)
+
+    do k = lo(3), hi(3)
+       do j = lo(2), hi(2)
+          do i = lo(1), hi(1)
+
+             if (state(i,j,k,URHO) .le. small_dens) then
+                print *, '  '
+                print *, '>>> Error: PeleC_util.F90::compute_temp ',i,j,k
+                print *, '>>> ... density',state(i,j,k,URHO),'below small_dens',small_dens
+                print *, '  '
+                call bl_error('Error:: PeleC_util.F90::compute_temp')
+             endif
+          enddo
+       enddo
+    enddo
 
     do k = lo(3), hi(3)
        do j = lo(2), hi(2)
@@ -208,7 +222,7 @@ contains
                                       bind(C, name="pc_check_initial_species")
 
     use chemistry_module, only : nspecies
-    use meth_params_module, only : NVAR, URHO, UFS
+    use meth_params_module, only : NVAR, URHO, UFS, small_dens
     use bl_constants_module
 
     implicit none
@@ -229,7 +243,7 @@ contains
 
              if (abs(state(i,j,k,URHO)-spec_sum) .gt. 1.d-8 * state(i,j,k,URHO)) then
 
-                print *,'Sum of (rho X)_i vs rho at (i,j,k): ',i,j,k,spec_sum,state(i,j,k,URHO)
+                print *,'Sum of (rho Y)_i vs rho at (i,j,k): ',i,j,k,spec_sum,state(i,j,k,URHO)
                 call bl_error("Error:: Failed check of initial species summing to 1")
 
              end if
@@ -239,40 +253,6 @@ contains
     enddo
 
   end subroutine pc_check_initial_species
-
-
-
-  subroutine pc_normalize_species(u,u_lo,u_hi,lo,hi) bind(C, name="pc_normalize_species")
-
-    use chemistry_module, only : nspecies
-    use meth_params_module, only : NVAR, URHO, UFS
-    use bl_constants_module, only: ONE
-
-    implicit none
-
-    integer          :: lo(3), hi(3)
-    integer          :: u_lo(3), u_hi(3)
-    double precision :: u(u_lo(1):u_hi(1),u_lo(2):u_hi(2),u_lo(3):u_hi(3),NVAR)
-
-    ! Local variables
-    integer          :: i, j, k
-    double precision :: massfrac(nspecies)
-
-    do k = lo(3), hi(3)
-       do j = lo(2), hi(2)
-          do i = lo(1), hi(1)
-
-             massfrac = u(i,j,k,UFS:UFS+nspecies-1)
-
-             massfrac = u(i,j,k,URHO) * (massfrac / sum(massfrac))
-
-             u(i,j,k,UFS:UFS+nspecies-1) = massfrac
-
-          enddo
-       enddo
-    enddo
-
-  end subroutine pc_normalize_species
 
 
 
