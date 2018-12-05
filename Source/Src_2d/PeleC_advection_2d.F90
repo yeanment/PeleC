@@ -151,7 +151,6 @@ contains
                       qaux(:,:,QGAMC),qd_l1,qd_l2,qd_h1,qd_h2, &
                       ilo1,ilo2,ihi1,ihi2,dx,dy,dt)
     end if
-
     ! Solve the Riemann problem in the x-direction using these first
     ! guesses for the x-interface states.  This produces the flux fx
     call cmpflx(qxm, qxp, ilo1-1, ilo2-1, ihi1+2, ihi2+2, &
@@ -171,7 +170,6 @@ contains
                 bcMask, &
                 shk, ilo1-1, ilo2-1, ihi1+1, ihi2+1, &
                 2, ilo1-1, ihi1+1, ilo2, ihi2, domlo, domhi)
-
     ! Correct the x-interface states (qxm, qxp) by adding the
     ! transverse flux difference in the y-direction to the x-interface
     ! states.  This results in the new x-interface states qm and qp
@@ -182,7 +180,7 @@ contains
                 srcQ, src_l1, src_l2, src_h1, src_h2, &
                 hdt, hdtdy, &
                 ilo1-1, ihi1+1, ilo2, ihi2)
-
+   
     ! Solve the final Riemann problem across the x-interfaces with the
     ! full unsplit states.  The resulting flux through the x-interfaces
     ! is flux1
@@ -193,7 +191,6 @@ contains
                 bcMask, &
                 shk, ilo1-1, ilo2-1, ihi1+1, ihi2+1, &
                 1, ilo1, ihi1, ilo2, ihi2, domlo, domhi)
-
     ! Correct the y-interface states (qym, qyp) by adding the
     ! transverse flux difference in the x-direction to the y-interface
     ! states.  This results in the new y-interface states qm and qp
@@ -217,11 +214,9 @@ contains
                 bcMask, &
                 shk, ilo1-1, ilo2-1, ihi1+1, ihi2+1, &
                 2, ilo1, ihi1, ilo2, ihi2, domlo, domhi)
-
     ! Construct p div{U} -- this will be used as a source to the internal
     ! energy update.  Note we construct this using the interface states
     ! returned from the Riemann solver.
-
     do j = ilo2,ihi2
        do i = ilo1,ihi1
           pdivu(i,j) = HALF*( &
@@ -330,7 +325,6 @@ contains
              do i = lo(1), hi(1)
                 div1 = HALF*(div(i,j) + div(i+1,j))
                 div1 = difmag*min(ZERO,div1)
-
                 flux2(i,j,n) = flux2(i,j,n) + &
                      dy*div1*(uin(i,j,n) - uin(i,j-1,n))
              enddo
@@ -386,7 +380,13 @@ contains
 
              update(i,j,n) = update(i,j,n) + ( flux1(i,j,n) - flux1(i+1,j,n) + &
                                                flux2(i,j,n) - flux2(i,j+1,n) ) / vol(i,j)
-
+             if(n.eq. URHO) then
+               print*, i, j, "source for rho = "
+               print*, update(i,j,n) 
+               print*, "fluxes = ", flux1(i,j,n), flux1(i+1,j,n)
+               print*, flux2(i,j,n), flux2(i,j+1,n) 
+               print*, "volume", vol(i,j)
+             endif
              if (n .eq. UEINT) then
 
                 ! Add p div(u) source term to (rho e)
@@ -398,7 +398,6 @@ contains
           enddo
        enddo
     enddo
-
     ! Add gradp term to momentum equation -- only for axisymmetric
     ! coords (and only for the radial flux).
 

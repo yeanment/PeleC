@@ -47,7 +47,8 @@ PeleC::fill_forcing_source (Real time, Real dt,
 {
   const Real* dx = geom.CellSize();
   const Real* prob_lo = geom.ProbLo();
-
+    amrex::Print()<<"In fill forcing source!"<<std::endl;
+    return; 
 #ifdef PELE_USE_EB
   auto const& fact = dynamic_cast<EBFArrayBoxFactory const&>(state_old.Factory());
   auto const& flags = fact.getMultiEBCellFlagFab();

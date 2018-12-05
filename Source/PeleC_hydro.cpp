@@ -24,15 +24,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     }
 
     BL_ASSERT(S.nGrow() == NUM_GROW);
-    MultiFab Qout(S.boxArray(), S.DistributionMap(), QVAR, 1); 
-    Qout.setVal(0.0);
     sources_for_hydro.setVal(0.0);
 
     int ng = 0; // TODO: This is currently the largest ngrow of the source data...maybe this needs fixing?
     for (int n = 0; n < src_list.size(); ++n)
     {
       MultiFab::Saxpy(sources_for_hydro,0.5,*new_sources[src_list[n]],0,0,NUM_STATE,ng);
-      MultiFab::Saxpy(sources_for_hydro,0.5,*old_sources[src_list[n]],0,0,NUM_STATE,ng);
+//      MultiFab::Saxpy(sources_for_hydro,0.5,*old_sources[src_list[n]],0,0,NUM_STATE,ng);
     }
 #ifdef REACTIONS
     // Add I_R terms to advective forcing
@@ -104,7 +102,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	{
 	    const Box& bx    = mfi.tilebox();
 	    const Box& qbx = amrex::grow(bx, NUM_GROW);
-        FArrayBox* qout = &(Qout[mfi]); 
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
 	    const FArrayBox *statein  = &(S[mfi]);
@@ -146,9 +143,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     		    qaux->dataPtr(), ARLIM_3D(qaux->loVect()), ARLIM_3D(qaux->hiVect()));
 
 #endif 
-          AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx,{ 
-            qout->copy(*q);
-          });
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
             //
@@ -274,15 +268,16 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
             }
 	} // MFIter loop
     std::cout<< "END OF MFI" << std::endl;
-#ifdef AMREX_USE_CUDA 
-    VisMF::Write(Qout, "Q_cuda"); 
-#else
-    VisMF::Write(Qout, "Q_cpu"); 
-#endif
     } // end of OMP parallel region
 
     hydro_source.FillBoundary(geom.periodicity());
-  
+#ifdef AMREX_USE_CUDA
+    VisMF::Write(hydro_source, "Hydro_source_cuda"); 
+#else
+    VisMF::Write(hydro_source, "Hydro_source_cpu");
+#endif
+    amrex::Print()<<"Hydro_source written!"<<std::endl;
+    std::cin.get(); 
     BL_PROFILE_VAR_STOP(PC_UMDRV);
 
     // Flush Fortran output

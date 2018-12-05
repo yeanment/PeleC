@@ -119,7 +119,7 @@ PeleC::do_mol_advance(Real time,
     MultiFab::Saxpy(U_new, dt, I_R, NumSpec,Eden,      1,       0);
   }
 #endif
-
+  amrex::Print()<<"Compute Temp 1! " << std::endl;
   computeTemp(U_new,0);
 
 
@@ -155,7 +155,7 @@ PeleC::do_mol_advance(Real time,
     react_state(time, dt, false, &S);  // false = not react_init
   }
 #endif
-
+  amrex::Print()<<"Compute Temp 2!"<<std::endl;
   computeTemp(U_new,0);
 
 
@@ -493,7 +493,6 @@ PeleC::do_sdc_iteration (Real time,
 #else
   construct_Snew(S_new, S_old, dt);
 #endif
-
 
   computeTemp(S_new, ng_src);
 

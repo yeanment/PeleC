@@ -91,7 +91,6 @@ subroutine pc_umdrv(is_finest_level, time, &
   integer :: q_lo_3D(3), q_hi_3D(3)
   integer :: uin_lo_3D(3), uin_hi_3D(3)
   double precision :: dx_3D(3)
-
   uin_lo  = [uin_l1, uin_l2]
   uin_hi  = [uin_h1, uin_h2]
 

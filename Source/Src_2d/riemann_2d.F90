@@ -892,7 +892,7 @@ contains
           do ipassive = 1, npassive
              n  = upass_map(ipassive)
              nqp = qpass_map(ipassive)
-
+             
              if (ustar .gt. ZERO) then
                 uflx(i,j,n) = uflx(i,j,URHO)*ql(i,j,nqp)
              else if (ustar .lt. ZERO) then
@@ -905,7 +905,6 @@ contains
 
        enddo
     enddo
-
     deallocate(pstar_hist_extra)
     deallocate(pstar_hist)
 

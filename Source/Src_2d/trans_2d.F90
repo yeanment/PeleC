@@ -111,7 +111,6 @@ contains
           enddo
        enddo
     enddo
-
     ! hydro variables
     do j = jlo, jhi
        do i = ilo, ihi

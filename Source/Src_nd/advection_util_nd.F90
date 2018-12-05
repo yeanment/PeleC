@@ -554,7 +554,11 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
           enddo
        enddo
     enddo
-
+    print*, "SrcQ rhoeint and components" 
+    print*, srcQ(0,38,0,QREINT), src(0,38,0,UEDEN), q(0,38,0,QU)
+    print*, src(0,38,0,UMX), q(0,38,0,QU), src(0,38,0,UMY) 
+    print*, srcQ(0,38,0,QW), src(0,38,0,UMZ), srcQ(0,38,0,URHO) 
+    stop
     do ipassive = 1, npassive
        n = upass_map(ipassive)
        nq = qpass_map(ipassive)
@@ -569,7 +573,9 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
        enddo
 
     enddo
-
+    print*, "In srctoprim" 
+    print*, srcQ(0,38,0,:)
+    stop
   end subroutine srctoprim
 
 
