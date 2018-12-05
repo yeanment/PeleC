@@ -88,7 +88,14 @@ extern "C"
 	           const amrex::Real* u, const int* u_lo, const int* u_hi,
 	           const amrex::Real* q, const int* q_lo, const int* q_hi,
                const amrex::Real* qaux, const int* qa_lo, const int* qa_hi);
-
+//TODO Eliminate the need for this one!
+#ifdef AMREX_USE_CUDA
+  AMREX_GPU_HOST
+  void ctoprim_h(const int* lo, const int* hi,
+	           const amrex::Real* u, const int* u_lo, const int* u_hi,
+	           const amrex::Real* q, const int* q_lo, const int* q_hi,
+               const amrex::Real* qaux, const int* qa_lo, const int* qa_hi);
+#endif
   void srctoprim(const int* lo,   const int* hi,
 		 const amrex::Real* q,   const int* q_lo,   const int* q_hi,
 		 const amrex::Real* qaux, const int* qa_lo, const int* qa_hi,

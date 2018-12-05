@@ -25,7 +25,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
     BL_ASSERT(S.nGrow() == NUM_GROW);
     sources_for_hydro.setVal(0.0);
-        
     int ng = 0; // TODO: This is currently the largest ngrow of the source data...maybe this needs fixing?
     for (int n = 0; n < src_list.size(); ++n)
     {

@@ -380,19 +380,11 @@ contains
 
              update(i,j,n) = update(i,j,n) + ( flux1(i,j,n) - flux1(i+1,j,n) + &
                                                flux2(i,j,n) - flux2(i,j+1,n) ) / vol(i,j)
-             if(n.eq. URHO) then
-               print*, i, j, "source for rho = "
-               print*, update(i,j,n) 
-               print*, "fluxes = ", flux1(i,j,n), flux1(i+1,j,n)
-               print*, flux2(i,j,n), flux2(i,j+1,n) 
-               print*, "volume", vol(i,j)
-             endif
              if (n .eq. UEINT) then
 
                 ! Add p div(u) source term to (rho e)
 
                 update(i,j,n) = update(i,j,n) - pdivu(i,j)
-
              endif
 
           enddo

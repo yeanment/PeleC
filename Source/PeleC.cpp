@@ -718,6 +718,7 @@ PeleC::initData ()
     pc_check_initial_species(ARLIM_3D(lo), ARLIM_3D(hi), BL_TO_FORTRAN_3D(S_new[mfi]));
   }
 
+   
   enforce_consistent_e(S_new);
 
   //computeTemp(S_new,0);

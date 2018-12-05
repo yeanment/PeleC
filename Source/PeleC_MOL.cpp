@@ -161,7 +161,13 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
       {
-#ifndef AMREX_USE_CUDA
+#ifdef AMREX_USE_CUDA
+        BL_PROFILE("PeleC::ctoprim call");
+        ctoprim_h(ARLIM_3D(gbox.loVect()), ARLIM_3D(gbox.hiVect()),
+                Sfab.dataPtr(), ARLIM_3D(Sfab.loVect()), ARLIM_3D(Sfab.hiVect()),
+                Qfab.dataPtr(), ARLIM_3D(Qfab.loVect()), ARLIM_3D(Qfab.hiVect()),
+                Qaux.dataPtr(), ARLIM_3D(Qaux.loVect()), ARLIM_3D(Qaux.hiVect()));
+#else
         BL_PROFILE("PeleC::ctoprim call");
         ctoprim(ARLIM_3D(gbox.loVect()), ARLIM_3D(gbox.hiVect()),
                 Sfab.dataPtr(), ARLIM_3D(Sfab.loVect()), ARLIM_3D(Sfab.hiVect()),
