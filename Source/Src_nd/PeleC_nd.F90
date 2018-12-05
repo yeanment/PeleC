@@ -57,9 +57,7 @@ subroutine pc_extern_init(name_in,namlen) bind(C, name="pc_extern_init")
 
   integer, intent(in) :: namlen
   integer, intent(in) :: name_in(namlen)
-  print*, "Before Runtime Init!" 
   call runtime_init(name_in,namlen)
-  print*, "After Runtime init"
 end subroutine pc_extern_init
 
 ! :::

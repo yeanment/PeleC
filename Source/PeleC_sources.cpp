@@ -7,7 +7,6 @@ void
 PeleC::construct_old_source(int src, Real time, Real dt, int amr_iteration, int amr_ncycle, int sub_iteration, int sub_ncycle)
 {
     BL_ASSERT(src >= 0 && src < num_src);
-
     switch(src) {
 
     case ext_src:
@@ -47,7 +46,6 @@ PeleC::construct_new_source(int src, Real time, Real dt, int amr_iteration, int 
         construct_new_mms_source(time);
         break;
 #endif
-
     } // end switch
 }
 
