@@ -13,12 +13,12 @@ contains
                                    time,delta,dt,verbose) bind(C, name="impose_NSCBC_mixed_BC")
     
  
-    use bl_error_module
+    use amrex_error_module
     use chemistry_module, only : nspecies
     use eos_module
     use fundamental_constants_module, only: k_B, n_A
 
-    use bl_constants_module
+    use amrex_constants_module
     use prob_params_module, only : physbc_lo, physbc_hi, problo, probhi, &
                                    Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall
     
@@ -209,7 +209,7 @@ contains
            ((bcMask(i+1,j,1)  == SlipWall) .and. (bcMask(i,j+1,1) == Outflow))) then
 
    ! This is the case when the upper right corner is outflow(y)/wall(x)
-      call bl_error("NSCBC not implemented for upper right corner")
+      call amrex_error("NSCBC not implemented for upper right corner")
       
    elseif (((bcMask(i+1,j,1)  == SlipWall) .or. (bcMask(i+1,j,1)  == NoSlipWall)) .and.  & 
            ((bcMask(i,j+1,1) == SlipWall) .or. (bcMask(i,j+1,1) == NoSlipWall))) then
@@ -217,7 +217,7 @@ contains
      ! Values long Y will be computed by mirror functions below
 
    else
-     call bl_error("NSCBC not implemented for upper right corner")
+     call amrex_error("NSCBC not implemented for upper right corner")
    endif
 
    if (q(i,j,QV) == 0.0d0) then
@@ -526,7 +526,7 @@ contains
            ((bcMask(i+1,j,1) == SlipWall) .and. (bcMask(i,j-1,1) == Outflow))) then
               
    ! This is the case when the bottom right corner is outflow(y)/wall(x)
-     call bl_error("NSCBC not implemented for bottom right corner")
+     call amrex_error("NSCBC not implemented for bottom right corner")
 
    elseif (((bcMask(i+1,j,1) == SlipWall) .or. (bcMask(i+1,j,1) == NoSlipWall)) .and.  & 
            ((bcMask(i,j-1,1) == SlipWall) .or. (bcMask(i,j-1,1) == NoSlipWall))) then
@@ -534,7 +534,7 @@ contains
       ! Values long Y will be computed by mirror functions below
 
    else
-     call bl_error("NSCBC not implemented for bottom right corner")
+     call amrex_error("NSCBC not implemented for bottom right corner")
    endif  
      
    if (q(i,j,QV) == 0.0d0) then
@@ -886,7 +886,7 @@ contains
        ! Values long Y will be computed by mirror functions below
  
    else
-     call bl_error("NSCBC not implemented for upper left corner")
+     call amrex_error("NSCBC not implemented for upper left corner")
    endif 
 
    if (q(i,j,QV) == 0.0d0) then
@@ -1240,7 +1240,7 @@ contains
      ! Values long Y will be computed by mirror functions below
 
    else
-     call bl_error("NSCBC not implemented for bottom left corner")
+     call amrex_error("NSCBC not implemented for bottom left corner")
    endif 
 
    if (q(i,j,QV) == 0.0d0) then
@@ -1520,7 +1520,7 @@ contains
        L4 = (Kout*(q(i,j,QPRES) - INLET_PRESSURE)) - ((1.0d0 - beta)*T4)
        
      else
-       call bl_error("Error:: This BC is not yet implemented for lo_x in characteristic form")
+       call amrex_error("Error:: This BC is not yet implemented for lo_x in characteristic form")
      endif
  
      if (q(i,j,QU) == 0.0d0) then
@@ -1724,7 +1724,7 @@ contains
        ! Values long Y will be computed by mirror functions below
        
      else
-       call bl_error("Error:: This BC is not yet implemented for hi_x in characteristic form")
+       call amrex_error("Error:: This BC is not yet implemented for hi_x in characteristic form")
      endif
    
      if (q(i,j,QU) == 0.0d0) then
@@ -1923,7 +1923,7 @@ endif
        L4 = (Kout*(q(i,j,QPRES) - INLET_PRESSURE)) - ((1.0d0 - beta)*T4)
        
      else
-       call bl_error("Error:: This BC is not yet implemented for lo_y in characteristic form")
+       call amrex_error("Error:: This BC is not yet implemented for lo_y in characteristic form")
      endif
 
      if (q(i,j,QV) == 0.0d0) then
@@ -2124,7 +2124,7 @@ endif
        L4 = (q(i,j,QV)+qaux(i,j,QC))* (dpdy + (q(i,j,QRHO)*qaux(i,j,QC))*dvdy)
         
      else
-       call bl_error("Error:: This BC is not yet implemented for hi_y in characteristic form")
+       call amrex_error("Error:: This BC is not yet implemented for hi_y in characteristic form")
      endif
     
      if (q(i,j,QV) == 0.0d0) then
@@ -2251,12 +2251,12 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
                                    time,delta,dt,verbose) bind(C, name="impose_NSCBC_with_perio")
     
  
-    use bl_error_module
+    use amrex_error_module
     use chemistry_module, only : nspecies
     use eos_module
     use fundamental_constants_module, only: k_B, n_A
 
-    use bl_constants_module
+    use amrex_constants_module
     use prob_params_module, only : physbc_lo, physbc_hi, problo, probhi, &
                                    Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall
     
@@ -2409,7 +2409,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
        L4 = (Kout*(q(i,j,QPRES) - INLET_PRESSURE)) - ((1.0d0 - beta)*T4)
        
      else
-       call bl_error("Error:: This BC is not yet implemented for lo_x in characteristic form")
+       call amrex_error("Error:: This BC is not yet implemented for lo_x in characteristic form")
      endif
  
      if (q(i,j,QU) == 0.0d0) then
@@ -2608,7 +2608,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
        ! Values long Y will be computed by mirror functions below
        
      else
-       call bl_error("Error:: This BC is not yet implemented for hi_x in characteristic form")
+       call amrex_error("Error:: This BC is not yet implemented for hi_x in characteristic form")
      endif
    
      if (q(i,j,QU) == 0.0d0) then
@@ -2800,7 +2800,7 @@ endif
        L4 = (Kout*(q(i,j,QPRES) - INLET_PRESSURE)) - ((1.0d0 - beta)*T4)
        
      else
-       call bl_error("Error:: This BC is not yet implemented for lo_y in characteristic form")
+       call amrex_error("Error:: This BC is not yet implemented for lo_y in characteristic form")
      endif
 
      if (q(i,j,QV) == 0.0d0) then
@@ -2993,7 +2993,7 @@ endif
        L4 = (q(i,j,QV)+qaux(i,j,QC))* (dpdy + (q(i,j,QRHO)*qaux(i,j,QC))*dvdy)
         
      else
-       call bl_error("Error:: This BC is not yet implemented for hi_y in characteristic form")
+       call amrex_error("Error:: This BC is not yet implemented for hi_y in characteristic form")
      endif
     
      if (q(i,j,QV) == 0.0d0) then
