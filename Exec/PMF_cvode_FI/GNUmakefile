@@ -1,12 +1,8 @@
-USE_EB = FALSE
-
 PRECISION  = DOUBLE
-
 PROFILE    = FALSE
+USE_EB     = FALSE
+DEBUG      = TRUE
 
-DEBUG      = FALSE
-
-DIM        = 1
 DIM        = 2
 
 COMP	   = gcc
@@ -22,10 +18,6 @@ USE_CUDA_CVODE = FALSE
 USE_SDC_FORTRAN = FALSE
 ifeq ($(USE_SDC_FORTRAN), TRUE)
     DEFINES  += -DUSE_SDC_F
-endif
-USE_PYJAC = FALSE
-ifeq ($(USE_PYJAC), TRUE)
-    DEFINES  += -DUSE_PYJAC
 endif
 USE_DVODE=TRUE
 
@@ -45,7 +37,10 @@ Reactions_dir := Fuego
 
 # This sets the model directory in $(PELE_PHYSICS_HOME)/Support/Fuego/Mechanism/Models
 # Chemistry_Model := Davis
-Chemistry_Model := LiDryer
+#Chemistry_Model := LiDryer
+#Chemistry_Model := drm19
+#Chemistry_Model = ERC_nheptane
+Chemistry_Model = dodecane_wang
 
 # This sets the transport directory in $(PELE_PHYSICS_HOME)/Transport
 Transport_dir := EGLib
@@ -54,4 +49,4 @@ Transport_dir := EGLib
 Bpack   := ./Make.package
 Blocs   := .
 
-include ../../Make.PeleC
+include ../Make.PeleC
