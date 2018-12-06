@@ -292,6 +292,7 @@ subroutine initialize_pmf(filename)
   integer :: n
   pmf_filename = filename
   call read_pmf()
+  print *, pmf_ncomp(), nspecies
   if (pmf_ncomp() .ne. nspecies + 3) then
      print *,'Number of dependent variables in file:',pmf_ncomp()
      print *,'Number expected:',nspecies+3
@@ -303,6 +304,7 @@ subroutine initialize_pmf(filename)
   if (pmf_names(3) .ne. "u")  stop 'pmf data file not compatible with pmf data reader, u must be third variable'
   do n=1,nspecies
      if (n .ne. get_species_index(pmf_names(4+n))) then
+        print *, pmf_names(4+n)
         stop 'pmf data file not compatible with current chemistry model, wrong species'
      endif
   enddo
