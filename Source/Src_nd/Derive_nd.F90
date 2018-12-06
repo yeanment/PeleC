@@ -9,13 +9,14 @@ contains
 ! All subroutines in this file must be threadsafe because they are called
 ! inside OpenMP parallel regions.
 
-  subroutine pc_dervel(vel,v_lo,v_hi,nv, &
+  subroutine pc_dervelx(vel,v_lo,v_hi,nv, &
                        dat,d_lo,d_hi,nc,lo,hi,domlo, &
                        domhi,delta,xlo,time,dt,bc,level,grid_no) &
-                       bind(C, name="pc_dervel")
+                       bind(C, name="pc_dervelx")
     !
     ! This routine will derive the velocity from the momentum.
     !
+    use meth_params_module, only : URHO, UMX
     implicit none
 
     integer          :: lo(3), hi(3)
@@ -33,21 +34,83 @@ contains
     do k = lo(3), hi(3)
        do j = lo(2), hi(2)
           do i = lo(1), hi(1)
-             vel(i,j,k,1) = dat(i,j,k,2) / dat(i,j,k,1)
+             vel(i,j,k,1) = dat(i,j,k,UMX) / dat(i,j,k,URHO)
           end do
        end do
     end do
 
-  end subroutine pc_dervel
+  end subroutine pc_dervelx
 
+  subroutine pc_dervely(vel,v_lo,v_hi,nv, &
+                       dat,d_lo,d_hi,nc,lo,hi,domlo, &
+                       domhi,delta,xlo,time,dt,bc,level,grid_no) &
+                       bind(C, name="pc_dervely")
+    !
+    ! This routine will derive the velocity from the momentum.
+    !
+    use meth_params_module, only : URHO, UMY
+    implicit none
 
+    integer          :: lo(3), hi(3)
+    integer          :: v_lo(3), v_hi(3), nv
+    integer          :: d_lo(3), d_hi(3), nc
+    integer          :: domlo(3), domhi(3)
+    integer          :: bc(3,2,nc)
+    double precision :: delta(3), xlo(3), time, dt
+    double precision :: vel(v_lo(1):v_hi(1),v_lo(2):v_hi(2),v_lo(3):v_hi(3),nv)
+    double precision :: dat(d_lo(1):d_hi(1),d_lo(2):d_hi(2),d_lo(3):d_hi(3),nc)
+    integer          :: level, grid_no
+
+    integer          :: i, j, k
+
+    do k = lo(3), hi(3)
+       do j = lo(2), hi(2)
+          do i = lo(1), hi(1)
+             vel(i,j,k,1) = dat(i,j,k,UMY) / dat(i,j,k,URHO)
+          end do
+       end do
+    end do
+
+  end subroutine pc_dervely
+
+  subroutine pc_dervelz(vel,v_lo,v_hi,nv, &
+                       dat,d_lo,d_hi,nc,lo,hi,domlo, &
+                       domhi,delta,xlo,time,dt,bc,level,grid_no) &
+                       bind(C, name="pc_dervelz")
+    !
+    ! This routine will derive the velocity from the momentum.
+    !
+    use meth_params_module, only : URHO, UMZ
+    implicit none
+
+    integer          :: lo(3), hi(3)
+    integer          :: v_lo(3), v_hi(3), nv
+    integer          :: d_lo(3), d_hi(3), nc
+    integer          :: domlo(3), domhi(3)
+    integer          :: bc(3,2,nc)
+    double precision :: delta(3), xlo(3), time, dt
+    double precision :: vel(v_lo(1):v_hi(1),v_lo(2):v_hi(2),v_lo(3):v_hi(3),nv)
+    double precision :: dat(d_lo(1):d_hi(1),d_lo(2):d_hi(2),d_lo(3):d_hi(3),nc)
+    integer          :: level, grid_no
+
+    integer          :: i, j, k
+
+    do k = lo(3), hi(3)
+       do j = lo(2), hi(2)
+          do i = lo(1), hi(1)
+             vel(i,j,k,1) = dat(i,j,k,UMZ) / dat(i,j,k,URHO)
+          end do
+       end do
+    end do
+
+  end subroutine pc_dervelz
 
   subroutine pc_deruplusc(vel,v_lo,v_hi,nv, &
                           dat,d_lo,d_hi,nc,lo,hi,domlo, &
                           domhi,delta,xlo,time,dt,bc,level,grid_no) &
                           bind(C, name="pc_deruplusc")
 
-    use network, only : nspec, naux
+    use chemistry_module, only : nspecies, naux
     use eos_module
     use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
@@ -79,7 +142,7 @@ contains
              eos_state % e        = dat(i,j,k,UEINT) * rhoInv
              eos_state % T        = dat(i,j,k,UTEMP)
              eos_state % rho      = dat(i,j,k,URHO)
-             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = dat(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -101,7 +164,7 @@ contains
                            domhi,delta,xlo,time,dt,bc,level,grid_no) &
                            bind(C, name="pc_deruminusc")
 
-    use network, only : nspec, naux
+    use chemistry_module, only : nspecies, naux
     use eos_module
     use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
@@ -133,7 +196,7 @@ contains
              eos_state % e        = dat(i,j,k,UEINT) * rhoInv
              eos_state % T        = dat(i,j,k,UTEMP)
              eos_state % rho      = dat(i,j,k,URHO)
-             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = dat(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -267,7 +330,7 @@ contains
                         domhi,dx,xlo,time,dt,bc,level,grid_no) &
                         bind(C, name="pc_derpres")
 
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
@@ -298,7 +361,7 @@ contains
              eos_state % rho      = u(i,j,k,URHO)
              eos_state % T        = u(i,j,k,UTEMP)
              eos_state % e        = u(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -393,7 +456,7 @@ contains
                               domhi,dx,xlo,time,dt,bc,level,grid_no) &
                               bind(C, name="pc_dersoundspeed")
 
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
@@ -424,7 +487,7 @@ contains
              eos_state % rho      = u(i,j,k,URHO)
              eos_state % T        = u(i,j,k,UTEMP)
              eos_state % e        = u(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -445,7 +508,7 @@ contains
                               domhi,dx,xlo,time,dt,bc,level,grid_no) &
                               bind(C, name="pc_dermachnumber")
 
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use meth_params_module, only: URHO, UMX, UMZ, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
@@ -476,7 +539,7 @@ contains
              eos_state % rho      = u(i,j,k,URHO)
              eos_state % T        = u(i,j,k,UTEMP)
              eos_state % e        = u(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -497,7 +560,7 @@ contains
                            domhi,dx,xlo,time,dt,bc,level,grid_no) &
                            bind(C, name="pc_derentropy")
 
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
@@ -528,7 +591,7 @@ contains
              eos_state % rho      = u(i,j,k,URHO)
              eos_state % T        = u(i,j,k,UTEMP)
              eos_state % e        = u(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -551,7 +614,7 @@ contains
 
     use amrex_constants_module, only: ZERO, ONE
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use prob_params_module, only: dim
     use eos_module
 
@@ -592,7 +655,7 @@ contains
                 eos_state % rho      = u(i,j,k,URHO)
                 eos_state % T        = u(i,j,k,UTEMP)
                 eos_state % e        = eint
-                eos_state % massfrac = u(i,j,k,UFS:UFS+nspec-1) * rhoInv
+                eos_state % massfrac = u(i,j,k,UFS:UFS+nspecies-1) * rhoInv
                 eos_state % aux      = u(i,j,k,UFX:UFX+naux-1) * rhoInv
 
                 call eos_re(eos_state)
@@ -656,7 +719,7 @@ contains
     ! This routine derives the mole fractions of the species.
     !
     use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
-    use network, only: nspec, naux
+    use chemistry_module, only: nspecies, naux
     use eos_module
     use amrex_constants_module
     
@@ -688,7 +751,7 @@ contains
              eos_state % rho      = dat(i,j,k,URHO)
              eos_state % T        = dat(i,j,k,UTEMP)
              eos_state % e        = dat(i,j,k,UEINT) * rhoInv
-             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspec-1) * rhoInv
+             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspecies-1) * rhoInv
              eos_state % aux      = dat(i,j,k,UFX:UFX+naux-1) * rhoInv
           
              call eos_ytx(eos_state)
@@ -745,6 +808,7 @@ contains
 
     use amrex_constants_module
     use prob_params_module, only: dg
+    use meth_params_module, only : URHO, UMX, UMY, UMZ
 
     implicit none
 
@@ -776,9 +840,9 @@ contains
     do k = lo(3)-1*dg(3), hi(3)+1*dg(3)
        do j = lo(2)-1*dg(2), hi(2)+1*dg(2)
           do i = lo(1)-1*dg(1), hi(1)+1*dg(1)
-             ldat(i,j,k,2) = dat(i,j,k,2) / dat(i,j,k,1)
-             ldat(i,j,k,3) = dat(i,j,k,3) / dat(i,j,k,1)
-             ldat(i,j,k,4) = dat(i,j,k,4) / dat(i,j,k,1)
+             ldat(i,j,k,2) = dat(i,j,k,UMX) / dat(i,j,k,URHO)
+             ldat(i,j,k,3) = dat(i,j,k,UMY) / dat(i,j,k,URHO)
+             ldat(i,j,k,4) = dat(i,j,k,UMZ) / dat(i,j,k,URHO)
           end do
        end do
     end do

@@ -153,25 +153,6 @@ transverse_reset_density     int           1                  y
 # with a value constructed from the $(\rho e)$ evolution equation
 transverse_reset_rhoe        int           0                  y
 
-# Allow internal energy resets and temperature flooring to change the
-# total energy variable UEDEN in addition to the internal energy variable
-# UEINT.
-dual_energy_update_E_from_e  int           1                  y
-
-# Threshold value of (E - K) / E such that above eta1, the hydrodynamic
-# pressure is derived from E - K; otherwise, we use the internal energy
-# variable UEINT.
-dual_energy_eta1             Real          1.0e0              y
-
-# Threshold value of (E - K) / E such that above eta2, we update the
-# internal energy variable UEINT to match E - K. Below this, UEINT
-# remains unchanged.
-dual_energy_eta2             Real          1.0e-4             y
-
-# Threshold value of (E - K) / E such that above eta3, the temperature used
-# in the burning module is derived from E-K; otherwise, we use UEINT.
-dual_energy_eta3             Real          1.0e0              y
-
 # for the piecewise linear reconstruction, do we subtract off $(\rho g)$
 # from the pressure before limiting?
 use_pslope                   int           1                  y
@@ -186,13 +167,6 @@ limit_fluxes_on_small_dens   int           0                  y
 # 2 = Use average of all adjacent zones for all state variables
 # 3 = Reset to the original zone state before the hydro update
 density_reset_method         int           1                  y
-
-# Whether or not to allow internal energy to be less than zero
-allow_negative_energy        int           1                  y
-
-# Whether or not to allow the internal energy to be less than the
-# internal energy corresponding to small\_temp
-allow_small_energy           int           1                  y
 
 # should we update the state in between evaluations of the new-time source terms
 update_state_between_sources int           0
