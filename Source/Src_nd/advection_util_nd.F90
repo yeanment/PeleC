@@ -202,7 +202,7 @@ contains
   subroutine reset_to_small_state(old_state, new_state, idx, lo, hi, verbose)
 
     use amrex_constants_module, only: ZERO
-    use network, only: nspecies, naux
+    use chemistry_module, only: nspecies, naux
     use meth_params_module, only: NVAR, URHO, UMX, UMY, UMZ, UTEMP, UEINT, UEDEN, UFS, small_temp, small_dens, npassive, upass_map
     use eos_type_module
     use eos_module!, only: eos_rt
@@ -405,7 +405,7 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
                                    QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
                                    QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
                                    npassive, upass_map, qpass_map
-    use actual_network, only : nspec, naux
+    use chemistry_module, only : nspecies, naux
 
     use amrex_constants_module, only: ZERO, HALF, ONE
 !    use pelec_util_module, only: position
@@ -473,8 +473,8 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
              eos_state % T        = q(i,j,k,QTEMP )
              eos_state % rho      = q(i,j,k,QRHO  )
              eos_state % e        = q(i,j,k,QREINT)
-             eos_state % massfrac = q(i,j,k,QFS:QFS+nspecies_d-1)
-             eos_state % aux      = q(i,j,k,QFX:QFX+naux_d-1)
+             eos_state % massfrac = q(i,j,k,QFS:QFS+nspecies-1)
+             eos_state % aux      = q(i,j,k,QFX:QFX+naux-1)
 #ifdef AMREX_USE_CUDA
              call eos_re_d(eos_state)
 #else
