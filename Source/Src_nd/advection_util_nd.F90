@@ -401,7 +401,7 @@ AMREX_CUDA_FORT_HOST subroutine ctoprim_h(lo, hi, &
                                    QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
                                    QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
                                    npassive, upass_map, qpass_map
-    use actual_network, only : nspec, naux
+    use chemistry_module, only : nspecies, naux
 
     use amrex_constants_module, only: ZERO, HALF, ONE
 !    use pelec_util_module, only: position
@@ -422,7 +422,6 @@ AMREX_CUDA_FORT_HOST subroutine ctoprim_h(lo, hi, &
     integer            :: i, j, k
     integer            :: n, ipassive
     integer            :: nq
-    integer, parameter :: nspec_d = 9, naux_d = 1
     real(amrex_real)   :: kineng, rhoinv
     real(amrex_real)   :: vel(3)
 
@@ -469,8 +468,8 @@ AMREX_CUDA_FORT_HOST subroutine ctoprim_h(lo, hi, &
              eos_state % T        = q(i,j,k,QTEMP )
              eos_state % rho      = q(i,j,k,QRHO  )
              eos_state % e        = q(i,j,k,QREINT)
-             eos_state % massfrac = q(i,j,k,QFS:QFS+nspec_d-1)
-             eos_state % aux      = q(i,j,k,QFX:QFX+naux_d-1)
+             eos_state % massfrac = q(i,j,k,QFS:QFS+nspecies-1)
+             eos_state % aux      = q(i,j,k,QFX:QFX+naux-1)
              call eos_re(eos_state) 
 ! fills the eos_state struct for use 
 
