@@ -197,8 +197,6 @@ PeleC::variableCleanUp ()
   }
 #endif
 
-  close_network();
-
   clear_grid_info();
 
   clear_prob();
@@ -1399,36 +1397,6 @@ PeleC::avgDown ()
 }
 
 void
-PeleC::normalize_species (MultiFab& S)
-{
-  int ng = S.nGrow();
-
-#ifdef PELE_USE_EB
-  auto const& fact = dynamic_cast<EBFArrayBoxFactory const&>(S.Factory());
-  auto const& flags = fact.getMultiEBCellFlagFab();
-#endif
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-  for (MFIter mfi(S,true); mfi.isValid(); ++mfi)
-  {
-    const Box& bx = mfi.growntilebox(ng);
-
-#ifdef PELE_USE_EB
-    const auto& flag_fab = flags[mfi];
-    FabType typ = flag_fab.getType(bx);
-    if (typ == FabType::covered) {
-      continue;
-    }
-#endif
-
-    auto& Sfab = S[mfi];
-    pc_normalize_species(BL_TO_FORTRAN_3D(Sfab),ARLIM_3D(bx.loVect()),ARLIM_3D(bx.hiVect()));
-  }
-}
-
-void
 PeleC::enforce_consistent_e (MultiFab& S)
 {
 
@@ -1719,18 +1687,6 @@ PeleC::derive (const std::string& name,
 }
 
 void
-PeleC::init_network ()
-{
-  pc_network_init();
-}
-
-void
-PeleC::close_network ()
-{
-  pc_network_close();
-}
-
-void
 PeleC::clear_prob ()
 {
   pc_prob_close();
@@ -1986,10 +1942,6 @@ PeleC::clean_state(MultiFab& S)
 
   Real frac_change = enforce_min_density(temp_state, S);
 
-  //normalize_species(S);
-
-  //reset_internal_energy(S,S.nGrow());
-
   return frac_change;
 }
 
@@ -2000,10 +1952,6 @@ PeleC::clean_state(MultiFab& S,
   // Enforce a minimum density.
 
   Real frac_change = enforce_min_density(S_old, S);
-
-  //normalize_species(S);
-
-  //reset_internal_energy(S,S.nGrow());
 
   return frac_change;
 }

@@ -11,8 +11,7 @@ module riemann_module
                                  NGDNV, small_dens, small_pres, small_temp, &
                                  cg_maxiter, cg_tol, cg_blend, &
                                  npassive, upass_map, qpass_map, &
-                                 riemann_solver, ppm_temp_fix, hybrid_riemann, &
-                                 allow_negative_energy
+                                 riemann_solver, ppm_temp_fix, hybrid_riemann
 
   implicit none
 
@@ -37,7 +36,7 @@ contains
                     idir,ilo,ihi,jlo,jhi,domlo,domhi)
 
     use eos_type_module
-    use eos_module !, only: eos_re, eos_rt, mine
+    use eos_module, only: eos_re, eos_rt
 
     integer, intent(in) :: qpd_l1,qpd_l2,qpd_h1,qpd_h2
     integer, intent(in) :: flx_l1,flx_l2,flx_h1,flx_h2
@@ -128,17 +127,10 @@ contains
              eos_state % rho      = qm(i,j,QRHO)
              eos_state % p        = qm(i,j,QPRES)
              eos_state % e        = qm(i,j,QREINT)/qm(i,j,QRHO)
-             eos_state % massfrac = qm(i,j,QFS:QFS-1+nspec)
+             eos_state % massfrac = qm(i,j,QFS:QFS-1+nspecies)
              eos_state % aux      = qm(i,j,QFX:QFX-1+naux)
 
-             ! Protect against negative energies
-
-             if (allow_negative_energy .eq. 0 .and. eos_state % e < mine) then
-                eos_state % T = small_temp
-!                call eos_rt(eos_state)
-             else
- !               call eos_re(eos_state)
-             endif
+             call eos_re(eos_state)
 
              qm(i,j,QREINT) = qm(i,j,QRHO)*eos_state%e
              qm(i,j,QPRES) = eos_state%p
@@ -149,17 +141,10 @@ contains
              eos_state % rho      = qp(i,j,QRHO)
              eos_state % p        = qp(i,j,QPRES)
              eos_state % e        = qp(i,j,QREINT)/qp(i,j,QRHO)
-             eos_state % massfrac = qp(i,j,QFS:QFS-1+nspec)
+             eos_state % massfrac = qp(i,j,QFS:QFS-1+nspecies)
              eos_state % aux      = qp(i,j,QFX:QFX-1+naux)
 
-             ! Protect against negative energies
-
-             if (allow_negative_energy .eq. 0 .and. eos_state % e < mine) then
-                eos_state % T = small_temp
- !               call eos_rt(eos_state)
-             else
-  !              call eos_re(eos_state)
-             endif
+             call eos_re(eos_state)
 
              qp(i,j,QREINT) = qp(i,j,QRHO)*eos_state%e
              qp(i,j,QPRES) = eos_state%p
@@ -375,7 +360,7 @@ contains
     ! this implements the approximate Riemann solver of Colella & Glaz (1985)
 
     use amrex_error_module
-    use network, only : nspec, naux
+    use chemistry_module, only : nspecies, naux
     use eos_type_module
     use eos_module
     use prob_params_module, only : coord_type
@@ -497,7 +482,7 @@ contains
              print *, "WARNING: (rho e)_l < 0 or pl < small_pres in Riemann: ", rel, pl, small_pres
              eos_state % T        = small_temp
              eos_state % rho      = rl
-             eos_state % massfrac = ql(i,j,QFS:QFS-1+nspec)
+             eos_state % massfrac = ql(i,j,QFS:QFS-1+nspecies)
              eos_state % aux      = ql(i,j,QFX:QFX-1+naux)
 
              call eos_rt(eos_state)
@@ -529,7 +514,7 @@ contains
              print *, "WARNING: (rho e)_r < 0 or pr < small_pres in Riemann: ", rer, pr, small_pres
              eos_state % T        = small_temp
              eos_state % rho      = rr
-             eos_state % massfrac = qr(i,j,QFS:QFS-1+nspec)
+             eos_state % massfrac = qr(i,j,QFS:QFS-1+nspecies)
              eos_state % aux      = qr(i,j,QFX:QFX-1+naux)
 
              call eos_rt(eos_state)
@@ -1187,7 +1172,7 @@ contains
                        idir, ilo1, ihi1, ilo2, ihi2, domlo, domhi)
 
     use prob_params_module, only : coord_type
-    use network, only : nspec
+    use chemistry_module, only : nspecies
 
     use eos_module
 
@@ -1290,11 +1275,11 @@ contains
 !
 
         call riemann_md_singlepoint( &
-          ql(i,j,QRHO), ul, vl, v2l, ql(i,j,QPRES), rel, ql(i,j,QFS:QFS+nspec-1), gamcl(i,j), &
-          qr(i,j,QRHO), ur, vr, v2r, qr(i,j,QPRES), rer, qr(i,j,QFS:QFS+nspec-1), gamcr(i,j), &
+          ql(i,j,QRHO), ul, vl, v2l, ql(i,j,QPRES), rel, ql(i,j,QFS:QFS+nspecies-1), gamcl(i,j), &
+          qr(i,j,QRHO), ur, vr, v2r, qr(i,j,QPRES), rer, qr(i,j,QFS:QFS+nspecies-1), gamcr(i,j), &
           qint(i,j,iu), qint(i,j,iv1), qint(i,j,iv2), qint(i,j,GDPRES),qint(i,j,GDGAME), &
           regd, rgd, ustar, &
-          eos_state, gdnv_state, nspec, &
+          eos_state, gdnv_state, nspecies, &
           uflx(i,j,URHO), uflx(i,j,UMX), uflx(i,j,UMY), uflx_w_dummy, uflx(i,j,UEDEN), uflx(i,j,UEINT), &
           idir, coord_type, bc_test_mask, smallc(i,j), cav(i,j) )
 

@@ -15,7 +15,7 @@ contains
                             IR,IR_lo,IR_hi, &
                             time,dt_react,do_update) bind(C, name="pc_react_state")
 
-    use network           , only : nspec
+    use chemistry_module , only : nspecies
     use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UEINT, UTEMP, &
                                    UFS
     use react_type_module
@@ -37,7 +37,7 @@ contains
     double precision :: asrc(as_lo(1):as_hi(1),as_lo(2):as_hi(2),as_lo(3):as_hi(3),NVAR)
     integer          :: mask(m_lo(1):m_hi(1),m_lo(2):m_hi(2),m_lo(3):m_hi(3))
     double precision :: cost(c_lo(1):c_hi(1),c_lo(2):c_hi(2),c_lo(3):c_hi(3))
-    double precision :: IR(IR_lo(1):IR_hi(1),IR_lo(2):IR_hi(2),IR_lo(3):IR_hi(3),nspec+1)
+    double precision :: IR(IR_lo(1):IR_hi(1),IR_lo(2):IR_hi(2),IR_lo(3):IR_hi(3),nspecies+1)
     double precision :: time, dt_react
     integer          :: do_update
 
@@ -58,10 +58,10 @@ contains
 
                 rhoE_old                        = uold(i,j,k,UEDEN)
                 rho_e_K_old                     = HALF * sum(uold(i,j,k,UMX:UMZ)**2) / uold(i,j,k,URHO)
-                react_state_in %            rho = sum(uold(i,j,k,UFS:UFS+nspec-1))
+                react_state_in %            rho = sum(uold(i,j,k,UFS:UFS+nspecies-1))
                 react_state_in %              e = (rhoE_old - rho_e_K_old) / uold(i,j,k,URHO)
                 react_state_in %              T = uold(i,j,k,UTEMP)
-                react_state_in %        rhoY(:) = uold(i,j,k,UFS:UFS+nspec-1)
+                react_state_in %        rhoY(:) = uold(i,j,k,UFS:UFS+nspecies-1)
                 !react_state_in %    rhoedot_ext = asrc(i,j,k,UEINT)
 
                 ! rho.e source term computed using (rho.E,rho.u,rho)_new rather than pulling from UEINT comp of asrc
@@ -69,7 +69,7 @@ contains
                 react_state_in % rhoedot_ext = ( (unew(i,j,k,UEDEN) - rho_e_K_new) &
                      -                           (react_state_in % rho  *  react_state_in % e) ) / dt_react
 
-                react_state_in % rhoYdot_ext(:) = asrc(i,j,k,UFS:UFS+nspec-1)
+                react_state_in % rhoYdot_ext(:) = asrc(i,j,k,UFS:UFS+nspecies-1)
                 react_state_in % i = i
                 react_state_in % j = j
                 react_state_in % k = k
@@ -89,7 +89,7 @@ contains
                    unew(i,j,k,UEINT)           = rhoe_new
                    unew(i,j,k,UEDEN)           = rhoE_new
                    unew(i,j,k,UTEMP)           = react_state_out % T
-                   unew(i,j,k,UFS:UFS+nspec-1) = react_state_out % rhoY(:)
+                   unew(i,j,k,UFS:UFS+nspecies-1) = react_state_out % rhoY(:)
 
                 endif
 
@@ -101,8 +101,8 @@ contains
                      j .ge. IR_lo(2) .and. j .le. IR_hi(2) .and. &
                      k .ge. IR_lo(3) .and. k .le. IR_hi(3) ) then
 
-                   IR(i,j,k,1:nspec) = (react_state_out % rhoY(:) - react_state_in % rhoY(:)) / dt_react - asrc(i,j,k,UFS:UFS+nspec-1)
-                   IR(i,j,k,nspec+1) = (        rhoE_new          -         rhoE_old        ) / dt_react - asrc(i,j,k,UEDEN          )
+                   IR(i,j,k,1:nspecies) = (react_state_out % rhoY(:) - react_state_in % rhoY(:)) / dt_react - asrc(i,j,k,UFS:UFS+nspecies-1)
+                   IR(i,j,k,nspecies+1) = (        rhoE_new          -         rhoE_old        ) / dt_react - asrc(i,j,k,UEDEN          )
 
                 endif
 
