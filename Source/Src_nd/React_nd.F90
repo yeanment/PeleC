@@ -19,7 +19,11 @@ contains
     use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UEINT, UTEMP, &
                                    UFS
     use react_type_module
+#ifdef USE_DVODE
     use reactor_module, only : react
+#elif USE_FORTRAN_CVODE
+    use reactor_module, only : react_cvode
+#endif
     use bl_constants_module, only : HALF
     use react_type_module
 
@@ -73,8 +77,11 @@ contains
                 react_state_in % i = i
                 react_state_in % j = j
                 react_state_in % k = k
-
+#ifdef USE_DVODE
                 stat = react(react_state_in, react_state_out, dt_react, time)
+#elif USE_FORTRAN_CVODE
+                stat = react_cvode(react_state_in, react_state_out, dt_react, time)
+#endif
 
                 rho_new = sum(react_state_out % rhoY(:))
                 mom_new = uold(i,j,k,UMX:UMZ) + dt_react*asrc(i,j,k,UMX:UMZ)

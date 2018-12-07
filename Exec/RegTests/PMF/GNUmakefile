@@ -20,12 +20,16 @@ USE_CUDA   =  FALSE
 
 #######################
 USE_DVODE=TRUE
+ifeq ($(USE_DVODE), TRUE)
+    DEFINES  += -DUSE_DVODE
+endif
 
 USE_SUNDIALS_3x4x=FALSE
 CVODE_LIB_DIR = /home/amfelden/CODES/PeleLM/Source/ChemDriver/sundials-3.2.1/instdir/lib/ 
 
 USE_FORTRAN_CVODE=FALSE
 ifeq ($(USE_FORTRAN_CVODE), TRUE)
+    DEFINES  += -DUSE_FORTRAN_CVODE
     USE_KLU = FALSE
     ifeq ($(USE_KLU), TRUE)
         DEFINES  += -DUSE_KLU

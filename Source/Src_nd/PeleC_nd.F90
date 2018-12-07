@@ -68,9 +68,15 @@ end subroutine pc_extern_init
 #ifdef REACTIONS
 subroutine pc_reactor_init() bind(C, name="pc_reactor_init")
 
+#ifdef USE_DVODE
   use reactor_module, only: reactor_init
 
   call reactor_init(1)
+#elif USE_FORTRAN_CVODE
+  use reactor_module, only: reactor_init_cvode
+
+  call reactor_init_cvode(2,2,0,1,1)
+#endif
 
 end subroutine pc_reactor_init
 
