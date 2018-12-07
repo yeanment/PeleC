@@ -16,10 +16,26 @@ USE_OMP    = FALSE
 
 USE_REACT  = TRUE
 
-#######################
-USE_SUNDIALS_3x4x=TRUE
-
 USE_CUDA   =  FALSE
+
+#######################
+USE_DVODE=TRUE
+
+USE_SUNDIALS_3x4x=FALSE
+CVODE_LIB_DIR = /home/amfelden/CODES/PeleLM/Source/ChemDriver/sundials-3.2.1/instdir/lib/ 
+
+USE_FORTRAN_CVODE=FALSE
+ifeq ($(USE_FORTRAN_CVODE), TRUE)
+    USE_KLU = FALSE
+    ifeq ($(USE_KLU), TRUE)
+        DEFINES  += -DUSE_KLU
+    endif
+    USE_PYJAC = FALSE
+    ifeq ($(USE_PYJAC), TRUE)
+        DEFINES  += -DUSE_PYJAC
+    endif
+endif
+
 USE_CUDA_CVODE = FALSE
 
 USE_SDC_FORTRAN = FALSE
@@ -27,19 +43,6 @@ ifeq ($(USE_SDC_FORTRAN), TRUE)
     DEFINES  += -DUSE_SDC_F
 endif
 
-USE_PYJAC = FALSE
-ifeq ($(USE_PYJAC), TRUE)
-    DEFINES  += -DUSE_PYJAC
-endif
-
-USE_DVODE=TRUE
-
-USE_KLU = FALSE
-ifeq ($(USE_KLU), TRUE)
-    DEFINES  += -DUSE_KLU
-endif
-
-CVODE_LIB_DIR = /home/amfelden/CODES/PeleLM/Source/ChemDriver/sundials-3.2.1/instdir/lib/ 
 #######################
 
 #HYP_TYPE   = MOL
