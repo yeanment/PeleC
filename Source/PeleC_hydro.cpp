@@ -162,7 +162,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
             }
 #elif (BL_SPACEDIM == 2)
-        std::cout<< " BCS! " << std::endl; 
 	    if (geom.isAnyPeriodic() && i_nscbc == 1)
 	    {
 	      impose_NSCBC_with_perio(lo, hi, domain_lo, domain_hi,
@@ -205,7 +204,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #ifdef GPU 
 //        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
 #endif
-        std::cout << "PC UMDRV" << std::endl; 
 	    pc_umdrv
 		(&is_finest_level, &time,
 		 lo, hi, domain_lo, domain_hi,
@@ -266,7 +264,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
               }
             }
 	} // MFIter loop
-    std::cout<< "END OF MFI" << std::endl;
     } // end of OMP parallel region
 
     hydro_source.FillBoundary(geom.periodicity());

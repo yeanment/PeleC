@@ -112,7 +112,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 #pragma omp parallel
 #endif
   {
-    FArrayBox Qfab, Qaux, coeff_cc, Dterm;
+    FArrayBox coeff_cc, Dterm;
     FArrayBox coeff_ec[BL_SPACEDIM], flux_ec[BL_SPACEDIM],
       tander_ec[BL_SPACEDIM], flatn;
     IArrayBox bcMask;
@@ -151,28 +151,51 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       int local_i = mfi.LocalIndex();
       int Ncut = no_eb_in_domain ? 0 : sv_eb_bndry_grad_stencil[local_i].size();
 #else
-      const FArrayBox& Sfab = S[mfi];
+      const FArrayBox *Sfab = &S[mfi];
 #endif
 
       BL_PROFILE_VAR_START(diff);
-      Qfab.resize(gbox, QVAR);
+//      Qfab.resize(gbox, QVAR);
       int nqaux = NQAUX > 0 ? NQAUX : 1;
-      Qaux.resize(gbox, nqaux);
+      FArrayBox *Qfab, *Qaux; 
+
+//      Qaux.resize(gbox, nqaux);
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
       {
 #ifdef AMREX_USE_CUDA
+        Gpu::AsyncFab q_as(gbox, QVAR), qaux_as(gbox, nqaux); 
+        Qfab = q_as.fabPtr(); 
+        Qaux = qaux_as.fabPtr(); 
         BL_PROFILE("PeleC::ctoprim call");
-        ctoprim_h(ARLIM_3D(gbox.loVect()), ARLIM_3D(gbox.hiVect()),
-                Sfab.dataPtr(), ARLIM_3D(Sfab.loVect()), ARLIM_3D(Sfab.hiVect()),
-                Qfab.dataPtr(), ARLIM_3D(Qfab.loVect()), ARLIM_3D(Qfab.hiVect()),
-                Qaux.dataPtr(), ARLIM_3D(Qaux.loVect()), ARLIM_3D(Qaux.hiVect()));
+        AMREX_LAUNCH_DEVICE_LAMBDA(gbox, tbx, {
+            ctoprim(BL_TO_FORTRAN_BOX(tbx), 
+                    BL_TO_FORTRAN_ANYD(*Sfab), 
+                    BL_TO_FORTRAN_ANYD(*Qfab), 
+                    BL_TO_FORTRAN_ANYD(*Qaux));
+        });
+        Gpu::Device::streamSynchronize();
+/*
+        FArrayBox qt(gbox, QVAR); 
+        FArrayBox qat(gbox, nqaux);
+        Qfab = &qt; 
+        Qaux = &qat;  
+        BL_PROFILE("PeleC::ctoprim call");
+            ctoprim_h(BL_TO_FORTRAN_BOX(gbox), 
+                    BL_TO_FORTRAN_ANYD(*Sfab), 
+                    BL_TO_FORTRAN_ANYD(*Qfab), 
+                    BL_TO_FORTRAN_ANYD(*Qaux));
+*/
 #else
+        FArrayBox qt(gbox, QVAR); 
+        FArrayBox qat(gbox, nqaux);
+        Qfab = &qt; 
+        Qaux = &qat;  
         BL_PROFILE("PeleC::ctoprim call");
-        ctoprim(ARLIM_3D(gbox.loVect()), ARLIM_3D(gbox.hiVect()),
-                Sfab.dataPtr(), ARLIM_3D(Sfab.loVect()), ARLIM_3D(Sfab.hiVect()),
-                Qfab.dataPtr(), ARLIM_3D(Qfab.loVect()), ARLIM_3D(Qfab.hiVect()),
-                Qaux.dataPtr(), ARLIM_3D(Qaux.loVect()), ARLIM_3D(Qaux.hiVect()));
+            ctoprim(BL_TO_FORTRAN_BOX(gbox), 
+                    BL_TO_FORTRAN_ANYD(*Sfab), 
+                    BL_TO_FORTRAN_ANYD(*Qfab), 
+                    BL_TO_FORTRAN_ANYD(*Qaux));
 #endif
       }
 
@@ -180,15 +203,10 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       {
         BL_PROFILE("PeleC::get_transport_coeffs call");
         coeff_cc.resize(gbox, nCompTr);
-        get_transport_coeffs(ARLIM_3D(gbox.loVect()),
-                             ARLIM_3D(gbox.hiVect()),
-                             BL_TO_FORTRAN_N_3D(Qfab, cQFS),
-                             BL_TO_FORTRAN_N_3D(Qfab, cQTEMP),
-                             BL_TO_FORTRAN_N_3D(Qfab, cQRHO),
-                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_rhoD),
-                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_mu),
-                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_xi),
-                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_lambda));
+        get_transport_coeffs(nCompTr, 
+                             BL_TO_FORTRAN_BOX(gbox),
+                             BL_TO_FORTRAN_ANYD(*Qfab),
+                             BL_TO_FORTRAN_ANYD(coeff_cc));
       }
 
       // Container on grown region, for hybrid divergence & redistribution
@@ -233,7 +251,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                                              cbox.hiVect(),
                                              dbox.loVect(),
                                              dbox.hiVect(),
-                                             BL_TO_FORTRAN_ANYD(Qfab),
+                                             BL_TO_FORTRAN_ANYD(*Qfab),
                                              BL_TO_FORTRAN_ANYD(tander_ec[d]),
                                              geom.CellSize(), &d);
           }
@@ -248,7 +266,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                                                   dbox.hiVect(),
                                                   sv_eb_bndry_geom[mfi.LocalIndex()].data(),
                                                   &Ncut,
-                                                  BL_TO_FORTRAN_ANYD(Qfab),
+                                                  BL_TO_FORTRAN_ANYD(*Qfab),
                                                   BL_TO_FORTRAN_ANYD(tander_ec[d]),
                                                   BL_TO_FORTRAN_ANYD(flag_fab),
                                                   geom.CellSize(), &d);
@@ -268,7 +286,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                     cbox.hiVect(),
                     dbox.loVect(),
                     dbox.hiVect(),
-                    BL_TO_FORTRAN_ANYD(Qfab),
+                    BL_TO_FORTRAN_ANYD(*Qfab),
                     BL_TO_FORTRAN_N_ANYD(coeff_ec[0], dComp_rhoD),
                     BL_TO_FORTRAN_N_ANYD(coeff_ec[0], dComp_mu),
                     BL_TO_FORTRAN_N_ANYD(coeff_ec[0], dComp_xi),
@@ -353,7 +371,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
             pc_apply_eb_boundry_flux_stencil(BL_TO_FORTRAN_BOX(box_to_apply),
                                              sv_eb_bndry_grad_stencil[local_i].data(),
                                              &Ncut,
-                                             BL_TO_FORTRAN_N_ANYD(Qfab, cQTEMP),
+                                             BL_TO_FORTRAN_N_ANYD(*Qfab, cQTEMP),
                                              BL_TO_FORTRAN_N_ANYD(coeff_cc, dComp_lambda),
                                              sv_eb_bcval[local_i].dataPtr(cQTEMP),
                                              &Nvals,
@@ -373,7 +391,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                                                   sv_eb_bndry_grad_stencil[local_i].data(),
                                                   &Ncut,
                                                   sv_eb_bndry_geom[local_i].data(), &Ncut,
-                                                  BL_TO_FORTRAN_N_ANYD(Qfab, cQU),
+                                                  BL_TO_FORTRAN_N_ANYD(*Qfab, cQU),
                                                   BL_TO_FORTRAN_N_ANYD(coeff_cc, dComp_mu),
                                                   BL_TO_FORTRAN_N_ANYD(coeff_cc, dComp_xi),
                                                   sv_eb_bcval[local_i].dataPtr(cQU), &Nvals,
@@ -410,8 +428,8 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
           BL_PROFILE("PeleC::pc_hyp_mol_flux call");
           pc_hyp_mol_flux(vbox.loVect(), vbox.hiVect(),
                           geom.Domain().loVect(), geom.Domain().hiVect(),
-                          BL_TO_FORTRAN_3D(Qfab),
-                          BL_TO_FORTRAN_3D(Qaux),
+                          BL_TO_FORTRAN_3D(*Qfab),
+                          BL_TO_FORTRAN_3D(*Qaux),
                           BL_TO_FORTRAN_ANYD(area[0][mfi]),
                           BL_TO_FORTRAN_3D(flux_ec[0]),
 #if (BL_SPACEDIM > 1)
