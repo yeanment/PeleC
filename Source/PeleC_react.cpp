@@ -4,6 +4,11 @@
 
 #include "AMReX_DistributionMapping.H"
 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#else
+#include <actual_Creactor.h>
+#endif
+
 using std::string;
 using namespace amrex;
 
@@ -38,6 +43,19 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
     // Create a MultiFab with all of the non-reacting source terms.
 
     MultiFab Atmp, *Ap;
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#else
+    MultiFab rY, rYs;
+    MultiFab rE, rEs;
+    rY.define(grids, dmap, NumSpec+1, ng, MFInfo(), Factory());
+    rYs.define(grids, dmap, NumSpec, ng, MFInfo(), Factory());
+    rE.define(grids, dmap, 1, ng, MFInfo(), Factory());
+    rEs.define(grids, dmap, 1, ng, MFInfo(), Factory());
+    rY.setVal(0);
+    rYs.setVal(0);
+    rE.setVal(0);
+    rEs.setVal(0);
+#endif
 
     if (A_aux == nullptr || react_init)
     {
@@ -96,8 +114,16 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
           const IArrayBox& m    = (*interior_mask)[mfi];
           w.resize(bx,1);
           FArrayBox& I_R        = reactions[mfi];
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#else
+          FArrayBox& Y          = rY[mfi];
+          FArrayBox& Ys         = rYs[mfi];
+          FArrayBox& E          = rE[mfi];
+          FArrayBox& Es         = rEs[mfi];
+#endif
           int do_update         = react_init ? 0 : 1;  // TODO: Update here? Or just get reaction source?
 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
           pc_react_state(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
                          uold.dataPtr(),  ARLIM_3D(uold.loVect()),  ARLIM_3D(uold.hiVect()),
                          unew.dataPtr(),  ARLIM_3D(unew.loVect()),  ARLIM_3D(unew.hiVect()),
@@ -106,6 +132,53 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
                          w.dataPtr(),     ARLIM_3D(w.loVect()),     ARLIM_3D(w.hiVect()),
                          I_R.dataPtr(),   ARLIM_3D(I_R.loVect()),   ARLIM_3D(I_R.hiVect()),
                          time, dt, do_update);
+#else
+          pc_prereact_state(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
+                         uold.dataPtr(),  ARLIM_3D(uold.loVect()),  ARLIM_3D(uold.hiVect()),
+                         unew.dataPtr(),  ARLIM_3D(unew.loVect()),  ARLIM_3D(unew.hiVect()),
+                         a.dataPtr(),     ARLIM_3D(a.loVect()),     ARLIM_3D(a.hiVect()),
+                         m.dataPtr(),     ARLIM_3D(m.loVect()),     ARLIM_3D(m.hiVect()),
+                         Y.dataPtr(),     ARLIM_3D(Y.loVect()),     ARLIM_3D(Y.hiVect()),
+                         Ys.dataPtr(),     ARLIM_3D(Ys.loVect()),     ARLIM_3D(Ys.hiVect()),
+                         E.dataPtr(),     ARLIM_3D(E.loVect()),     ARLIM_3D(E.hiVect()),
+                         Es.dataPtr(),     ARLIM_3D(Es.loVect()),     ARLIM_3D(Es.hiVect()),
+                         time, dt);
+
+	  for (BoxIterator bit(bx); bit.ok(); ++bit) {
+		  double tmp_vect[NumSpec+1];
+		  double tmp_src_vect[NumSpec];
+		  double tmp_vect_energy[1];
+		  double tmp_src_vect_energy[1];
+		  for (int i=0;i<NumSpec; i++){
+			  tmp_vect[i] = Y(bit(),i);
+			  tmp_src_vect[i] = Ys(bit(),i);
+		  }
+		  tmp_vect[NumSpec] = Y(bit(),NumSpec);   
+		  tmp_vect_energy[0] = E(bit(),0);   
+		  tmp_src_vect_energy[0] = Es(bit(),0);   
+		  double plo = 1013250.0;
+		  int cost = actual_cReact(tmp_vect, tmp_src_vect, 
+				  tmp_vect_energy, tmp_src_vect_energy,
+				  &plo, &dt, &time);
+		  for (int i=0;i<NumSpec+1; i++){
+			  Y(bit(),i) = tmp_vect[i];
+		  }
+		  E(bit(),0) = tmp_vect_energy[0];   
+		  w(bit(),0) = cost; 
+	  }
+
+          pc_postreact_state(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
+                         uold.dataPtr(),  ARLIM_3D(uold.loVect()),  ARLIM_3D(uold.hiVect()),
+                         unew.dataPtr(),  ARLIM_3D(unew.loVect()),  ARLIM_3D(unew.hiVect()),
+                         a.dataPtr(),     ARLIM_3D(a.loVect()),     ARLIM_3D(a.hiVect()),
+                         Y.dataPtr(),     ARLIM_3D(Y.loVect()),     ARLIM_3D(Y.hiVect()),
+                         E.dataPtr(),     ARLIM_3D(E.loVect()),     ARLIM_3D(E.hiVect()),
+                         m.dataPtr(),     ARLIM_3D(m.loVect()),     ARLIM_3D(m.hiVect()),
+                         w.dataPtr(),     ARLIM_3D(w.loVect()),     ARLIM_3D(w.hiVect()),
+                         I_R.dataPtr(),   ARLIM_3D(I_R.loVect()),   ARLIM_3D(I_R.hiVect()),
+                         time, dt, do_update);
+
+#endif
 
           if (do_react_load_balance || do_mol_load_balance)
           {

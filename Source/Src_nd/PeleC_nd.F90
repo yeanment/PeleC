@@ -66,6 +66,7 @@ end subroutine pc_extern_init
 ! ::: ----------------------------------------------------------------
 ! :::
 #ifdef REACTIONS
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
 subroutine pc_reactor_init() bind(C, name="pc_reactor_init")
 
 #ifdef USE_DVODE
@@ -75,7 +76,7 @@ subroutine pc_reactor_init() bind(C, name="pc_reactor_init")
 #elif USE_FORTRAN_CVODE
   use reactor_module, only: reactor_init_cvode
 
-  call reactor_init_cvode(2,2,0,1,1)
+  call reactor_init_cvode(2,2,0,1,99)
 #endif
 
 end subroutine pc_reactor_init
@@ -91,6 +92,7 @@ subroutine pc_reactor_close() bind(C, name="pc_reactor_close")
   call reactor_close()
 
 end subroutine pc_reactor_close
+#endif
 #endif
 
 ! :::

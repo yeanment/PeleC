@@ -13,9 +13,11 @@ extern "C"
 
   void pc_network_close();
 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
   void pc_reactor_init();
 
   void pc_reactor_close();
+#endif
 
   void pc_transport_init();
 
@@ -405,6 +407,7 @@ extern "C"
      const amrex::Real* dx, BL_FORT_FAB_ARG_3D(vol), amrex::Real* mass);
 
 #ifdef REACTIONS
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
   void pc_react_state
     (const int* lo, const int* hi,
      const amrex::Real*  uold, const int* uo_lo, const int* uo_hi,
@@ -414,6 +417,31 @@ extern "C"
      amrex::Real*        cost, const int*  c_lo, const int*  c_hi,
      amrex::Real*       rYdot, const int* rY_lo, const int* rY_hi,
      const amrex::Real& time,  const amrex::Real& dt_react, const int& do_react);
+#else
+  void pc_prereact_state
+    (const int* lo, const int* hi,
+     const amrex::Real*  uold, const int* uo_lo, const int* uo_hi,
+     amrex::Real*        unew, const int* un_lo, const int* un_hi,
+     const amrex::Real*  asrc, const int* as_lo, const int* as_hi,
+     const int*   mask, const int*  m_lo, const int*  m_hi,
+     amrex::Real*        rY, const int* rY_lo, const int* rY_hi,
+     amrex::Real*        rYs, const int* rYs_lo, const int* rYs_hi,
+     amrex::Real*        rE, const int* rE_lo, const int* rE_hi,
+     amrex::Real*        rEs, const int* rEs_lo, const int* rEs_hi,
+     const amrex::Real& time,  const amrex::Real& dt_react);
+
+  void pc_postreact_state
+    (const int* lo, const int* hi,
+     const amrex::Real*  uold, const int* uo_lo, const int* uo_hi,
+     amrex::Real*        unew, const int* un_lo, const int* un_hi,
+     const amrex::Real*  asrc, const int* as_lo, const int* as_hi,
+     amrex::Real*        rY, const int* rY_lo, const int* rY_hi,
+     amrex::Real*        rE, const int* rE_lo, const int* rE_hi,
+     const int*   mask, const int*  m_lo, const int*  m_hi,
+     amrex::Real*        cost, const int*  c_lo, const int*  c_hi,
+     amrex::Real*       rYdot, const int* IR_lo, const int* IR_hi,
+     const amrex::Real& time,  const amrex::Real& dt_react, const int& do_react);
+#endif
 #endif
 
   void pc_diffextrap

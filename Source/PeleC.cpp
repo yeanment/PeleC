@@ -50,6 +50,11 @@ using namespace amrex;
 using namespace MASA;
 #endif
 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#else
+#include <actual_Creactor.h>
+#endif
+
 bool         PeleC::signalStopJob = false;
 
 bool         PeleC::dump_old      = false;
@@ -113,6 +118,11 @@ int          PeleC::pfld_p     = -1;
 int          PeleC::pfld_spc   = -1;
 int          PeleC::n_pfld     = 0;
 
+int          PeleC::cvode_meth   = 100;
+int          PeleC::cvode_itmeth = 100;
+int          PeleC::cvode_iJac   = 100;
+int          PeleC::cvode_iE     = 100;
+int          PeleC::cvode_iDense = 100;
 #include <pelec_defaults.H>
 
 int          PeleC::nGrowTr      = 4;
@@ -191,10 +201,12 @@ PeleC::variableCleanUp ()
   close_transport();
 
 #ifdef REACTIONS
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
   if (do_react == 1)
   {
     close_reactor();
   }
+#endif
 #endif
 
   close_network();
@@ -224,6 +236,25 @@ PeleC::read_params ()
   pp.query("v",verbose);
   pp.query("sum_interval",sum_interval);
   pp.query("dump_old",dump_old);
+
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#else
+  // Select CVODE solve method.
+  // 2 = BDF (for stiff problems)
+  pp.query("cvode_meth",cvode_meth);
+  // Select CVODE solver iteration method.
+  // 2 = Newton iteration
+  pp.query("cvode_itmeth",cvode_itmeth);
+  // Select CVODE Jacobian eval: 0 = finite differences
+  pp.query("cvode_iJac",cvode_iJac);
+  // Select CVODE type of energy employed.
+  // 1 for UV, 2 for HP
+  pp.query("cvode_iE",cvode_iE);
+  // Choose linear solver
+  // 1 for regular dense solver
+  // 99 for Krylov iterative SPGMR solver
+  pp.query("cvode_iDense",cvode_iDense);
+#endif
 
   // Get boundary conditions
   Vector<int> lo_bc(BL_SPACEDIM), hi_bc(BL_SPACEDIM);
@@ -1758,14 +1789,43 @@ PeleC::init_extern ()
 void
 PeleC::init_reactor ()
 {
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
   pc_reactor_init();
+#else
+  amrex::Print() << "Initializing CVODE reactor ..." << std::endl;
+  amrex::Print() << " --CVODE method: ";
+  if (cvode_meth == 1) {
+      amrex::Print() << "   Adams (non-stiff)";
+  } else if (cvode_meth == 2) {
+        amrex::Print() << "   BDF (stiff)";
+  }
+  amrex::Print() << std::endl;
+  amrex::Print() << " --CVODE iteration method: ";
+  if (cvode_itmeth == 1) {
+    amrex::Print() << "   Functional";
+  } else if (cvode_itmeth == 2) {
+      amrex::Print() << "   Newton";
+  }
+  amrex::Print() << std::endl;
+  amrex::Print() << " --CVODE use of Analytical J: ";
+  if (cvode_iJac == 0) {
+    amrex::Print() << "   NO";
+  } else {
+      amrex::Print() << "   YUP";
+  }
+  amrex::Print() << std::endl;
+  int max_grid_size = 1;
+  extern_cInit(&cvode_meth,&cvode_itmeth,&cvode_iJac,&cvode_iE,&cvode_iDense,&max_grid_size);
+#endif
 }
 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
 void
 PeleC::close_reactor ()
 {
   pc_reactor_close();
 }
+#endif
 #endif
 
 void

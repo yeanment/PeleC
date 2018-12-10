@@ -61,3 +61,15 @@ pelec.diffuse_spec=1
 pelec.diffuse_vel=1
 pelec.sdc_iters = 2
 pelec.flame_trac_name = HO2
+
+# 1 = Adams (non-stiff); 2 = BDF (stiff)
+pelec.cvode_meth = 2
+# 1 = functional iteration; 2 = Newton iteration
+pelec.cvode_itmeth = 2
+# Select CVODE Jacobian eval.
+pelec.cvode_iJac = 0
+# 1=full e, 2=full h
+pelec.cvode_iE = 1
+# choose sparse or dense
+pelec.cvode_iDense = 1
+

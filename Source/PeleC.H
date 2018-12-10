@@ -602,6 +602,11 @@ protected:
     //
 #include <pelec_params.H>
 
+    static int  cvode_meth;
+    static int  cvode_itmeth;
+    static int  cvode_iJac;
+    static int  cvode_iE;
+    static int  cvode_iDense;
     static bool      signalStopJob;
     static bool      dump_old;
     static int       radius_grow;
