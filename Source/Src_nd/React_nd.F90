@@ -98,9 +98,6 @@ contains
                    unew(i,j,k,UEDEN)           = rhoE_new
                    unew(i,j,k,UTEMP)           = react_state_out % T
                    unew(i,j,k,UFS:UFS+nspec-1) = react_state_out % rhoY(:)
-                   print *, "do_update YES "
-                else 
-                   print *, "do_update NO "
                 endif
 
                 ! Add drhoY/dt to reactions MultiFab, but be
@@ -113,9 +110,6 @@ contains
 
                    IR(i,j,k,1:nspec) = (react_state_out % rhoY(:) - react_state_in % rhoY(:)) / dt_react - asrc(i,j,k,UFS:UFS+nspec-1)
                    IR(i,j,k,nspec+1) = (        rhoE_new          -         rhoE_old        ) / dt_react - asrc(i,j,k,UEDEN          )
-                   if (i == 5) then
-                       print *, "rhoE_new, rhoE_old, asrc(i,j,k,UEDEN)", rhoE_new, rhoE_old, asrc(i,j,k,UEDEN) 
-                   end if
 
                 endif
 
