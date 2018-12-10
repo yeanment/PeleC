@@ -38,6 +38,9 @@ ifeq ($(USE_FORTRAN_CVODE), TRUE)
     ifeq ($(USE_PYJAC), TRUE)
         DEFINES  += -DUSE_PYJAC
     endif
+else
+USE_KLU = FALSE
+USE_PYJAC = FALSE
 endif
 
 USE_CUDA_CVODE = FALSE
@@ -73,3 +76,4 @@ Bpack   := ./Make.package
 Blocs   := .
 
 include ../../Make.PeleC
+include ./Make.cvodeCinterface
