@@ -62,7 +62,6 @@ pelec.diffuse_vel=1
 pelec.sdc_iters = 2
 pelec.flame_trac_name = C2H4
 
-
 # 1 = Adams (non-stiff); 2 = BDF (stiff)
 pelec.cvode_meth = 2
 # 1 = functional iteration; 2 = Newton iteration
