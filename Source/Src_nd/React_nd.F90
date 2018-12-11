@@ -47,7 +47,7 @@ contains
     integer          :: do_update
 
     integer          :: i, j, k
-    double precision :: rho_e_K_old,rho_e_K_new, rhoE_old, rhoE_new, rho_new, mom_new(3)
+    double precision :: rho_e_K_old,rho_e_K_new, rhoe_new, rhoET_old, rhoET_new, rho_new, mom_new(3)
 
     type (react_t) :: react_state_in, react_state_out
     type (reaction_stat_t)  :: stat
@@ -61,16 +61,20 @@ contains
 
              if (mask(i,j,k) .eq. 1) then
 
-                rhoE_old                        = uold(i,j,k,UEDEN)
+                ! Tot energ
+                rhoET_old                        = uold(i,j,k,UEDEN)
+                ! kinet energ
                 rho_e_K_old                     = HALF * sum(uold(i,j,k,UMX:UMZ)**2) / uold(i,j,k,URHO)
                 react_state_in %            rho = sum(uold(i,j,k,UFS:UFS+nspec-1))
-                react_state_in %              e = (rhoE_old - rho_e_K_old) / uold(i,j,k,URHO)
+                ! int energ
+                react_state_in %              e = (rhoET_old - rho_e_K_old) / uold(i,j,k,URHO)
                 react_state_in %              T = uold(i,j,k,UTEMP)
                 react_state_in %        rhoY(:) = uold(i,j,k,UFS:UFS+nspec-1)
                 !react_state_in %    rhoedot_ext = asrc(i,j,k,UEINT)
 
                 ! rho.e source term computed using (rho.E,rho.u,rho)_new rather than pulling from UEINT comp of asrc
                 rho_e_K_new = HALF * sum(unew(i,j,k,UMX:UMZ)**2) / unew(i,j,k,URHO)
+                ! int energ source term
                 react_state_in % rhoedot_ext = ( (unew(i,j,k,UEDEN) - rho_e_K_new) &
                      -                           (react_state_in % rho  *  react_state_in % e) ) / dt_react
 
@@ -86,16 +90,19 @@ contains
 
                 rho_new = sum(react_state_out % rhoY(:))
                 mom_new = uold(i,j,k,UMX:UMZ) + dt_react*asrc(i,j,k,UMX:UMZ)
+                ! int energ
                 rhoe_new = rho_new  *  react_state_out % e
+                ! kinet energ
                 rho_e_K_new = HALF * sum(mom_new**2) / rho_new
-                rhoE_new    = rhoe_new + rho_e_K_new
+                ! Tot energ
+                rhoET_new    = rhoe_new + rho_e_K_new
                 
                 if (do_update .eq. 1) then
 
                    unew(i,j,k,URHO)            = rho_new
                    unew(i,j,k,UMX:UMZ)         = mom_new
                    unew(i,j,k,UEINT)           = rhoe_new
-                   unew(i,j,k,UEDEN)           = rhoE_new
+                   unew(i,j,k,UEDEN)           = rhoET_new
                    unew(i,j,k,UTEMP)           = react_state_out % T
                    unew(i,j,k,UFS:UFS+nspec-1) = react_state_out % rhoY(:)
                 endif
@@ -109,7 +116,7 @@ contains
                      k .ge. IR_lo(3) .and. k .le. IR_hi(3) ) then
 
                    IR(i,j,k,1:nspec) = (react_state_out % rhoY(:) - react_state_in % rhoY(:)) / dt_react - asrc(i,j,k,UFS:UFS+nspec-1)
-                   IR(i,j,k,nspec+1) = (        rhoE_new          -         rhoE_old        ) / dt_react - asrc(i,j,k,UEDEN          )
+                   IR(i,j,k,nspec+1) = (        rhoET_new          -         rhoET_old        ) / dt_react - asrc(i,j,k,UEDEN          )
 
                 endif
 
