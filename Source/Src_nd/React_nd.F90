@@ -176,7 +176,7 @@ contains
     double precision :: time, dt_react
 
     integer          :: i, j, k
-    double precision :: rho_e_K_old,rho_e_K_new, rhoE_old, rhoE_new, rho, mom_new(3)
+    double precision :: rho_e_K_old,rho_e_K_new, rhoET_old, rho, mom_new(3)
 
     type (react_t) :: react_state_in !, react_state_out
 
@@ -188,10 +188,10 @@ contains
 
              if (mask(i,j,k) .eq. 1) then
 
-                rhoE_old                        = uold(i,j,k,UEDEN)
+                rhoET_old                        = uold(i,j,k,UEDEN)
                 rho_e_K_old                     = HALF * sum(uold(i,j,k,UMX:UMZ)**2) / uold(i,j,k,URHO)
                 react_state_in %            rho = sum(uold(i,j,k,UFS:UFS+nspec-1))
-                react_state_in %              e = (rhoE_old - rho_e_K_old) / uold(i,j,k,URHO)
+                react_state_in %              e = (rhoET_old - rho_e_K_old) / uold(i,j,k,URHO)
                 react_state_in %              T = uold(i,j,k,UTEMP)
                 react_state_in %        rhoY(:) = uold(i,j,k,UFS:UFS+nspec-1)
 
@@ -260,7 +260,7 @@ contains
     integer          :: do_update
 
     integer          :: i, j, k
-    double precision :: rho_e_K_new, rhoE_old, rhoE_new, rho_new, mom_new(3)
+    double precision :: rho_e_K_new, rhoe_new, rhoET_old, rhoET_new, rho_new, mom_new(3)
 
 
     do k = lo(3), hi(3)
@@ -269,19 +269,19 @@ contains
 
              if (mask(i,j,k) .eq. 1) then
 
-                rhoE_old    = uold(i,j,k,UEDEN)
+                rhoET_old    = uold(i,j,k,UEDEN)
                 rho_new     = sum(rY(i,j,k,1:nspec))
                 mom_new     = uold(i,j,k,UMX:UMZ) + dt_react*asrc(i,j,k,UMX:UMZ)
                 rhoe_new    = rE(i,j,k,1) 
                 rho_e_K_new = HALF * sum(mom_new**2) / rho_new
-                rhoE_new    = rhoe_new + rho_e_K_new
+                rhoET_new    = rhoe_new + rho_e_K_new
 
                 if (do_update .eq. 1) then
 
                    unew(i,j,k,URHO)            = rho_new
                    unew(i,j,k,UMX:UMZ)         = mom_new
                    unew(i,j,k,UEINT)           = rhoe_new
-                   unew(i,j,k,UEDEN)           = rhoE_new
+                   unew(i,j,k,UEDEN)           = rhoET_new
                    unew(i,j,k,UTEMP)           = rY(i,j,k,nspec+1)
                    unew(i,j,k,UFS:UFS+nspec-1) = rY(i,j,k,1:nspec)
 
@@ -296,7 +296,7 @@ contains
                      k .ge. IR_lo(3) .and. k .le. IR_hi(3) ) then
 
                    IR(i,j,k,1:nspec) = (rY(i,j,k,1:nspec) - uold(i,j,k,UFS:UFS+nspec-1)) / dt_react - asrc(i,j,k,UFS:UFS+nspec-1)
-                   IR(i,j,k,nspec+1) = (        rhoE_new          -         rhoE_old        ) / dt_react - asrc(i,j,k,UEDEN          )
+                   IR(i,j,k,nspec+1) = (        rhoET_new          -         rhoET_old        ) / dt_react - asrc(i,j,k,UEDEN          )
                 endif
 
              end if
