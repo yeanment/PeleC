@@ -162,7 +162,6 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 //      Qaux.resize(gbox, nqaux);
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
-      {
 #ifdef AMREX_USE_CUDA
         Gpu::AsyncFab q_as(gbox, QVAR), qaux_as(gbox, nqaux); 
         Qfab = q_as.fabPtr(); 
@@ -197,17 +196,19 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                     BL_TO_FORTRAN_ANYD(*Qfab), 
                     BL_TO_FORTRAN_ANYD(*Qaux));
 #endif
-      }
 
       // Compute transport coefficients, coincident with Q
-      {
         BL_PROFILE("PeleC::get_transport_coeffs call");
         coeff_cc.resize(gbox, nCompTr);
-        get_transport_coeffs(nCompTr, 
-                             BL_TO_FORTRAN_BOX(gbox),
-                             BL_TO_FORTRAN_ANYD(*Qfab),
-                             BL_TO_FORTRAN_ANYD(coeff_cc));
-      }
+        get_transport_coeffs(ARLIM_3D(gbox.loVect()),
+                             ARLIM_3D(gbox.hiVect()),
+                             BL_TO_FORTRAN_N_3D(*Qfab, cQFS),
+                             BL_TO_FORTRAN_N_3D(*Qfab, cQTEMP),
+                             BL_TO_FORTRAN_N_3D(*Qfab, cQRHO),
+                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_rhoD),
+                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_mu),
+                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_xi),
+                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_lambda));
 
       // Container on grown region, for hybrid divergence & redistribution
       Dterm.resize(cbox, NUM_STATE);
