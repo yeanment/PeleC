@@ -104,12 +104,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    FArrayBox *source_in  = sources_for_hydro.fabPtr(mfi);
 	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
 
-            Gpu::AsyncFab q_as(qbx, QVAR);
-            FArrayBox* q = q_as.fabPtr();  
-            Gpu::AsyncFab qaux_as(qbx, NQAUX); 
-            FArrayBox* qaux = qaux_as.fabPtr();
-            Gpu::AsyncFab src_q_as(qbx, QVAR); 
-            FArrayBox* src_q = src_q_as.fabPtr(); 
+            Gpu::AsyncFab q(qbx, QVAR);
+            Gpu::AsyncFab qaux(qbx, NQAUX); 
+            Gpu::AsyncFab src_q(qbx, QVAR); 
 
             bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
                                   // First integer is bc_type, second integer about slip/no-slip wall 
@@ -119,8 +116,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
             AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
                 ctoprim(BL_TO_FORTRAN_BOX(tbx),
                         BL_TO_FORTRAN_ANYD(*statein),
-                        BL_TO_FORTRAN_ANYD(*q),
-                        BL_TO_FORTRAN_ANYD(*qaux));// */
+                        BL_TO_FORTRAN_ANYD(q.fab()),
+                        BL_TO_FORTRAN_ANYD(qaux.fab()));// */
               });
             Gpu::Device::streamSynchronize();
             
@@ -137,8 +134,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
             {
               impose_NSCBC(lo, hi, domain_lo, domain_hi,
                            BL_TO_FORTRAN(statein),
-                           BL_TO_FORTRAN(*q),
-                           BL_TO_FORTRAN(*qaux),
+                           BL_TO_FORTRAN(q.fab()),
+                           BL_TO_FORTRAN(qaux.fab()),
                            BL_TO_FORTRAN(bcMask),
                            &time, dx, &dt);
 
@@ -148,16 +145,16 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    {
 	      impose_NSCBC_with_perio(lo, hi, domain_lo, domain_hi,
 				      BL_TO_FORTRAN(*statein),
-				      BL_TO_FORTRAN(*q),
-				      BL_TO_FORTRAN(*qaux),
+				      BL_TO_FORTRAN(q.fab()),
+				      BL_TO_FORTRAN(qaux.fab()),
 				      BL_TO_FORTRAN(bcMask),
 				      &time, dx, &dt);
         
 	    } else if (!geom.isAnyPeriodic() && i_nscbc == 1){
 	      impose_NSCBC_mixed_BC(lo, hi, domain_lo, domain_hi,
 				    BL_TO_FORTRAN(*statein),
-				    BL_TO_FORTRAN(*q),
-				    BL_TO_FORTRAN(*qaux),
+				    BL_TO_FORTRAN(q.fab()),
+				    BL_TO_FORTRAN(qaux.fab()),
 				    BL_TO_FORTRAN(bcMask),
 				    &time, dx, &dt);
 	    }
@@ -167,11 +164,11 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
 	    }
 #endif
-	    srctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
-		      q->dataPtr(), ARLIM_3D(q->loVect()), ARLIM_3D(q->hiVect()),
-		      qaux->dataPtr(), ARLIM_3D(qaux->loVect()), ARLIM_3D(qaux->hiVect()),
-		      source_in->dataPtr(), ARLIM_3D(source_in->loVect()), ARLIM_3D(source_in->hiVect()),
-		      src_q->dataPtr(), ARLIM_3D(src_q->loVect()), ARLIM_3D(src_q->hiVect()));
+	    srctoprim(BL_TO_FORTRAN_BOX(qbx),
+                      BL_TO_FORTRAN_ANYD(q.fab()),
+                      BL_TO_FORTRAN_ANYD(qaux.fab()),
+                      BL_TO_FORTRAN_ANYD(*source_in),
+                      BL_TO_FORTRAN_ANYD(src_q.fab()));
 
             // Allocate fabs for fluxes
 	    for (int i = 0; i < BL_SPACEDIM ; i++)  {
@@ -191,9 +188,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 		 lo, hi, domain_lo, domain_hi,
 		 BL_TO_FORTRAN(*statein), 
 		 BL_TO_FORTRAN(*stateout),
-		 BL_TO_FORTRAN(*q),
-		 BL_TO_FORTRAN(*qaux),
-		 BL_TO_FORTRAN(*src_q),
+		 BL_TO_FORTRAN(q.fab()),
+		 BL_TO_FORTRAN(qaux.fab()),
+		 BL_TO_FORTRAN(src_q.fab()),
 		 BL_TO_FORTRAN(*source_out),
 		 BL_TO_FORTRAN(bcMask),
 		 dx, &dt,

@@ -85,22 +85,22 @@ extern "C"
 
   AMREX_GPU_DEVICE
   void ctoprim(const int* lo, const int* hi,
-	           const amrex::Real* u, const int* u_lo, const int* u_hi,
-	           const amrex::Real* q, const int* q_lo, const int* q_hi,
-               const amrex::Real* qaux, const int* qa_lo, const int* qa_hi);
+               const BL_FORT_FAB_ARG_3D(u),
+               BL_FORT_FAB_ARG_3D(q),
+               BL_FORT_FAB_ARG_3D(qaux));
 //TODO Eliminate the need for this one!
 #ifdef AMREX_USE_CUDA
   AMREX_GPU_HOST
   void ctoprim_h(const int* lo, const int* hi,
-	           const amrex::Real* u, const int* u_lo, const int* u_hi,
-	           const amrex::Real* q, const int* q_lo, const int* q_hi,
-               const amrex::Real* qaux, const int* qa_lo, const int* qa_hi);
+                 const BL_FORT_FAB_ARG_3D(u),
+                 BL_FORT_FAB_ARG_3D(q),
+                 BL_FORT_FAB_ARG_3D(qaux));
 #endif
   void srctoprim(const int* lo,   const int* hi,
-		 const amrex::Real* q,   const int* q_lo,   const int* q_hi,
-		 const amrex::Real* qaux, const int* qa_lo, const int* qa_hi,
-		 const amrex::Real* src, const int* src_lo, const int* src_hi,
-		 const amrex::Real* srQ, const int* srQ_lo, const int* srQ_hi);
+                 const BL_FORT_FAB_ARG_3D(q),
+                 const BL_FORT_FAB_ARG_3D(qaux),
+                 const BL_FORT_FAB_ARG_3D(src),
+                 BL_FORT_FAB_ARG_3D(srQ));
 
 #if (BL_SPACEDIM > 1)
   void pc_compute_tangential_vel_derivs(const int* lo, const int* hi,
