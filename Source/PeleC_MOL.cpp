@@ -133,17 +133,17 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       const Box& dbox = geom.Domain();
 
 #ifdef PELE_USE_EB
-      const EBFArrayBox& Sfab = static_cast<const EBFArrayBox&>(S[mfi]);
+      const EBFArrayBox& Sfab = static_cast<const EBFArrayBox&>(S.fabPtr(mfi));
 
       const auto& flag_fab = Sfab.getEBCellFlagFab();
       FabType typ = flag_fab.getType(cbox);
       if (typ == FabType::covered) {
-        MOLSrcTerm[mfi].setVal(0, vbox, 0, NUM_STATE);
+        MOLSrcTerm.fabPtr(mfi)->setVal(0, vbox, 0, NUM_STATE);
 
         if (do_mol_load_balance) {
           wt = (ParallelDescriptor::second() - wt) / vbox.d_numPts();
 
-          (*cost)[mfi].plus(wt, vbox);
+          cost->fabPtr(mfi)->plus(wt, vbox);
         }
         continue;
       }
@@ -151,7 +151,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       int local_i = mfi.LocalIndex();
       int Ncut = no_eb_in_domain ? 0 : sv_eb_bndry_grad_stencil[local_i].size();
 #else
-      const FArrayBox *Sfab = &S[mfi];
+      const FArrayBox *Sfab = S.fabPtr(mfi);
 #endif
 
       BL_PROFILE_VAR_START(diff);
@@ -295,7 +295,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 #if (BL_SPACEDIM > 1)
                     BL_TO_FORTRAN_ANYD(tander_ec[0]),
 #endif
-                    BL_TO_FORTRAN_ANYD(area[0][mfi]),
+                    BL_TO_FORTRAN_ANYD(*area[0].fabPtr(mfi)),
                     BL_TO_FORTRAN_ANYD(flux_ec[0]),
 #if (BL_SPACEDIM > 1)
                     BL_TO_FORTRAN_N_ANYD(coeff_ec[1], dComp_rhoD),
@@ -303,7 +303,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                     BL_TO_FORTRAN_N_ANYD(coeff_ec[1], dComp_xi),
                     BL_TO_FORTRAN_N_ANYD(coeff_ec[1], dComp_lambda),
                     BL_TO_FORTRAN_ANYD(tander_ec[1]),
-                    BL_TO_FORTRAN_ANYD(area[1][mfi]),
+                    BL_TO_FORTRAN_ANYD(*area[1].fabPtr(mfi)),
                     BL_TO_FORTRAN_ANYD(flux_ec[1]),
 #if (BL_SPACEDIM > 2)
                     BL_TO_FORTRAN_N_ANYD(coeff_ec[2], dComp_rhoD),
@@ -311,11 +311,11 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                     BL_TO_FORTRAN_N_ANYD(coeff_ec[2], dComp_xi),
                     BL_TO_FORTRAN_N_ANYD(coeff_ec[2], dComp_lambda),
                     BL_TO_FORTRAN_ANYD(tander_ec[2]),
-                    BL_TO_FORTRAN_ANYD(area[2][mfi]),
+                    BL_TO_FORTRAN_ANYD(*area[2].fabPtr(mfi)),
                     BL_TO_FORTRAN_ANYD(flux_ec[2]),
 #endif
 #endif
-                    BL_TO_FORTRAN_ANYD(volume[mfi]),
+                    BL_TO_FORTRAN_ANYD(*volume.fabPtr(mfi)),
                     BL_TO_FORTRAN_ANYD(Dterm),
                     geom.CellSize());
       }
@@ -431,18 +431,18 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                           geom.Domain().loVect(), geom.Domain().hiVect(),
                           BL_TO_FORTRAN_3D(*Qfab),
                           BL_TO_FORTRAN_3D(*Qaux),
-                          BL_TO_FORTRAN_ANYD(area[0][mfi]),
+                          BL_TO_FORTRAN_ANYD(*area[0].fabPtr(mfi)),
                           BL_TO_FORTRAN_3D(flux_ec[0]),
 #if (BL_SPACEDIM > 1)
-                          BL_TO_FORTRAN_ANYD(area[1][mfi]),
+                          BL_TO_FORTRAN_ANYD(*area[1].fabPtr(mfi)),
                           BL_TO_FORTRAN_3D(flux_ec[1]),
 #if (BL_SPACEDIM > 2)
-                          BL_TO_FORTRAN_ANYD(area[2][mfi]),
+                          BL_TO_FORTRAN_ANYD(*area[2].fabPtr(mfi)),
                           BL_TO_FORTRAN_3D(flux_ec[2]),
 #endif
 #endif
                           BL_TO_FORTRAN_3D(flatn),
-                          BL_TO_FORTRAN_ANYD(volume[mfi]),
+                          BL_TO_FORTRAN_ANYD(*volume.fabPtr(mfi)),
                           BL_TO_FORTRAN_3D(Dterm),
 #ifdef PELEC_USE_EB
                           BL_TO_FORTRAN_ANYD(flag_fab),
@@ -498,7 +498,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
           VOL *= geom.CellSize()[idir];
 
         // Set weighting for redistribution
-        const FArrayBox& W = vfrac[mfi];
+        const FArrayBox& W = *vfrac.fabPtr(mfi);
         int wComp = 0;
 
         int Nflux = sv_eb_flux[local_i].numPts();
@@ -521,14 +521,14 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                                       sv_eb_flux[local_i].dataPtr(), &Nflux,
                                       BL_TO_FORTRAN_ANYD(Dterm),
                                       BL_TO_FORTRAN_N_ANYD(W, wComp),
-                                      BL_TO_FORTRAN_ANYD(vfrac[mfi]),
+                                      BL_TO_FORTRAN_ANYD(*vfrac.fabPtr(mfi)),
                                       &VOL, &NUM_STATE,
                                       &as_crse,
                                       BL_TO_FORTRAN_ANYD(*p_drho_as_crse),
                                       BL_TO_FORTRAN_ANYD(*p_rrflag_as_crse),
                                       &as_fine,
                                       BL_TO_FORTRAN_ANYD(dm_as_fine),
-                                      BL_TO_FORTRAN_ANYD(level_mask[mfi]), &dt);
+                                      BL_TO_FORTRAN_ANYD(*level_mask.fabPtr(mfi)), &dt);
         }
 
         if (do_reflux && flux_factor != 0) {
@@ -540,10 +540,10 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 #if (BL_SPACEDIM > 2)
             fr_as_crse->CrseAdd(mfi,
                                 {D_DECL(&flux_ec[0], &flux_ec[1], &flux_ec[2])},
-                                dxDp, dt, vfrac[mfi],
-                                {&((*areafrac[0])[mfi]),
-                                    &((*areafrac[1])[mfi]),
-                                    &((*areafrac[2])[mfi])});
+                                dxDp, dt, *vfrac.fabPtr(mfi),
+                                {areafrac[0]->fabPtr(mfi),
+                                    areafrac[1]->fabPtr(mfi),
+                                    areafrac[2]->fabPtr(mfi)};
 #else
             // TODO: EBfluxregisters are designed only for 3D, need for 2D
             Print() << "WARNING:Re redistribution crseadd for EB not implemented\n";
@@ -555,10 +555,10 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
             fr_as_fine->FineAdd(mfi,
                                 {D_DECL(&flux_ec[0], &flux_ec[1], &flux_ec[2])},
                                 dxDp, dt,
-                                vfrac[mfi],
-                                {&((*areafrac[0])[mfi]),
-                                    &((*areafrac[1])[mfi]),
-                                    &((*areafrac[2])[mfi])},
+                                *vfrac.fabPtr(mfi),
+                                {areafrac[0]->fabPtr(mfi),
+                                    areafrac[1]->fabPtr(mfi),
+                                    areafrac[2]->fabPtr(mfi)},
                                 dm_as_fine);
 #else
             // TODO: EBfluxregisters are designed only for 3D, need for 2D
@@ -571,9 +571,9 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       }
 #endif  //  PELEC_USE_EB ifdef
 
-      MOLSrcTerm[mfi].setVal(0, vbox, 0, NUM_STATE);
-      MOLSrcTerm[mfi].copy(Dterm, vbox, 0, vbox, 0, NUM_STATE);
-
+        MOLSrcTerm.fabPtr(mfi)->setVal(0, vbox, 0, NUM_STATE);
+        MOLSrcTerm.fabPtr(mfi)->copy(Dterm, vbox, 0, vbox, 0, NUM_STATE);
+        
 #ifdef PELEC_USE_EB
       // do regular flux reg ops
       if (do_reflux && flux_factor != 0 && typ == FabType::regular) 
@@ -601,7 +601,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 #ifdef PELEC_USE_EB
       if (do_mol_load_balance) {
         wt = (ParallelDescriptor::second() - wt) / vbox.d_numPts();
-        (*cost)[mfi].plus(wt, vbox);
+        cost->fabPtr(mfi)->plus(wt, vbox);
       }
 #endif
     }  // End of MFIter scope
@@ -617,14 +617,14 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 
       const Box& bx = mfi.validbox();
       pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
-                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], Xmom), &amrex::SpaceDim);
+                    BL_TO_FORTRAN_N_3D(*MOLSrcTerm.fabPtr(mfi), Xmom), &amrex::SpaceDim);
 
       pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
-                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], FirstSpec), &NumSpec);
+                    BL_TO_FORTRAN_N_3D(*MOLSrcTerm.fabPtr(mfi), FirstSpec), &NumSpec);
 
       const int one = 1;
       pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
-                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], Eden), &one);
+                    BL_TO_FORTRAN_N_3D(*MOLSrcTerm.fabPtr(mfi), Eden), &one);
     }
   }
 }
