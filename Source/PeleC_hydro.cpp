@@ -87,10 +87,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     {
 	FArrayBox flux[BL_SPACEDIM];
 	FArrayBox pradial(Box::TheUnitBox(),1);
-
-#ifndef AMREX_USE_CUDA 
-	FArrayBox* q, *qaux, *src_q;
-#endif
 	IArrayBox bcMask;
 
 	Real cflLoc = -1.0e+200;
@@ -107,41 +103,27 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    FArrayBox &stateout = S_new[mfi];
 	    FArrayBox &source_in  = sources_for_hydro[mfi];
 	    FArrayBox &source_out = hydro_source[mfi];
-        FArrayBox qtmp, qauxtmp, src_qtmp; 
-#ifdef AMREX_USE_CUDA 
-        Gpu::AsyncFab q_as(qbx, QVAR);
-        FArrayBox* q = q_as.fabPtr();  
-        Gpu::AsyncFab qaux_as(qbx, NQAUX); 
-        FArrayBox* qaux = qaux_as.fabPtr();
-        Gpu::AsyncFab src_q_as(qbx, QVAR); 
-        FArrayBox* src_q = src_q_as.fabPtr(); 
-#else   
-        FArrayBox qt(qbx,QVAR); 
-        FArrayBox qat(qbx,NQAUX); 
-        FArrayBox sqt(qbx, QVAR); 
-        q = &qt; 
-        qaux = &qat; 
-        src_q = &sqt; 
-#endif
-	    bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
-                            // First integer is bc_type, second integer about slip/no-slip wall 
-        bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
-        set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
-#ifdef AMREX_USE_CUDA
-        AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
-    	    ctoprim(BL_TO_FORTRAN_BOX(tbx),
-    		    BL_TO_FORTRAN_ANYD(*statein),
-    		    BL_TO_FORTRAN_ANYD(*q),
-    		    BL_TO_FORTRAN_ANYD(*qaux));// */
-            });
-        Gpu::Device::streamSynchronize();
-#else
-    	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
-    		    statein->dataPtr(), ARLIM_3D(statein->loVect()), ARLIM_3D(statein->hiVect()),
-    		    q->dataPtr(), ARLIM_3D(q->loVect()), ARLIM_3D(q->hiVect()),
-    		    qaux->dataPtr(), ARLIM_3D(qaux->loVect()), ARLIM_3D(qaux->hiVect()));
 
-#endif 
+            Gpu::AsyncFab q_as(qbx, QVAR);
+            FArrayBox* q = q_as.fabPtr();  
+            Gpu::AsyncFab qaux_as(qbx, NQAUX); 
+            FArrayBox* qaux = qaux_as.fabPtr();
+            Gpu::AsyncFab src_q_as(qbx, QVAR); 
+            FArrayBox* src_q = src_q_as.fabPtr(); 
+
+            bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
+                                  // First integer is bc_type, second integer about slip/no-slip wall 
+            bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
+            set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
+
+            AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
+                ctoprim(BL_TO_FORTRAN_BOX(tbx),
+                        BL_TO_FORTRAN_ANYD(*statein),
+                        BL_TO_FORTRAN_ANYD(*q),
+                        BL_TO_FORTRAN_ANYD(*qaux));// */
+              });
+            Gpu::Device::streamSynchronize();
+            
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
             //
@@ -155,8 +137,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
             {
               impose_NSCBC(lo, hi, domain_lo, domain_hi,
                            BL_TO_FORTRAN(statein),
-                           BL_TO_FORTRAN(q),
-                           BL_TO_FORTRAN(qaux),
+                           BL_TO_FORTRAN(*q),
+                           BL_TO_FORTRAN(*qaux),
                            BL_TO_FORTRAN(bcMask),
                            &time, dx, &dt);
 
