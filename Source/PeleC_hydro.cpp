@@ -99,11 +99,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    const Box& qbx = amrex::grow(bx, NUM_GROW);
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
-	    const FArrayBox *statein  = S.fabPtr(mfi);
-	    FArrayBox *stateout = S_new.fabPtr(mfi);
-	    FArrayBox *source_in  = sources_for_hydro.fabPtr(mfi);
-	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
+	    const FArrayBox *statein  = &S[mfi];
+	    FArrayBox *stateout = &(S_new[mfi]);
+	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
+	    FArrayBox *source_out = &(hydro_source[mfi]);
 
+            const FArrayBox *statein_gp = S.fabPtr(mfi);
+            
             Gpu::AsyncFab q(qbx, QVAR);
             Gpu::AsyncFab qaux(qbx, NQAUX); 
             Gpu::AsyncFab src_q(qbx, QVAR); 
@@ -115,7 +117,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
             AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
                 ctoprim(BL_TO_FORTRAN_BOX(tbx),
-                        BL_TO_FORTRAN_ANYD(*statein),
+                        BL_TO_FORTRAN_ANYD(*statein_gp),
                         BL_TO_FORTRAN_ANYD(q.fab()),
                         BL_TO_FORTRAN_ANYD(qaux.fab()));// */
               });
@@ -200,13 +202,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #if (BL_SPACEDIM < 3)
 		 BL_TO_FORTRAN(pradial),
 #endif
-		 D_DECL(BL_TO_FORTRAN(*area[0].fabPtr(mfi)),
-			BL_TO_FORTRAN(*area[1].fabPtr(mfi)),
-			BL_TO_FORTRAN(*area[2].fabPtr(mfi))),
+		 D_DECL(BL_TO_FORTRAN(area[0][mfi]),
+			BL_TO_FORTRAN(area[1][mfi]),
+			BL_TO_FORTRAN(area[2][mfi])),
 #if (BL_SPACEDIM < 3)
-		 BL_TO_FORTRAN(*dLogArea[0].fabPtr(mfi)),
+		 BL_TO_FORTRAN(dLogArea[0][mfi]),
 #endif
-		 BL_TO_FORTRAN(*volume.fabPtr(mfi)),
+		 BL_TO_FORTRAN(volume[mfi]),
 		 &cflLoc, verbose,
 		 mass_added_flux,
 		 xmom_added_flux,
