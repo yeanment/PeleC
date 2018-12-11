@@ -155,61 +155,37 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 #endif
 
       BL_PROFILE_VAR_START(diff);
-//      Qfab.resize(gbox, QVAR);
       int nqaux = NQAUX > 0 ? NQAUX : 1;
-      FArrayBox *Qfab, *Qaux; 
 
-//      Qaux.resize(gbox, nqaux);
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
-#ifdef AMREX_USE_CUDA
-        Gpu::AsyncFab q_as(gbox, QVAR), qaux_as(gbox, nqaux); 
-        Qfab = q_as.fabPtr(); 
-        Qaux = qaux_as.fabPtr(); 
-        BL_PROFILE("PeleC::ctoprim call");
-        AMREX_LAUNCH_DEVICE_LAMBDA(gbox, tbx, {
-            ctoprim(BL_TO_FORTRAN_BOX(tbx), 
-                    BL_TO_FORTRAN_ANYD(*Sfab), 
-                    BL_TO_FORTRAN_ANYD(*Qfab), 
-                    BL_TO_FORTRAN_ANYD(*Qaux));
+
+      Gpu::AsyncFab q_as(gbox, QVAR), qaux_as(gbox, nqaux); 
+      FArrayBox* Qfab = q_as.fabPtr(); 
+      FArrayBox* Qaux = qaux_as.fabPtr(); 
+
+      BL_PROFILE("PeleC::ctoprim call");
+      AMREX_LAUNCH_DEVICE_LAMBDA(gbox, tbx, {
+          ctoprim(BL_TO_FORTRAN_BOX(tbx), 
+                  BL_TO_FORTRAN_ANYD(*Sfab), 
+                  BL_TO_FORTRAN_ANYD(*Qfab), 
+                  BL_TO_FORTRAN_ANYD(*Qaux));
         });
-        Gpu::Device::streamSynchronize();
-/*
-        FArrayBox qt(gbox, QVAR); 
-        FArrayBox qat(gbox, nqaux);
-        Qfab = &qt; 
-        Qaux = &qat;  
-        BL_PROFILE("PeleC::ctoprim call");
-            ctoprim_h(BL_TO_FORTRAN_BOX(gbox), 
-                    BL_TO_FORTRAN_ANYD(*Sfab), 
-                    BL_TO_FORTRAN_ANYD(*Qfab), 
-                    BL_TO_FORTRAN_ANYD(*Qaux));
-*/
-#else
-        FArrayBox qt(gbox, QVAR); 
-        FArrayBox qat(gbox, nqaux);
-        Qfab = &qt; 
-        Qaux = &qat;  
-        BL_PROFILE("PeleC::ctoprim call");
-            ctoprim(BL_TO_FORTRAN_BOX(gbox), 
-                    BL_TO_FORTRAN_ANYD(*Sfab), 
-                    BL_TO_FORTRAN_ANYD(*Qfab), 
-                    BL_TO_FORTRAN_ANYD(*Qaux));
-#endif
+      Gpu::Device::streamSynchronize();
 
       // Compute transport coefficients, coincident with Q
-        BL_PROFILE("PeleC::get_transport_coeffs call");
-        coeff_cc.resize(gbox, nCompTr);
-        get_transport_coeffs(ARLIM_3D(gbox.loVect()),
-                             ARLIM_3D(gbox.hiVect()),
-                             BL_TO_FORTRAN_N_3D(*Qfab, cQFS),
-                             BL_TO_FORTRAN_N_3D(*Qfab, cQTEMP),
-                             BL_TO_FORTRAN_N_3D(*Qfab, cQRHO),
-                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_rhoD),
-                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_mu),
-                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_xi),
-                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_lambda));
-
+      BL_PROFILE("PeleC::get_transport_coeffs call");
+      coeff_cc.resize(gbox, nCompTr);
+      get_transport_coeffs(ARLIM_3D(gbox.loVect()),
+                           ARLIM_3D(gbox.hiVect()),
+                           BL_TO_FORTRAN_N_3D(*Qfab, cQFS),
+                           BL_TO_FORTRAN_N_3D(*Qfab, cQTEMP),
+                           BL_TO_FORTRAN_N_3D(*Qfab, cQRHO),
+                           BL_TO_FORTRAN_N_3D(coeff_cc, dComp_rhoD),
+                           BL_TO_FORTRAN_N_3D(coeff_cc, dComp_mu),
+                           BL_TO_FORTRAN_N_3D(coeff_cc, dComp_xi),
+                           BL_TO_FORTRAN_N_3D(coeff_cc, dComp_lambda));
+      
       // Container on grown region, for hybrid divergence & redistribution
       Dterm.resize(cbox, NUM_STATE);
 
