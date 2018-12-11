@@ -88,14 +88,8 @@ extern "C"
                const BL_FORT_FAB_ARG_3D(u),
                BL_FORT_FAB_ARG_3D(q),
                BL_FORT_FAB_ARG_3D(qaux));
-//TODO Eliminate the need for this one!
-#ifdef AMREX_USE_CUDA
-  AMREX_GPU_HOST
-  void ctoprim_h(const int* lo, const int* hi,
-                 const BL_FORT_FAB_ARG_3D(u),
-                 BL_FORT_FAB_ARG_3D(q),
-                 BL_FORT_FAB_ARG_3D(qaux));
-#endif
+
+  AMREX_GPU_DEVICE
   void srctoprim(const int* lo,   const int* hi,
                  const BL_FORT_FAB_ARG_3D(q),
                  const BL_FORT_FAB_ARG_3D(qaux),

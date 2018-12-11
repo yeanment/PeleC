@@ -493,7 +493,7 @@ AMREX_CUDA_FORT_HOST subroutine ctoprim_h(lo, hi, &
   end subroutine 
 #endif
 
-AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
+AMREX_DEVICE subroutine ctoprim(lo, hi, &
                      uin, uin_lo, uin_hi, &
                      q,     q_lo,   q_hi, &
                      qaux, qa_lo,  qa_hi) bind(C, name = "ctoprim")
@@ -608,7 +608,7 @@ AMREX_CUDA_FORT_DEVICE subroutine ctoprim(lo, hi, &
 !   call destroy(eos_state)
   end subroutine 
 
-  subroutine srctoprim(lo, hi, &
+AMREX_DEVICE  subroutine srctoprim(lo, hi, &
                        q,     q_lo,   q_hi, &
                        qaux, qa_lo,  qa_hi, &
                        src, src_lo, src_hi, &

@@ -121,7 +121,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                         BL_TO_FORTRAN_ANYD(q.fab()),
                         BL_TO_FORTRAN_ANYD(qaux.fab()));// */
               });
-            Gpu::Device::streamSynchronize();
             
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
@@ -166,11 +165,16 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
 	    }
 #endif
-	    srctoprim(BL_TO_FORTRAN_BOX(qbx),
+        FArrayBox *source_in_d  = sources_for_hydro.fabPtr(mfi);
+  
+        AMREX_LAUNCH_DEVICE_LAMBDA(qbx,tbx,{
+	        srctoprim(BL_TO_FORTRAN_BOX(tbx),
                       BL_TO_FORTRAN_ANYD(q.fab()),
                       BL_TO_FORTRAN_ANYD(qaux.fab()),
-                      BL_TO_FORTRAN_ANYD(*source_in),
+                      BL_TO_FORTRAN_ANYD(*source_in_d),
                       BL_TO_FORTRAN_ANYD(src_q.fab()));
+        });
+        Gpu::Device::streamSynchronize();
 
             // Allocate fabs for fluxes
 	    for (int i = 0; i < BL_SPACEDIM ; i++)  {
@@ -182,9 +186,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 		pradial.resize(amrex::surroundingNodes(bx,0),1);
 	    }
         
-#ifdef GPU 
 //        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-#endif
 	    pc_umdrv
 		(&is_finest_level, &time,
 		 lo, hi, domain_lo, domain_hi,
@@ -217,9 +219,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 		 E_added_flux,
 		 mass_lost, xmom_lost, ymom_lost, zmom_lost,
 		 eden_lost, xang_lost, yang_lost, zang_lost); // */
-#ifdef GPU 
 //         }); 
-#endif
 	    courno = std::max(courno,cflLoc);
 
             if (do_reflux  && sub_iteration == sub_ncycle-1 )
