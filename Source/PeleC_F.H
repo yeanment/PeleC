@@ -296,7 +296,8 @@ extern "C"
     (const int    lo[], const int    hi[],
      const int domlo[], const int domhi[],
      BL_FORT_IFAB_ARG(bcMask));
-  
+
+AMREX_GPU_DEVICE  
   void pc_umdrv
     (const int* is_finest_level,
      const amrex::Real* time,

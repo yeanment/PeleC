@@ -89,32 +89,34 @@ contains
     double precision vol(vol_l1:vol_h1,vol_l2:vol_h2)
 
     ! Left and right state arrays (edge centered, cell centered)
-    double precision, allocatable::  qm(:,:,:),  qp(:,:,:)
-    double precision, allocatable:: qxm(:,:,:), qym(:,:,:)
-    double precision, allocatable:: qxp(:,:,:), qyp(:,:,:)
+    double precision, dimesion(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) :: qm , qp  
+    double precision, dimesion(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) :: qxm, qym
+    double precision, dimesion(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) :: qxp, qyp
 
     ! Work arrays to hold riemann state and conservative fluxes
-    double precision, allocatable ::  fx(:,:,:),  fy(:,:,:)
-    double precision, allocatable ::  qgdxtmp(:,:,:)
-    double precision, allocatable :: shk(:,:)
+    double precision ::  fx(ilo1:ihi1+1,ilo2-1:ihi2+1,NVAR),  fy(ilo1-1:ihi1+1,ilo2:ihi2+1,NVAR)
+!TODO see how big q1_l, q1_h is 
+    double precision ::  qgdxtmp(q1_l1:q1_h1,q1_l2:q1_h2,NGDNV)
+    double precision :: shk(ilo1-1:ihi1+1,ilo2-1:ihi2+1)
 
     ! Local scalar variables
     double precision :: dtdx
     double precision :: hdtdx, hdt, hdtdy
     integer          :: i,j
 
-    allocate ( qgdxtmp(q1_l1:q1_h1,q1_l2:q1_h2,NGDNV))
 
-    allocate (  qm(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
-    allocate (  qp(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
-    allocate ( qxm(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
-    allocate ( qxp(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
-    allocate ( qym(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
-    allocate ( qyp(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
-    allocate (  fx(ilo1  :ihi1+1,ilo2-1:ihi2+1,NVAR))
-    allocate (  fy(ilo1-1:ihi1+1,ilo2  :ihi2+1,NVAR))
+!    allocate ( qgdxtmp(q1_l1:q1_h1,q1_l2:q1_h2,NGDNV))
 
-    allocate (shk(ilo1-1:ihi1+1,ilo2-1:ihi2+1))
+!    allocate (  qm(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
+!    allocate (  qp(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
+!    allocate ( qxm(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
+!    allocate ( qxp(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
+!    allocate ( qym(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
+!    allocate ( qyp(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) )
+!    allocate (  fx(ilo1  :ihi1+1,ilo2-1:ihi2+1,NVAR))
+!    allocate (  fy(ilo1-1:ihi1+1,ilo2  :ihi2+1,NVAR))
+
+!    allocate (shk(ilo1-1:ihi1+1,ilo2-1:ihi2+1))
 
 
     ! Local constants
@@ -227,10 +229,10 @@ contains
        end do
     end do
 
-    deallocate(qm,qp,qxm,qxp,qym,qyp)
-    deallocate(fx,fy)
-    deallocate(shk)
-    deallocate(qgdxtmp)
+!    deallocate(qm,qp,qxm,qxp,qym,qyp)
+!    deallocate(fx,fy)
+!    deallocate(shk)
+!    deallocate(qgdxtmp)
 
   end subroutine umeth2d
 
@@ -238,7 +240,7 @@ contains
 ! ::: ------------------------------------------------------------------
 ! :::
 
-  subroutine consup( uin, uin_l1, uin_l2, uin_h1, uin_h2, &
+AMREX_DEVICE  subroutine consup( uin, uin_l1, uin_l2, uin_h1, uin_h2, &
                      q, q_l1, q_l2, q_h1, q_h2, &
                      uout,uout_l1,uout_l2,uout_h1,uout_h2, &
                      update,updt_l1,updt_l2,updt_h1,updt_h2, &

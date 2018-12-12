@@ -738,7 +738,7 @@ AMREX_DEVICE  subroutine srctoprim(lo, hi, &
 
 
 
-  subroutine limit_hydro_fluxes_on_small_dens(u,u_lo,u_hi, &
+AMREX_DEVICE  subroutine limit_hydro_fluxes_on_small_dens(u,u_lo,u_hi, &
                                               q,q_lo,q_hi, &
                                               vol,vol_lo,vol_hi, &
                                               flux1,flux1_lo,flux1_hi, &
@@ -795,7 +795,8 @@ AMREX_DEVICE  subroutine srctoprim(lo, hi, &
     double precision, intent(in   ) :: area3(area3_lo(1):area3_hi(1),area3_lo(2):area3_hi(2),area3_lo(3):area3_hi(3))
 #endif
 
-    double precision, pointer :: thetap_dens(:,:,:), thetam_dens(:,:,:)
+    double precision :: thetap_dens(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1), &
+                        thetam_dens(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
 
     integer          :: i, j, k
 
@@ -814,8 +815,9 @@ AMREX_DEVICE  subroutine srctoprim(lo, hi, &
 
     ! We implement the flux limiter on a dimension-by-dimension basis, starting with the x-direction.
 
-    call bl_allocate(thetap_dens,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
-    call bl_allocate(thetam_dens,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+!TODO get rid of allocates! 
+!    call bl_allocate(thetap_dens,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+!    call bl_allocate(thetam_dens,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
 
     thetap_dens(:,:,:) = ONE
     thetam_dens(:,:,:) = ONE
@@ -1211,8 +1213,9 @@ AMREX_DEVICE  subroutine srctoprim(lo, hi, &
 
 #endif
 
-    call bl_deallocate(thetap_dens)
-    call bl_deallocate(thetam_dens)
+!TODO Get rid of bl_deallocate! 
+!    call bl_deallocate(thetap_dens)
+!    call bl_deallocate(thetam_dens)
 
   end subroutine limit_hydro_fluxes_on_small_dens
 
