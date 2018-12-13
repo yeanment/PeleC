@@ -27,7 +27,7 @@ contains
 ! ::: :: flux1      <=  (modify) flux in X direction on X edges
 ! ::: :: flux2      <=  (modify) flux in Y direction on Y edges
 ! ::: ----------------------------------------------------------------
-
+AMREX_DEVICE
   subroutine umeth2d(q, flatn, qd_l1, qd_l2, qd_h1, qd_h2, &
                      qaux, qa_l1, qa_l2, qa_h1, qa_h2, &
                      srcQ, src_l1, src_l2, src_h1, src_h2, &
@@ -89,9 +89,9 @@ contains
     double precision vol(vol_l1:vol_h1,vol_l2:vol_h2)
 
     ! Left and right state arrays (edge centered, cell centered)
-    double precision, dimesion(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) :: qm , qp  
-    double precision, dimesion(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) :: qxm, qym
-    double precision, dimesion(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) :: qxp, qyp
+    double precision, dimension(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) :: qm , qp  
+    double precision, dimension(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) :: qxm, qym
+    double precision, dimension(ilo1-1:ihi1+2,ilo2-1:ihi2+2,QVAR) :: qxp, qyp
 
     ! Work arrays to hold riemann state and conservative fluxes
     double precision ::  fx(ilo1:ihi1+1,ilo2-1:ihi2+1,NVAR),  fy(ilo1-1:ihi1+1,ilo2:ihi2+1,NVAR)
@@ -539,3 +539,4 @@ AMREX_DEVICE  subroutine consup( uin, uin_l1, uin_l2, uin_h1, uin_h2, &
   end subroutine consup
 
 end module advection_module
+

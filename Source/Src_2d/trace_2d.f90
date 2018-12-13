@@ -8,11 +8,12 @@ module trace_module
 
 contains
 
-  subroutine trace(q,c,flatn,qd_l1,qd_l2,qd_h1,qd_h2, &
-                   dloga,dloga_l1,dloga_l2,dloga_h1,dloga_h2, &
-                   qxm,qxp,qym,qyp,qpd_l1,qpd_l2,qpd_h1,qpd_h2, &
-                   src,src_l1,src_l2,src_h1,src_h2, &
-                   ilo1,ilo2,ihi1,ihi2,dx,dy,dt)
+!AMREX_DEVICE  
+        subroutine trace(q,c,flatn,qd_l1,qd_l2,qd_h1,qd_h2, &
+                         dloga,dloga_l1,dloga_l2,dloga_h1,dloga_h2, &
+                         qxm,qxp,qym,qyp,qpd_l1,qpd_l2,qpd_h1,qpd_h2, &
+                         src,src_l1,src_l2,src_h1,src_h2, &
+                         ilo1,ilo2,ihi1,ihi2,dx,dy,dt)
 
     use meth_params_module, only : plm_iorder, QVAR, QRHO, QU, QV, &
                                    QREINT, QPRES, &
@@ -40,7 +41,8 @@ contains
     double precision qyp(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR)
     double precision src(src_l1:src_h1,src_l2:src_h2,QVAR)
 
-    double precision, allocatable :: dqx(:,:,:), dqy(:,:,:)
+  !This is really ilo, ihi etc. 
+    double precision, dimension(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR) :: dqx, dqy
 
     ! Local variables
     integer i, j
@@ -63,16 +65,18 @@ contains
     double precision :: rho_ref, u_ref, v_ref, p_ref, rhoe_ref
     double precision :: e(3)
 
+!#ifndef AMREX_USE_CUDA
     if (ppm_type .ne. 0) then
        print *,'Oops -- shouldnt be in trace with ppm_type != 0'
        call amrex_error("Error:: trace_2d.f90")
     end if
+!#endif 
     
     dtdx = dt/dx
     dtdy = dt/dy
 
-    allocate(dqx(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR))
-    allocate(dqy(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR))
+!    allocate(dqx(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR))
+!    allocate(dqy(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR))
 
     ! Compute slopes
     if (plm_iorder == 1) then
@@ -386,7 +390,7 @@ contains
        enddo
     enddo
 
-    deallocate(dqx,dqy)
+!    deallocate(dqx,dqy)
     
   end subroutine trace
   

@@ -246,7 +246,7 @@ contains
   end subroutine cmpflx
 
 
-  subroutine shock(q,qd_l1,qd_l2,qd_h1,qd_h2, &
+AMREX_DEVICE  subroutine shock(q,qd_l1,qd_l2,qd_h1,qd_h2, &
                    shk,s_l1,s_l2,s_h1,s_h2, &
                    ilo1,ilo2,ihi1,ihi2,dx,dy)
 
@@ -293,8 +293,10 @@ contains
 
              divU = HALF*(rp*q(i+1,j,QU) - rm*q(i-1,j,QU))/(rc*dx) + &
                     HALF*(q(i,j+1,QV) - q(i,j-1,QV))/dy
+#ifndef AMREX_USE_CUDA
           else
              call amrex_error("ERROR: invalid coord_type in shock")
+#endif
           endif
              
           ! find the pre- and post-shock pressures in each direction
