@@ -40,28 +40,27 @@ void PeleC_ctoprim(Box const& bx, FArrayBox const& ufab, FArrayBox& qfab, FArray
                 q(i,j,k,QU) = v.x; 
                 q(i,j,k,QV) = v.y;
                 q(i,j,k,QW) = v.z; 
-
 // Maybe #pragma unroll                 
                 for(int ipassive = 0; ipassive < npassive; ++ipassive){
                     n = eos_state.upass_map(ipassive); 
                     nq = eos_state.qpass_map(ipassive); 
-                    q(i,j,k,nq) = u(i,j,k,n)/rhoinv; 
+                    q(i,j,k,nq) = u(i,j,k,n)*rhoinv; 
                 }
 
 
-                eos_state.e = (u(i,j,k,UEDEN) - kineng)*rhoinv; 
+                eos_state.e = (u(i,j,k,UEDEN) - kineng)*rhoinv;
                 eos_state.T = u(i,j,k,UTEMP); 
                 eos_state.rho = rho; 
 //TODO figure out massfrac and auxilary vars
 #pragma unroll 
-                for(int sp = 0; sp < NUM_SPECIES; ++sp)  eos_state.massfrac[sp] = u(i,j,k,sp+UFS); 
+                for(int sp = 0; sp < NUM_SPECIES; ++sp)  eos_state.massfrac[sp] = q(i,j,k,sp+QFS);
 #pragma unroll
                 for(int ax = 0; ax < naux; ++ax) eos_state.aux[ax] = q(i,j,k,ax+QFX); 
 // Call eos_re
                 eos_state.eos_re(); 
 
                 q(i,j,k,QTEMP) = eos_state.T; 
-                q(i,j,k,QREINT) = eos_state.e * rho; 
+                q(i,j,k,QREINT) = eos_state.e * rho;
                 q(i,j,k,QPRES) = eos_state.p; 
                 q(i,j,k,QGAME) = eos_state.p/eos_state.e*rhoinv + 1.e0; 
 

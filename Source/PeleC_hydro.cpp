@@ -1,5 +1,6 @@
 #include "PeleC.H"
 #include "PeleC_F.H"
+#include "PeleC_K.H"
 #include <AMReX_Gpu.H>
 #include <AMReX_VisMF.H>
 using namespace amrex;
@@ -114,12 +115,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                                   // First integer is bc_type, second integer about slip/no-slip wall 
             bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
             set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
-
+            amrex::Print()<<"About to use Ctoprim C++"<<std::endl;
             AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
-                ctoprim(BL_TO_FORTRAN_BOX(tbx),
+/*               ctoprim(BL_TO_FORTRAN_BOX(tbx),
                         BL_TO_FORTRAN_ANYD(*statein_gp),
                         BL_TO_FORTRAN_ANYD(q.fab()),
                         BL_TO_FORTRAN_ANYD(qaux.fab()));// */
+                 PeleC_ctoprim(tbx, *statein_gp, q.fab(), qaux.fab()); 
               });
             
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on

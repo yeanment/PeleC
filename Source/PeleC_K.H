@@ -3,7 +3,7 @@
 
 #include <AMReX_FArrayBox.H> 
 AMREX_GPU_DEVICE 
-void PeleC_ctoprim(amrex::Box const& bx, amrex::FArrayBox& state, amrex::FArrayBox& Q,
+void PeleC_ctoprim(amrex::Box const& bx, amrex::FArrayBox const& state, amrex::FArrayBox& Q,
                    amrex::FArrayBox& Qaux); 
 //TODO Add more fuctions! 
 
