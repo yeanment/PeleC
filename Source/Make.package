@@ -12,7 +12,9 @@ CEXE_sources += PeleCBld.cpp
 CEXE_sources += main.cpp
 
 CEXE_headers += PeleC.H
+CEXE_headers += PeleC_index_macros.H
 CEXE_headers += PeleC_EOS.H
+CEXE_headers += PeleC_Parameters.H
 CEXE_headers += PeleC_K.H
 CEXE_headers += PeleC_io.H
 CEXE_headers += Problem.H
