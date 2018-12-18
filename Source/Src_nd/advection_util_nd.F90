@@ -587,6 +587,7 @@ AMREX_DEVICE subroutine ctoprim(lo, hi, &
 #else
              call eos_re(eos_state) 
 #endif
+
 ! fills the eos_state struct for use 
 
 ! The PelePhysics 

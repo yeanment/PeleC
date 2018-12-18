@@ -26,6 +26,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
     BL_ASSERT(S.nGrow() == NUM_GROW);
     sources_for_hydro.setVal(0.0);
+//    MultiFab Qout(grids, dmap, NQAUX, NUM_GROW); 
     int ng = 0; // TODO: This is currently the largest ngrow of the source data...maybe this needs fixing?
     for (int n = 0; n < src_list.size(); ++n)
     {
@@ -42,7 +43,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     }
 #endif
     sources_for_hydro.FillBoundary(geom.periodicity());
-
+    VisMF::Write(sources_for_hydro,"SFH_FORTRAN");
     hydro_source.setVal(0);
 
     int finest_level = parent->finestLevel();
@@ -96,7 +97,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	const int*  domain_hi = geom.Domain().hiVect();
 	for (MFIter mfi(S_new,hydro_tile_size); mfi.isValid(); ++mfi)
 	{
-	    const Box& bx    = mfi.tilebox();
+	    const Box& bx  = mfi.tilebox();
 	    const Box& qbx = amrex::grow(bx, NUM_GROW);
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
@@ -105,25 +106,25 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
 	    FArrayBox *source_out = &(hydro_source[mfi]);
 
-            const FArrayBox *statein_gp = S.fabPtr(mfi);
+        FArrayBox const* statein_gp = S.fabPtr(mfi);
             
-            Gpu::AsyncFab q(qbx, QVAR);
-            Gpu::AsyncFab qaux(qbx, NQAUX); 
-            Gpu::AsyncFab src_q(qbx, QVAR); 
+        Gpu::AsyncFab q(qbx, QVAR);
+        Gpu::AsyncFab qaux(qbx, NQAUX); 
+        Gpu::AsyncFab src_q(qbx, QVAR); 
 
-            bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
-                                  // First integer is bc_type, second integer about slip/no-slip wall 
-            bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
-            set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
-            amrex::Print()<<"About to use Ctoprim C++"<<std::endl;
-            AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx,{ 
-/*               ctoprim(BL_TO_FORTRAN_BOX(tbx),
-                        BL_TO_FORTRAN_ANYD(*statein_gp),
-                        BL_TO_FORTRAN_ANYD(q.fab()),
-                        BL_TO_FORTRAN_ANYD(qaux.fab()));// */
-                 PeleC_ctoprim(tbx, *statein_gp, q.fab(), qaux.fab()); 
-              });
-            
+        bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
+                              // First integer is bc_type, second integer about slip/no-slip wall 
+        bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
+        set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
+        AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx, 
+            {
+/*             ctoprim(BL_TO_FORTRAN_BOX(tbx),
+                     BL_TO_FORTRAN_ANYD(*statein_gp),
+                     BL_TO_FORTRAN_ANYD(q.fab()),
+                     BL_TO_FORTRAN_ANYD(qaux.fab()));// */
+                 PeleC_ctoprim(tbx, *statein_gp, q.fab(), qaux.fab());                  
+             });
+//             Qout[mfi].copy(qaux.fab()); 
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
             //
@@ -167,132 +168,129 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
 	    }
 #endif
-        FArrayBox *source_in_d  = sources_for_hydro.fabPtr(mfi);
-  
-        AMREX_LAUNCH_DEVICE_LAMBDA(qbx,tbx,{
-	        srctoprim(BL_TO_FORTRAN_BOX(tbx),
-                      BL_TO_FORTRAN_ANYD(q.fab()),
-                      BL_TO_FORTRAN_ANYD(qaux.fab()),
-                      BL_TO_FORTRAN_ANYD(*source_in_d),
-                      BL_TO_FORTRAN_ANYD(src_q.fab()));
-        });
+                FArrayBox *source_in_d  = sources_for_hydro.fabPtr(mfi);
+          
+                AMREX_LAUNCH_DEVICE_LAMBDA(qbx,tbx,{
+                    srctoprim(BL_TO_FORTRAN_BOX(tbx),
+                              BL_TO_FORTRAN_ANYD(q.fab()),
+                              BL_TO_FORTRAN_ANYD(qaux.fab()),
+                              BL_TO_FORTRAN_ANYD(*source_in_d),
+                              BL_TO_FORTRAN_ANYD(src_q.fab()));
+                });
 
-            // Allocate fabs for fluxes
-	    for (int i = 0; i < BL_SPACEDIM ; i++)  {
-		const Box& bxtmp = amrex::surroundingNodes(bx,i);
-		flux[i].resize(bxtmp,NUM_STATE);
-	    }
-
-	    if (!Geometry::IsCartesian()) {
-		pradial.resize(amrex::surroundingNodes(bx,0),1);
-	    }
-
-//TODO Remove ifdefs and integrate into to one function 
-// It is two calls right now to 
-#ifdef AMREX_USE_CUDA        
-        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-	    pc_umdrv
-		(&is_finest_level, &time,
-		 lo, hi, domain_lo, domain_hi,
-		 BL_TO_FORTRAN(*statein), 
-		 BL_TO_FORTRAN(*stateout),
-		 BL_TO_FORTRAN(q.fab()),
-		 BL_TO_FORTRAN(qaux.fab()),
-		 BL_TO_FORTRAN(src_q.fab()),
-		 BL_TO_FORTRAN(*source_out),
-		 BL_TO_FORTRAN(bcMask),
-		 dx, &dt,
-		 D_DECL(BL_TO_FORTRAN(flux[0]),
-			BL_TO_FORTRAN(flux[1]),
-			BL_TO_FORTRAN(flux[2])),
-#if (BL_SPACEDIM < 3)
-		 BL_TO_FORTRAN(pradial),
-#endif
-		 D_DECL(BL_TO_FORTRAN(area[0][mfi]),
-			BL_TO_FORTRAN(area[1][mfi]),
-			BL_TO_FORTRAN(area[2][mfi])),
-#if (BL_SPACEDIM < 3)
-		 BL_TO_FORTRAN(dLogArea[0][mfi]),
-#endif
-		 BL_TO_FORTRAN(volume[mfi]),
-		 &cflLoc, verbose,
-		 mass_added_flux,
-		 xmom_added_flux,
-		 ymom_added_flux,
-		 zmom_added_flux,
-		 E_added_flux,
-		 mass_lost, xmom_lost, ymom_lost, zmom_lost,
-		 eden_lost, xang_lost, yang_lost, zang_lost); // */
-         }); 
-         Gpu::Device::streamSynchronize();
-#else
-	    pc_umdrv
-		(&is_finest_level, &time,
-		 lo, hi, domain_lo, domain_hi,
-		 BL_TO_FORTRAN(*statein), 
-		 BL_TO_FORTRAN(*stateout),
-		 BL_TO_FORTRAN(q.fab()),
-		 BL_TO_FORTRAN(qaux.fab()),
-		 BL_TO_FORTRAN(src_q.fab()),
-		 BL_TO_FORTRAN(*source_out),
-		 BL_TO_FORTRAN(bcMask),
-		 dx, &dt,
-		 D_DECL(BL_TO_FORTRAN(flux[0]),
-			BL_TO_FORTRAN(flux[1]),
-			BL_TO_FORTRAN(flux[2])),
-#if (BL_SPACEDIM < 3)
-		 BL_TO_FORTRAN(pradial),
-#endif
-		 D_DECL(BL_TO_FORTRAN(area[0][mfi]),
-			BL_TO_FORTRAN(area[1][mfi]),
-			BL_TO_FORTRAN(area[2][mfi])),
-#if (BL_SPACEDIM < 3)
-		 BL_TO_FORTRAN(dLogArea[0][mfi]),
-#endif
-		 BL_TO_FORTRAN(volume[mfi]),
-		 &cflLoc, verbose,
-		 mass_added_flux,
-		 xmom_added_flux,
-		 ymom_added_flux,
-		 zmom_added_flux,
-		 E_added_flux,
-		 mass_lost, xmom_lost, ymom_lost, zmom_lost,
-		 eden_lost, xang_lost, yang_lost, zang_lost); // */
-#endif
-
-	    courno = std::max(courno,cflLoc);
-
-            if (do_reflux  && sub_iteration == sub_ncycle-1 )
-            {
-              if (level < finest_level)
-              {
-                getFluxReg(level+1).CrseAdd(mfi,{D_DECL(&flux[0],&flux[1],&flux[2])}, dxDp,dt);
+                    // Allocate fabs for fluxes
+                for (int i = 0; i < BL_SPACEDIM ; i++)  {
+                const Box& bxtmp = amrex::surroundingNodes(bx,i);
+                flux[i].resize(bxtmp,NUM_STATE);
+                }
 
                 if (!Geometry::IsCartesian()) {
-                    amrex::Abort("Flux registers not r-z compatible yet");
-                    //getPresReg(level+1).CrseAdd(mfi,pradial, dx,dt);
+                pradial.resize(amrex::surroundingNodes(bx,0),1);
                 }
-              }
 
-              if (level > 0)
-              {
-                getFluxReg(level).FineAdd(mfi, {D_DECL(&flux[0],&flux[1],&flux[2])}, dxDp,dt);
+        //TODO Remove ifdefs and integrate into to one function 
+        // It is two calls right now to 
+        #ifdef AMREX_USE_CUDA        
+                AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+                pc_umdrv
+                (&is_finest_level, &time,
+                 lo, hi, domain_lo, domain_hi,
+                 BL_TO_FORTRAN(*statein), 
+                 BL_TO_FORTRAN(*stateout),
+                 BL_TO_FORTRAN(q.fab()),
+                 BL_TO_FORTRAN(qaux.fab()),
+                 BL_TO_FORTRAN(src_q.fab()),
+                 BL_TO_FORTRAN(*source_out),
+                 BL_TO_FORTRAN(bcMask),
+                 dx, &dt,
+                 D_DECL(BL_TO_FORTRAN(flux[0]),
+                    BL_TO_FORTRAN(flux[1]),
+                    BL_TO_FORTRAN(flux[2])),
+        #if (BL_SPACEDIM < 3)
+                 BL_TO_FORTRAN(pradial),
+        #endif
+                 D_DECL(BL_TO_FORTRAN(area[0][mfi]),
+                    BL_TO_FORTRAN(area[1][mfi]),
+                    BL_TO_FORTRAN(area[2][mfi])),
+        #if (BL_SPACEDIM < 3)
+                 BL_TO_FORTRAN(dLogArea[0][mfi]),
+        #endif
+                 BL_TO_FORTRAN(volume[mfi]),
+                 &cflLoc, verbose,
+                 mass_added_flux,
+                 xmom_added_flux,
+                 ymom_added_flux,
+                 zmom_added_flux,
+                 E_added_flux,
+                 mass_lost, xmom_lost, ymom_lost, zmom_lost,
+                 eden_lost, xang_lost, yang_lost, zang_lost); // */
+                 }); 
+                 Gpu::Device::streamSynchronize();
+        #else
+                pc_umdrv
+                (&is_finest_level, &time,
+                 lo, hi, domain_lo, domain_hi,
+                 BL_TO_FORTRAN(*statein), 
+                 BL_TO_FORTRAN(*stateout),
+                 BL_TO_FORTRAN(q.fab()),
+                 BL_TO_FORTRAN(qaux.fab()),
+                 BL_TO_FORTRAN(src_q.fab()),
+                 BL_TO_FORTRAN(*source_out),
+                 BL_TO_FORTRAN(bcMask),
+                 dx, &dt,
+                 D_DECL(BL_TO_FORTRAN(flux[0]),
+                    BL_TO_FORTRAN(flux[1]),
+                    BL_TO_FORTRAN(flux[2])),
+        #if (BL_SPACEDIM < 3)
+                 BL_TO_FORTRAN(pradial),
+        #endif
+                 D_DECL(BL_TO_FORTRAN(area[0][mfi]),
+                    BL_TO_FORTRAN(area[1][mfi]),
+                    BL_TO_FORTRAN(area[2][mfi])),
+        #if (BL_SPACEDIM < 3)
+                 BL_TO_FORTRAN(dLogArea[0][mfi]),
+        #endif
+                 BL_TO_FORTRAN(volume[mfi]),
+                 &cflLoc, verbose,
+                 mass_added_flux,
+                 xmom_added_flux,
+                 ymom_added_flux,
+                 zmom_added_flux,
+                 E_added_flux,
+                 mass_lost, xmom_lost, ymom_lost, zmom_lost,
+                 eden_lost, xang_lost, yang_lost, zang_lost); // */
+        #endif
 
-                if (!Geometry::IsCartesian()) {
-                    amrex::Abort("Flux registers not r-z compatible yet");
-                    //getPresReg(level).FineAdd(mfi,pradial, dx,dt);
-                }
-              }
-            }
-	} // MFIter loop
-    } // end of OMP parallel region
+                courno = std::max(courno,cflLoc);
 
+                    if (do_reflux  && sub_iteration == sub_ncycle-1 )
+                    {
+                      if (level < finest_level)
+                      {
+                        getFluxReg(level+1).CrseAdd(mfi,{D_DECL(&flux[0],&flux[1],&flux[2])}, dxDp,dt);
+
+                        if (!Geometry::IsCartesian()) {
+                            amrex::Abort("Flux registers not r-z compatible yet");
+                            //getPresReg(level+1).CrseAdd(mfi,pradial, dx,dt);
+                        }
+                      }
+
+                      if (level > 0)
+                      {
+                        getFluxReg(level).FineAdd(mfi, {D_DECL(&flux[0],&flux[1],&flux[2])}, dxDp,dt);
+
+                        if (!Geometry::IsCartesian()) {
+                            amrex::Abort("Flux registers not r-z compatible yet");
+                            //getPresReg(level).FineAdd(mfi,pradial, dx,dt);
+                        }
+                      }
+                    }
+            } // MFIter loop
+//            VisMF::Write(Qout, "Qaux_FORTRAN");
+//            VisMF::Write(Qout, "Qaux_CPP");
+            } // end of OMP parallel region
+//            std::cin.get();
     hydro_source.FillBoundary(geom.periodicity());
-#ifdef AMREX_USE_CUDA
-    VisMF::Write(hydro_source, "Hydro_source_cuda"); 
-#else
-    VisMF::Write(hydro_source, "Hydro_source_cpu");
-#endif
     BL_PROFILE_VAR_STOP(PC_UMDRV);
 
     // Flush Fortran output

@@ -8,8 +8,8 @@
 #define UMX       1 
 #define UMY       2
 #define UMZ       3 
-#define UEINT     4
-#define UEDEN     5
+#define UEDEN     4
+#define UEINT     5
 #define UTEMP     6
 #define UFS       7
 #define UFX       0 

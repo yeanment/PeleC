@@ -24,7 +24,7 @@ EOS::~EOS()
 AMREX_GPU_DEVICE 
 void EOS::eos_bottom()
 {
-    CKCVMS(&T, &iwrk, &rwrk, cvi); 
+    CKCVMS(&T, &iwrk, &rwrk, cvi);
     CKCPMS(&T, &iwrk, &rwrk, cpi); 
     CKHMS( &T, &iwrk, &rwrk,  hi);
     cv = 0.e0, cp = 0.e0, h = 0.e0; 
@@ -47,12 +47,11 @@ AMREX_GPU_DEVICE
 void EOS::eos_wb()
 {
     amrex::Real imw[NUM_SPECIES]; 
-    get_imw(imw); 
-    wbar = 1.0; 
+    get_imw(imw);
     amrex::Real summ =0.0; 
 #pragma unroll 
     for(int i = 0; i < NUM_SPECIES; ++i) summ+= massfrac[i]*imw[i]; 
-    wbar /= summ; 
+    wbar = 1.0/summ; 
 }
 
 
@@ -60,12 +59,12 @@ AMREX_GPU_DEVICE
 void EOS::eos_re()
 {
     int lierr=0; 
-    eos_wb(); 
-    
+    eos_wb();
     GET_T_GIVEN_EY(&e, massfrac, &iwrk, &rwrk, &T, &lierr);
-    T = amrex::max(T, smallT); 
+    T = amrex::max(T, smallT); //*/
     CKUMS(&T, &iwrk, &rwrk, ei); 
-    CKPY(&rho, &T, massfrac, &iwrk, &rwrk, &p); 
+    CKPY(&rho, &T, massfrac, &iwrk, &rwrk, &p);
+
     eos_bottom(); 
 }
 
@@ -74,13 +73,13 @@ void EOS::eos_re()
 AMREX_GPU_DEVICE
 int EOS::upass_map(const int i)
 {
+/*UMY and UMZ are passive*/
 #if (AMREX_SPACEDIM==1)
-    if(i == 0) 
-        return 2;
-    else if(i == 1)
-        return 3; 
+    if(i <=1); 
+        return i+2; 
     else 
         return (i-2) + UFS;
+/*UMZ is passive*/
 #elif (AMREX_SPACEDIM==2)
     if(i == 0)
         return 3; 
@@ -94,13 +93,13 @@ int EOS::upass_map(const int i)
 AMREX_GPU_DEVICE 
 int EOS::qpass_map(const int i)
 {
+/*V and W are passive*/
 #if(AMREX_SPACEDIM==1)
-    if(i==0)
-        return 2; 
-    else if(i ==1); 
-        return 3; 
+    if(i <=1); 
+        return i+2; 
     else 
         return (i-2) + QFS; 
+/*W is passive*/
 #elif(AMREX_SPACEDIM==2)
     if(i==0) 
         return 3; 
