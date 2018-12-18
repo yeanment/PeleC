@@ -120,8 +120,7 @@ INCLUDE_LOCATIONS += $(TOP)/Util/plot1d
 VPATH_LOCATIONS   += $(TOP)/Util/plot1d
 endif
 
-Bdirs   := Source Source/param_includes Source/Src_nd Source/Src_$(DIM)d Source/hydro
-
+Bdirs   := Source Source/param_includes Source/Src_nd Source/Src_$(DIM)d 
 ifeq ($(USE_EB), TRUE)
   Pdirs := Base EB Amr Boundary AmrCore
 else 

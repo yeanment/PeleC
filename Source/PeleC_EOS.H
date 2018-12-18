@@ -29,8 +29,8 @@ public:
     amrex::Real dpdtau, Z, taui[NUM_SPECIES], diP[NUM_SPECIES], dijY[NUM_SPECIES][NUM_SPECIES]; 
 
 //functions
-AMREX_GPU_DEVICE    int  upass_map(const int i); 
-AMREX_GPU_DEVICE    int  qpass_map(const int i); 
+AMREX_GPU_DEVICE  static int  upass_map(const int i); 
+AMREX_GPU_DEVICE  static int  qpass_map(const int i); 
 AMREX_GPU_DEVICE    void eos_wb();  
 AMREX_GPU_DEVICE    void eos_re(); 
 AMREX_GPU_DEVICE    void eos_bottom(); 

@@ -12,7 +12,7 @@ using namespace amrex;
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
+#include <PeleC_K.H>
 // **********************************************************************************************
 void
 PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
@@ -166,10 +166,11 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 
       BL_PROFILE("PeleC::ctoprim call");
       AMREX_LAUNCH_DEVICE_LAMBDA(gbox, tbx, {
-          ctoprim(BL_TO_FORTRAN_BOX(tbx), 
+/*          ctoprim(BL_TO_FORTRAN_BOX(tbx), 
                   BL_TO_FORTRAN_ANYD(*Sgp), 
                   BL_TO_FORTRAN_ANYD(q.fab()), 
-                  BL_TO_FORTRAN_ANYD(qaux.fab()));
+                  BL_TO_FORTRAN_ANYD(qaux.fab())); */ 
+            PeleC_ctoprim(tbx, *Sgp, q.fab(), qaux.fab());
         });
       Gpu::Device::streamSynchronize();
 

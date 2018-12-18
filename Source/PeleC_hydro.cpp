@@ -26,7 +26,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
     BL_ASSERT(S.nGrow() == NUM_GROW);
     sources_for_hydro.setVal(0.0);
-//    MultiFab Qout(grids, dmap, NQAUX, NUM_GROW); 
     int ng = 0; // TODO: This is currently the largest ngrow of the source data...maybe this needs fixing?
     for (int n = 0; n < src_list.size(); ++n)
     {
@@ -118,13 +117,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
         AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx, 
             {
-/*             ctoprim(BL_TO_FORTRAN_BOX(tbx),
-                     BL_TO_FORTRAN_ANYD(*statein_gp),
-                     BL_TO_FORTRAN_ANYD(q.fab()),
-                     BL_TO_FORTRAN_ANYD(qaux.fab()));// */
                  PeleC_ctoprim(tbx, *statein_gp, q.fab(), qaux.fab());                  
              });
-//             Qout[mfi].copy(qaux.fab()); 
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
             //
@@ -171,11 +165,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 FArrayBox *source_in_d  = sources_for_hydro.fabPtr(mfi);
           
                 AMREX_LAUNCH_DEVICE_LAMBDA(qbx,tbx,{
-                    srctoprim(BL_TO_FORTRAN_BOX(tbx),
-                              BL_TO_FORTRAN_ANYD(q.fab()),
-                              BL_TO_FORTRAN_ANYD(qaux.fab()),
-                              BL_TO_FORTRAN_ANYD(*source_in_d),
-                              BL_TO_FORTRAN_ANYD(src_q.fab()));
+                      PeleC_srctoprim(tbx, q.fab(), qaux.fab(), *source_in_d, src_q.fab()); 
                 });
 
                     // Allocate fabs for fluxes
@@ -286,10 +276,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                       }
                     }
             } // MFIter loop
-//            VisMF::Write(Qout, "Qaux_FORTRAN");
-//            VisMF::Write(Qout, "Qaux_CPP");
-            } // end of OMP parallel region
-//            std::cin.get();
+           } // end of OMP parallel region
     hydro_source.FillBoundary(geom.periodicity());
     BL_PROFILE_VAR_STOP(PC_UMDRV);
 
