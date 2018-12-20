@@ -84,7 +84,7 @@ contains
     double precision, intent(in   ) ::    V(   Vlo(1):   Vhi(1),   Vlo(2):   Vhi(2) )
     double precision, intent(in   ) :: deltax(2)
 
-    integer :: i, j, k, n
+    integer :: i, j, n
     double precision :: tauxx, tauxy, tauyx, tauyy, divu
     double precision :: Uface(2), dudx,dvdx,dudy,dvdy
     double precision :: pface, hface, Xface, Yface
