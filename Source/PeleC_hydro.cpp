@@ -1,8 +1,6 @@
 #include "PeleC.H"
 #include "PeleC_K.H"
 #include <AMReX_Gpu.H>
-#include <AMReX_VisMF.H>
-
 using namespace amrex;
 
 /**
@@ -42,7 +40,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     }
 #endif
     sources_for_hydro.FillBoundary(geom.periodicity());
-    VisMF::Write(sources_for_hydro,"SFH_FORTRAN");
     hydro_source.setVal(0);
 
     int finest_level = parent->finestLevel();
