@@ -335,7 +335,7 @@ subroutine set_method_params(dm, &
                          pstate_rho, pstate_ys, pfld_vel, pfld_rho, pfld_T, &
                          pfld_p, pfld_ys
   double precision, intent(in) :: diffuse_cutoff_density_in
-  integer :: iadv, ispec, countt
+  integer :: iadv, ispec, iaux, countt
 
   integer :: QLAST
 
@@ -348,59 +348,42 @@ subroutine set_method_params(dm, &
   allocate(qpass_map(QVAR))
   allocate(upass_map(NVAR))
 
-  ! Transverse velocities
-
+  ! Unused velocities
   if (dm == 1) then
      upass_map(1) = UMY
      qpass_map(1) = QV
-
      upass_map(2) = UMZ
      qpass_map(2) = QW
-
-#ifndef AMREX_USE_CUDA
-     !npassive = 2
-#else 
      countt   = 2
-#endif
-
-  else if (dm == 2) then
+  else if (dm == 2) then     
      upass_map(1) = UMZ
      qpass_map(1) = QW
-#ifndef AMREX_USE_CUDA
-     !npassive = 1
-#else 
      countt = 1
-#endif
   else
-#ifndef AMREX_USE_CUDA
-     !npassive = 0
-#else
      countt = 1
-#endif
   endif
 
   do iadv = 1, nadv
-     upass_map(npassive + iadv) = UFA + iadv - 1
-     qpass_map(npassive + iadv) = QFA + iadv - 1
+     upass_map(countt + iadv) = UFA + iadv - 1
+     qpass_map(countt + iadv) = QFA + iadv - 1
   enddo
-#ifndef AMREX_USE_CUDA
-  !npassive = npassive + nadv
-#else 
-  countt = countt + nadv 
-#endif
-  if (QFS > -1) then
-     do ispec = 1, nspecies+naux
-#ifndef AMREX_USE_CUDA
-        upass_map(npassive + ispec) = UFS + ispec - 1
-        qpass_map(npassive + ispec) = QFS + ispec - 1
-#else 
-        upass_map(countt + ispec) = UFS + ispec - 1
-        qpass_map(countt + ispec) = QFS + ispec - 1
-#endif
-     enddo
-#ifndef AMREX_USE_CUDA
-     !npassive = npassive + nspecies + naux
-#endif
+  countt = countt + nadv
+
+  do ispec = 1, nspecies
+     upass_map(countt + ispec) = UFS + ispec - 1
+     qpass_map(countt + ispec) = QFS + ispec - 1
+  enddo
+  countt = countt + nspecies
+
+  do iaux = 1, naux
+     upass_map(countt + iaux) = UFX + iaux - 1
+     qpass_map(countt + iaux) = QFX + iaux - 1
+  enddo
+  countt = countt + naux
+
+  if (countt .ne. npassive) then
+     print *,'Indexing screwup'
+     call bl_abort()
   endif
 
   !---------------------------------------------------------------------

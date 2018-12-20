@@ -25,7 +25,7 @@ contains
     double precision :: x(3)
     integer :: i, j, k, n
     logical rho_only
-
+    
     do n = 1,NVAR
        call filcc_nd(adv(:,:,:,n),adv_lo,adv_hi,domlo,domhi,delta,xlo,bc(:,:,n))
     enddo
@@ -270,10 +270,9 @@ contains
     type (eos_t) :: eos_state
     double precision :: u(3), rho_inv
     double precision :: relax_U, relax_V, relax_T, beta, sigma_out
-    double precision, allocatable :: pmf_vals(:)
+    double precision :: pmf_vals(nspecies+4)
 
     call build(eos_state)
-    allocate(pmf_vals(nspecies+4))
 
     if (.not. bc_initialized) then
        call init_bc()
@@ -333,7 +332,6 @@ contains
        endif
     endif
 
-    deallocate(pmf_vals)
     call destroy(eos_state)
 
   end subroutine bcnormal

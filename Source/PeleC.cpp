@@ -1360,12 +1360,6 @@ PeleC::avgDown ()
 }
 
 void
-PeleC::normalize_species (MultiFab& S)
-{
-    amrex::Abort("We don't normalize species!");
-}
-
-void
 PeleC::enforce_consistent_e (MultiFab& S)
 {
 
