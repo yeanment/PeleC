@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module problem_tagging_module
 
   implicit none
@@ -16,8 +17,6 @@ contains
                               dx,problo,time,level) &
                               bind(C, name="set_problem_tags")
 
-    use meth_params_module, only : NVAR
-    
     implicit none
 
     integer          :: lo(3),hi(3)

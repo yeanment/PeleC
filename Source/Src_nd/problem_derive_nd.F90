@@ -1,4 +1,5 @@
 ! problem-specific Fortran derive routines go here
+#include <PeleC_index_macros.H>
 module problem_derive_module
 
   implicit none
@@ -230,7 +231,6 @@ contains
     !
 
     use amrex_constants_module
-    use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
     use eos_module
 #ifdef USE_MASA
     use masa

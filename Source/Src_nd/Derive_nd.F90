@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module derive_module
 
   implicit none
@@ -16,7 +17,6 @@ contains
     !
     ! This routine will derive the velocity from the momentum.
     !
-    use meth_params_module, only : URHO, UMX
     implicit none
 
     integer          :: lo(3), hi(3)
@@ -48,7 +48,6 @@ contains
     !
     ! This routine will derive the velocity from the momentum.
     !
-    use meth_params_module, only : URHO, UMY
     implicit none
 
     integer          :: lo(3), hi(3)
@@ -80,7 +79,6 @@ contains
     !
     ! This routine will derive the velocity from the momentum.
     !
-    use meth_params_module, only : URHO, UMZ
     implicit none
 
     integer          :: lo(3), hi(3)
@@ -112,7 +110,6 @@ contains
 
     use chemistry_module, only : nspecies, naux
     use eos_module
-    use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
 
     implicit none
@@ -166,7 +163,6 @@ contains
 
     use chemistry_module, only : nspecies, naux
     use eos_module
-    use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
 
     implicit none
@@ -332,7 +328,6 @@ contains
 
     use chemistry_module, only: nspecies, naux
     use eos_module
-    use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
 
     implicit none
@@ -383,7 +378,6 @@ contains
                          bind(C, name="pc_dereint1")
 
     use amrex_constants_module
-    use meth_params_module, only: URHO, UMX, UMY, UMZ, UEDEN 
 
     implicit none
 
@@ -422,7 +416,6 @@ contains
                          domhi,dx,xlo,time,dt,bc,level,grid_no) &
                          bind(C, name="pc_dereint2")
 
-    use meth_params_module, only: URHO, UEINT
 
     implicit none
 
@@ -458,7 +451,6 @@ contains
 
     use chemistry_module, only: nspecies, naux
     use eos_module
-    use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
 
     implicit none
@@ -510,7 +502,6 @@ contains
 
     use chemistry_module, only: nspecies, naux
     use eos_module
-    use meth_params_module, only: URHO, UMX, UMZ, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
 
     implicit none
@@ -562,7 +553,6 @@ contains
 
     use chemistry_module, only: nspecies, naux
     use eos_module
-    use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use amrex_constants_module
 
     implicit none
@@ -613,7 +603,6 @@ contains
                                  bind(C, name="pc_derenuctimescale")
 
     use amrex_constants_module, only: ZERO, ONE
-    use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use chemistry_module, only: nspecies, naux
     use prob_params_module, only: dim
     use eos_module
@@ -718,7 +707,6 @@ contains
     !
     ! This routine derives the mole fractions of the species.
     !
-    use meth_params_module, only: URHO, UEINT, UTEMP, UFS, UFX
     use chemistry_module, only: nspecies, naux
     use eos_module
     use amrex_constants_module
@@ -808,7 +796,6 @@ contains
 
     use amrex_constants_module
     use prob_params_module, only: dg
-    use meth_params_module, only : URHO, UMX, UMY, UMZ
 
     implicit none
 
@@ -1613,7 +1600,6 @@ contains
 
     use amrex_constants_module
     use prob_params_module, only: dg
-    use meth_params_module, only: URHO, UMX, UMY, UMZ
 
     implicit none
 

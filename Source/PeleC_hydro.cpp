@@ -1,8 +1,8 @@
 #include "PeleC.H"
-#include "PeleC_F.H"
 #include "PeleC_K.H"
 #include <AMReX_Gpu.H>
 #include <AMReX_VisMF.H>
+
 using namespace amrex;
 
 /**

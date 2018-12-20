@@ -1,3 +1,5 @@
+#include <PeleC_index_macros.H>
+
 module probdata_module
 
   use eos_module
@@ -6,7 +8,7 @@ module probdata_module
   implicit none
 
   double precision, save :: pamb, phi_in, T_in, vn_in, L(3), pertmag
-  double precision, save, allocatable :: fuel_state(:)
+  double precision, save :: fuel_state(NVAR)
   logical, save :: bc_initialized = .false.
 
   ! These determine the refinement criteria
@@ -32,7 +34,6 @@ contains
 
   subroutine init_bc
 
-    use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEINT, UEDEN, UTEMP, UFS
     use chemistry_module, only : nspecies, get_species_index
     use eos_type_module
 
@@ -73,11 +74,6 @@ contains
     vt = vn_in
     ek = 0.5d0*vt**2
 
-    if (allocated(fuel_state)) then
-       call bl_error('fuel_state already allocated')
-    endif
-    allocate(fuel_state(NVAR))
-
     fuel_state(URHO ) = eos_state % rho
     fuel_state(UMX  ) = 0.d0
     fuel_state(UMY  ) = eos_state % rho * vt
@@ -93,11 +89,7 @@ contains
 
   end subroutine init_bc
 
-
   subroutine clear_bc()
-
-    deallocate(fuel_state)
-
   end subroutine clear_bc
 
 end module probdata_module

@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <string>
 #include "PeleC.H"
-#include "PeleC_F.H"
 #include "Spray_F.H"
 
 using namespace amrex;

@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 subroutine pc_umdrv(is_finest_level, time, &
                     lo, hi, domlo, domhi, &
                     uin, uin_l1, uin_l2, uin_h1, uin_h2, &
@@ -20,8 +21,8 @@ subroutine pc_umdrv(is_finest_level, time, &
                     E_added_flux, mass_lost, xmom_lost, ymom_lost, zmom_lost, &
                     eden_lost, xang_lost, yang_lost, zang_lost) bind(C, name="pc_umdrv")
 
-  use meth_params_module, only : QVAR, NVAR, NHYP, NGDNV, GDPRES, &
-                                 use_flattening, QU, QV, QW, QPRES, NQAUX, &
+  use meth_params_module, only : NHYP, NGDNV, GDPRES, &
+                                 use_flattening, &
                                  first_order_hydro
   use advection_util_2d_module, only : divu
   use advection_util_module, only : compute_cfl

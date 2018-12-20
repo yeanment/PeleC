@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module reactions_module
 
   implicit none
@@ -16,8 +17,6 @@ contains
                             time,dt_react,do_update) bind(C, name="pc_react_state")
 
     use chemistry_module , only : nspecies
-    use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UEINT, UTEMP, &
-                                   UFS
     use react_type_module
     use reactor_module, only : react
     use amrex_constants_module, only : HALF

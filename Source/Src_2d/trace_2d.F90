@@ -1,3 +1,5 @@
+#include <PeleC_index_macros.H>
+
 module trace_module
 
   implicit none
@@ -15,9 +17,7 @@ contains
                          src,src_l1,src_l2,src_h1,src_h2, &
                          ilo1,ilo2,ihi1,ihi2,dx,dy,dt)
 
-    use meth_params_module, only : plm_iorder, QVAR, QRHO, QU, QV, &
-                                   QREINT, QPRES, &
-                                   npassive, qpass_map, small_dens, small_pres, ppm_type, use_pslope
+    use meth_params_module, only : plm_iorder, qpass_map, small_dens, small_pres, ppm_type, use_pslope
     use slope_module, only : uslope, pslope, multid_slope
     use amrex_constants_module
     use amrex_error_module

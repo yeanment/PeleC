@@ -1,16 +1,14 @@
+#include <PeleC_index_macros.H>
 module riemann_module
 
   use amrex_constants_module
   use amrex_error_module
   use riemann_util_module
   use amrex_fort_module, only : amrex_real
-  use meth_params_module, only : NQ, QVAR, NVAR, QRHO, QU, QV, QW, &
-                                 QPRES, QREINT, QFS, &
-                                 QFX, URHO, UMX, UMY, UEDEN, UEINT, &
-                                 GDPRES, GDGAME, &
+  use meth_params_module, only : GDPRES, GDGAME, &
                                  NGDNV, small_dens, small_pres, small_temp, &
                                  cg_maxiter, cg_tol, cg_blend, &
-                                 npassive, upass_map, qpass_map, &
+                                 upass_map, qpass_map, &
                                  riemann_solver, ppm_temp_fix, hybrid_riemann
 
   implicit none
@@ -921,8 +919,8 @@ AMREX_DEVICE  subroutine shock(q,qd_l1,qd_l2,qd_h1,qd_h2, &
     integer :: qd_l1, qd_h1,qd_l2, qd_h2
     integer :: domlo(2),domhi(2)
 
-    double precision :: ql(qpd_l1:qpd_h1,qpd_l2:qpd_h2,NQ)
-    double precision :: qr(qpd_l1:qpd_h1,qpd_l2:qpd_h2,NQ)
+    double precision :: ql(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR)
+    double precision :: qr(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR)
 
     double precision :: gamcl(gd_l1:gd_h1,gd_l2:gd_h2)
     double precision :: gamcr(gd_l1:gd_h1,gd_l2:gd_h2)
@@ -1189,8 +1187,8 @@ AMREX_DEVICE  subroutine shock(q,qd_l1,qd_l2,qd_h1,qd_h2, &
     integer :: qd_l1, qd_h1,qd_l2, qd_h2
     integer :: domlo(2),domhi(2)
 
-    double precision :: ql(qpd_l1:qpd_h1,qpd_l2:qpd_h2,NQ)
-    double precision :: qr(qpd_l1:qpd_h1,qpd_l2:qpd_h2,NQ)
+    double precision :: ql(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR)
+    double precision :: qr(qpd_l1:qpd_h1,qpd_l2:qpd_h2,QVAR)
 
     double precision :: gamcl(gd_l1:gd_h1,gd_l2:gd_h2)
     double precision :: gamcr(gd_l1:gd_h1,gd_l2:gd_h2)
@@ -1363,7 +1361,7 @@ AMREX_DEVICE  subroutine shock(q,qd_l1,qd_l2,qd_h1,qd_h2, &
     double precision :: sgnm, spin, spout, ushock, frac
     double precision :: wsmall, csmall
 
-    double precision :: U_hllc_state(nvar), U_state(nvar), F_state(nvar)
+    double precision :: U_hllc_state(NVAR), U_state(NVAR), F_state(NVAR)
     double precision :: S_l, S_r, S_c
 
     integer :: iu, iv1, iv2

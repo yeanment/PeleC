@@ -23,7 +23,6 @@ using std::string;
 #include <AMReX_Utility.H>
 #include <AMReX_CONSTANTS.H>
 #include <PeleC.H>
-#include <PeleC_F.H>
 #include <Derive_F.H>
 #include <AMReX_VisMF.H>
 #include <AMReX_TagBox.H>
@@ -60,44 +59,8 @@ int          PeleC::radius_grow   = 1;
 BCRec        PeleC::phys_bc;
 int          PeleC::NUM_STATE     = -1;
 int          PeleC::NUM_GROW      = -1;
-int          PeleC::QTHERM        = -1;
-int          PeleC::QVAR          = -1;
-int          PeleC::cQRHO         = -1;
-int          PeleC::cQU           = -1;
-int          PeleC::cQV           = -1;
-int          PeleC::cQW           = -1;
-int          PeleC::cQGAME        = -1;
-int          PeleC::cQPRES        = -1;
-int          PeleC::cQREINT       = -1;
-int          PeleC::cQTEMP        = -1;
-int          PeleC::cQFA          = -1;
-int          PeleC::cQFS          = -1;
-int          PeleC::cQFX          = -1;
-int          PeleC::NQAUX         = -1;
-int          PeleC::cQGAMC        = -1;
-int          PeleC::cQC           = -1;
-int          PeleC::cQCSML        = -1;
-int          PeleC::cQDPDR        = -1;
-int          PeleC::cQDPDE        = -1;
-int          PeleC::cQRSPEC        = -1;
 
 Real         PeleC::frac_change   = 1.e200;
-
-int          PeleC::Density       = -1;
-int          PeleC::Eden          = -1;
-int          PeleC::Eint          = -1;
-int          PeleC::Temp          = -1;
-int          PeleC::Xmom          = -1;
-int          PeleC::Ymom          = -1;
-int          PeleC::Zmom          = -1;
-int          PeleC::NumSpec       = 0;
-int          PeleC::FirstSpec     = -1;
-
-int          PeleC::NumAux        = 0;
-int          PeleC::FirstAux      = -1;
-
-int          PeleC::NumAdv        = 0;
-int          PeleC::FirstAdv      = -1;
 
 int          PeleC::pstate_loc = -1;
 int          PeleC::pstate_vel = -1;

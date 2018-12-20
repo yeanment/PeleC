@@ -1,7 +1,5 @@
 #include <iomanip>
-
 #include <PeleC.H>
-#include <PeleC_F.H>
 
 using namespace std;
 using namespace amrex;

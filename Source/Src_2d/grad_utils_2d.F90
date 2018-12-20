@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module grad_utils_module
 
   use amrex_fort_module, only : amrex_real, dim=>bl_spacedim
@@ -25,7 +26,6 @@ contains
        deltax, idir) bind(C, name = "pc_compute_tangential_vel_derivs")
 
     use prob_params_module, only : physbc_lo, physbc_hi, Inflow
-    use meth_params_module, only : QVAR, QU, QV
     use amrex_constants_module
 
     implicit none
@@ -86,7 +86,6 @@ contains
        deltax, idir) bind(C, name = "pc_compute_tangential_vel_derivs_eb")
 
     use prob_params_module, only : physbc_lo, physbc_hi, Inflow
-    use meth_params_module, only : QVAR, QU, QV
     use amrex_constants_module
     use amrex_ebcellflag_module, only : get_neighbor_cells
 

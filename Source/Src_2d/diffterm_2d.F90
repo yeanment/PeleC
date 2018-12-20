@@ -1,6 +1,8 @@
   ! compute the diffusion source terms and fluxes for all the
   ! conservative equations.
   ! 
+#include <PeleC_index_macros.H>
+
 module diffterm_module
 
   implicit none
@@ -33,7 +35,6 @@ contains
                          deltax) bind(C, name = "pc_diffterm")
 
     use chemistry_module, only     : nspecies
-    use meth_params_module, only : NVAR, UMX, UMY, UMZ, UEDEN, UFS, QVAR, QU, QV, QPRES, QTEMP, QFS, QRHO
     use amrex_constants_module
     use eos_type_module
     use eos_module

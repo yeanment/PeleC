@@ -27,6 +27,9 @@
 
 #include <iostream>
 
+#include <PeleC_F.H>
+#include <PeleC_index_macros.H>
+
 using std::istream;
 using std::ostream;
 
@@ -455,11 +458,11 @@ public:
     void set_special_tagging_flag (amrex::Real time);
 
     static int       NUM_STATE;
-    static int       Density, Xmom, Ymom, Zmom, Eden, Eint, Temp;
+    // static int       Density, Xmom, Ymom, Zmom, Eden, Eint, Temp;
 
-    static int       FirstAdv,  NumAdv;
-    static int       FirstSpec, NumSpec;
-    static int       FirstAux,  NumAux;
+    // static int       FirstAdv,  NumAdv;
+    // static int       FirstSpec, NumSpec;
+    // static int       FirstAux,  NumAux;
 
     /// Index locations into particle state
     static int       pstate_loc, pstate_vel, pstate_T, pstate_dia, pstate_rho, pstate_spc, n_pstate;
@@ -606,7 +609,7 @@ protected:
     static int       verbose;
     static amrex::ErrorList err_list;
     static amrex::BCRec     phys_bc;
-    static int       NUM_GROW, QTHERM, QVAR, cQRHO, cQU, cQV, cQW, cQGAME, cQPRES, cQREINT, cQTEMP, cQFA, cQFS, cQFX, NQAUX, cQGAMC, cQC, cQCSML, cQDPDR, cQDPDE, cQRSPEC;
+    static int       NUM_GROW;
 
     /// for keeping track of mass changes from negative density resets
     static amrex::Real      frac_change;

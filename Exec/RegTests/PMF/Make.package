@@ -1,2 +1,2 @@
-f90EXE_sources += probdata.f90
+F90EXE_sources += probdata.F90
 f90EXE_sources += pmf_generic.f90

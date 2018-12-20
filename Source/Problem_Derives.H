@@ -1,3 +1,5 @@
+#include "PeleC_index_macros.H"
+
 // problem-specific derived variables would be put here
 
 //

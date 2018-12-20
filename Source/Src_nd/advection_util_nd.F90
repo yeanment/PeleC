@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module advection_util_module
 
   implicit none
@@ -16,7 +17,7 @@ contains
                                      eden_added,frac_change,verbose) &
                                      bind(C, name="enforce_minimum_density")
 
-    use meth_params_module, only : NVAR, URHO, UEINT, UEDEN, small_dens, density_reset_method
+    use meth_params_module, only : small_dens, density_reset_method
     use amrex_constants_module, only : ZERO
 
     implicit none
@@ -203,7 +204,7 @@ contains
 
     use amrex_constants_module, only: ZERO
     use chemistry_module, only: nspecies, naux
-    use meth_params_module, only: NVAR, URHO, UMX, UMY, UMZ, UTEMP, UEINT, UEDEN, UFS, small_temp, small_dens, npassive, upass_map
+    use meth_params_module, only: small_temp, small_dens, upass_map
     use eos_type_module
     use eos_module!, only: eos_rt
     use pelec_util_module, only: position
@@ -266,7 +267,6 @@ contains
   subroutine reset_to_zone_state(old_state, new_state, input_state, idx, lo, hi, verbose)
 
     use amrex_constants_module, only: ZERO
-    use meth_params_module, only: NVAR, URHO
 
     implicit none
 
@@ -303,7 +303,6 @@ contains
                          bind(C, name = "compute_cfl")
 
     use amrex_constants_module, only: ZERO, ONE
-    use meth_params_module, only: QVAR, QRHO, QU, QV, QW, QC, NQAUX
     use prob_params_module, only: dim
 
     implicit none
@@ -396,11 +395,7 @@ AMREX_CUDA_FORT_HOST subroutine ctoprim_h(lo, hi, &
     use amrex_fort_module, only: amrex_real 
     use eos_type_module
     use eos_module, only: eos_re
-    use meth_params_module , only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
-                                   QVAR, QRHO, QU, QV, QW, &
-                                   QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
-                                   QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
-                                   npassive, upass_map, qpass_map
+    use meth_params_module , only : upass_map, qpass_map
     use chemistry_module, only : nspecies, naux
 
     use amrex_constants_module, only: ZERO, HALF, ONE
@@ -507,11 +502,7 @@ AMREX_DEVICE subroutine ctoprim(lo, hi, &
 #else
     use eos_module, only: eos_re
 #endif
-    use meth_params_module , only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
-                                   QVAR, QRHO, QU, QV, QW, &
-                                   QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
-                                   QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
-                                   npassive, upass_map, qpass_map
+    use meth_params_module , only : upass_map, qpass_map
     use chemistry_module, only : nspecies, naux
 
     use amrex_constants_module, only: ZERO, HALF, ONE
@@ -615,10 +606,7 @@ AMREX_DEVICE  subroutine srctoprim(lo, hi, &
                        src, src_lo, src_hi, &
                        srcQ,srQ_lo, srQ_hi) bind(C, name = "srctoprim")
 
-    use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, &
-                                   QVAR, QRHO, QU, QV, QW, &
-                                   QREINT, QPRES, QDPDR, QDPDE, NQAUX, &
-                                   npassive, upass_map, qpass_map
+    use meth_params_module, only : upass_map, qpass_map
     use amrex_constants_module, only: ZERO, HALF, ONE
     use pelec_util_module, only: position
 
@@ -687,9 +675,7 @@ AMREX_DEVICE  subroutine srctoprim(lo, hi, &
   function dflux(u, q, dir, idx, include_pressure) result(flux)
 
     use amrex_constants_module, only: ZERO
-    use meth_params_module, only: NVAR, URHO, UMX, UMZ, UEDEN, UEINT, &
-                                  QVAR, QU, QPRES, &
-                                  npassive, upass_map
+    use meth_params_module, only: upass_map
     implicit none
 
     integer :: dir, idx(3)
@@ -755,8 +741,7 @@ AMREX_DEVICE  subroutine limit_hydro_fluxes_on_small_dens(u,u_lo,u_hi, &
                                               lo,hi,dt,dx)
 
     use amrex_constants_module, only: ZERO, HALF, ONE, TWO
-    use meth_params_module, only: NVAR, QVAR, URHO, UEINT, UFS, UFX, &
-                                  small_dens, small_temp, cfl
+    use meth_params_module, only: small_dens, small_temp, cfl
     use prob_params_module, only: dim, coord_type, dg
     use amrex_mempool_module, only: bl_allocate, bl_deallocate
     use chemistry_module, only: nspecies, naux

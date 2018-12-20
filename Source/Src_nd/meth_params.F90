@@ -13,71 +13,14 @@
 module meth_params_module
 
   use amrex_error_module
+
   implicit none
-#ifdef AMREX_USE_CUDA
-  integer, managed, save, allocatable :: qpass_map(:), upass_map(:)
-  integer, parameter     :: NHYP    = 4
-  integer, parameter     :: nb_nscbc_params = 4
-  !Convservative Vars
-  integer, parameter  :: NTHERM = 7, NVAR = 16, URHO = 1, UMX = 2, UMY = 3,&
-  UMZ=4, UML=0, UMP=0, UEDEN=5, UEINT=6, UTEMP=7, UFS=8
-  !Auxillary
-  integer, parameter ::  UFA=1, UFX=1, USHK=-1, &
-  QTHERM=8, QVAR=17, NQAUX=6, QGAMC=1, QC=2, QCSML=3, QDPDR=4, QDPDE=5,&
-  QRSPEC=6 , QFA = 1, QFX=1, nadv=0, NQ=17, npassive = 10
-  ! Godunov Indexing Paramets 
-  integer, parameter ::  NGDNV=6, GDRHO=1,&
-  GDU =2, GDV=3, GDW=4, GDPRES=5, GDGAME=6, nspec=9, naux=0
-  !Primitive Var 
-  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
-  integer, parameter :: QFS=9
 
-  ! number of ghost cells for the hyperbolic solver
-!  integer, parameter     :: NHYP    = 4
-
-  ! Number of parameters for GC-NSCBC
-  ! NTHERM: number of thermodynamic variables
-!  integer, managed, save, allocatable :: NTHERM, NVAR
-!  integer, managed, save, allocatable:: URHO, UMX, UMY, UMZ, UMR, UML, UMP, UEDEN, UEINT, UTEMP, UFA, UFS, UFX
-!  integer, managed, save, allocatable:: USHK
-
-  ! QTHERM: number of primitive variables
-!  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
-!  integer, managed, save, allocatable:: QTHERM, QVAR
-!  integer, parameter :: QFS=9
-!  integer, managed, save, allocatable:: NQAUX, QGAMC, QC, QCSML, QDPDR, QDPDE, QRSPEC
-!  integer, managed, save, allocatable:: QFA, QFX
-!  integer, managed, save, allocatable:: nadv
-
-  ! NQ will be the total number of primitive variables, hydro + radiation
-!  integer, managed, save, allocatable:: NQ         
-
-!  integer, managed, save, allocatable:: npassive
-!  integer, managed, save, allocatable:: NGDNV, GDRHO, GDU, GDV, GDW, GDPRES, GDGAME
-
-#else
   ! number of ghost cells for the hyperbolic solver
   integer, parameter     :: NHYP    = 4
 
   ! Number of parameters for GC-NSCBC
   integer, parameter     :: nb_nscbc_params = 4
-
-  ! NTHERM: number of thermodynamic variables
-  integer, save :: NTHERM, NVAR
-  integer, save :: URHO, UMX, UMY, UMZ, UMR, UML, UMP, UEDEN, UEINT, UTEMP, UFA, UFS, UFX
-  integer, save :: USHK
-
-  ! QTHERM: number of primitive variables
-  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
-  integer, save :: QTHERM, QVAR
-  integer, save :: QFS=9
-  integer, save :: NQAUX, QGAMC, QC, QCSML, QDPDR, QDPDE, QRSPEC
-  integer, save :: QFA, QFX
-
-  integer, save :: nadv
-
-  ! NQ will be the total number of primitive variables, hydro + radiation
-  integer, save :: NQ         
 
   integer, save :: npassive
   integer, save, allocatable :: qpass_map(:), upass_map(:)
@@ -86,7 +29,7 @@ module meth_params_module
   ! Note that the velocity indices here are picked to be the same value
   ! as in the primitive variable array
   integer, save :: NGDNV, GDRHO, GDU, GDV, GDW, GDPRES, GDGAME
-#endif
+
 
   ! This for keeping track of particles states, and 
   integer, save :: PLOC, PVEL, PTEMP, PDIA, PRHO, PSPC
@@ -114,14 +57,6 @@ module meth_params_module
   ! the device update is then done in PeleC_nd.f90
 
   !$acc declare &
-  !$acc create(NTHERM, NVAR) &
-  !$acc create(URHO, UMX, UMY, UMZ, UMR, UML, UMP, UEDEN, UEINT, UTEMP, UFA, UFS,UFX) &
-  !$acc create(USHK) &
-  !$acc create(QTHERM, QVAR) &
-  !$acc create(QRHO, QU, QV, QW, QPRES, QREINT, QTEMP) &
-  !$acc create(QGAMC, QGAME) &
-  !$acc create(NQ) &
-  !$acc create(QFA, QFS, QFX) &
   !$acc create(xl_ext, yl_ext, zl_ext, xr_ext, yr_ext, zr_ext)
 
   ! Begin the declarations of the ParmParse parameters
@@ -203,46 +138,6 @@ module meth_params_module
   double precision, save :: rot_vec(3)
 
 contains
-#if 0
-  subroutine pelec_allocate_managed_params() &
-             bind(C,name='pelec_allocate_managed_params')
- ! Allocate all the managed memory values
-    allocate(NTHERM)
-    allocate(NVAR)
-    allocate(URHO)
-    allocate(UMX) 
-    allocate(UMY) 
-    allocate(UMZ)
-    allocate(UML)
-    allocate(UMP)
-    allocate(UEDEN)
-    allocate(UEINT)
-    allocate(UFA)
-    allocate(UFS)
-    allocate(UFX)
-    allocate(USHK)
-    allocate(QTHERM)
-    allocate(QVAR)
-    allocate(NQAUX)
-    allocate(QGAMC)
-    allocate(QC)
-    allocate(QCSML)
-    allocate(QCSML)
-    allocate(QDPDR)
-    allocate(QDPDE)
-    allocate(QRSPEC)
-    allocate(QFA)
-    allocate(QFX)
-    allocate(nadv)
-    allocate(NQ)
-    allocate(NGDNV)
-    allocate(GDRHO)
-    allocate(GDU)
-    allocate(GDW)
-    allocate(GDPRES)
-    allocate(GDGAME) 
-  end subroutine pelec_allocate_managed_params
-#endif
 
   subroutine set_pelec_method_params() bind(C,name="set_pelec_method_params")
 

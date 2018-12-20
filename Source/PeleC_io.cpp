@@ -10,7 +10,6 @@
 
 #include <AMReX_Utility.H>
 #include "PeleC.H"
-#include "PeleC_F.H"
 #include "PeleC_io.H"
 #include <AMReX_ParmParse.H>
 
@@ -424,10 +423,6 @@ PeleC::setPlotVariables ()
     {
 	if (plot_massfrac)
 	{
-	    //
-	    // Get the number of species from the network model.
-	    //
-	    get_num_spec(&NumSpec);
 	    //
 	    // Get the species names from the network model.
 	    //

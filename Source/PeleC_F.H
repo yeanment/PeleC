@@ -39,20 +39,12 @@ extern "C"
   void set_amr_info(const int& level, const int& iteration, const int& ncycle,
 		    const amrex::Real& time, const amrex::Real& dt);
 
-  void get_method_params(int* NUM_GROW,int* QTHERM,int* QVAR,int* cQRHO,int* cQU,
-                         int* cQV,int* cQW,int* cQGAME,int* cQPRES,int* cQREINT,
-                         int* cQTEMP,int* cQFA,int* cQFS,int* cQFX,int* NQAUX,
-                         int* cQGAMC,int* cQC,int* cQCSML,int* cQDPDR,int* cQDPDE,int* cQRSPEC);
+  void get_method_params(int* NUM_GROW);
 
   void clear_method_params();
 
   void set_method_params
     (const int& dm,
-     const int& Density, const int& Xmom,
-     const int& Eden,    const int& Eint,
-     const int& Temp     , const int& FirstAdv,
-     const int& FirstSpec, const int& FirstAux,
-     const int& NumAdv,
      const amrex::Real& diffuse_cutoff_density,
      const int& pstate_loc, const int& pstate_vel,
      const int& pstate_T, const int& pstate_dia,
@@ -468,6 +460,7 @@ AMREX_GPU_DEVICE
 #ifdef __cplusplus
 }
 #endif
+
 
 /* problem-specific includes */
 #include <Problem_F.H>
