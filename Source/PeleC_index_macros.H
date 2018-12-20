@@ -23,7 +23,7 @@
 #define UFA       UTEMP + 1
 #define UFS       UFA   + NUM_ADVECT
 #define UFX       UFS   + NUM_SPECIES
-#define NVAR      UFX   + NUM_AUXILIARY
+#define NVAR      NTHERM + NUM_ADVECT + NUM_SPECIES + NUM_AUXILIARY
 
 #define QU        QRHO   + 1
 #define QV        QU     + 1
@@ -36,7 +36,7 @@
 #define QTHERM    NTHERM + 1
 #define QFS       QFA    + NUM_ADVECT
 #define QFX       QFS    + NUM_SPECIES
-#define QVAR      QFX    + NUM_AUXILIARY
+#define QVAR      QTHERM + NUM_ADVECT + NUM_SPECIES + NUM_AUXILIARY
 
 #define QC        QGAMC  + 1
 #define QCSML     QC     + 1
