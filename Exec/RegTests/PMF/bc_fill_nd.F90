@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module bc_fill_module
 
   implicit none
@@ -9,7 +10,6 @@ contains
   subroutine pc_hypfill(adv,adv_lo,adv_hi,domlo,domhi,delta,xlo,time,bc) &
        bind(C, name="pc_hypfill")
 
-    use meth_params_module, only: NVAR
     use prob_params_module, only: dim
 
     implicit none
@@ -17,7 +17,7 @@ contains
     include 'AMReX_bc_types.fi'
 
     integer          :: adv_lo(3),adv_hi(3)
-    integer          :: bc(dim,2,*)
+    integer          :: bc(dim,2,NVAR)
     integer          :: domlo(3), domhi(3)
     double precision :: delta(3), xlo(3), time
     double precision :: adv(adv_lo(1):adv_hi(1),adv_lo(2):adv_hi(2),adv_lo(3):adv_hi(3),NVAR)
@@ -25,7 +25,7 @@ contains
     double precision :: x(3)
     integer :: i, j, k, n
     logical rho_only
-
+    
     do n = 1,NVAR
        call filcc_nd(adv(:,:,:,n),adv_lo,adv_hi,domlo,domhi,delta,xlo,bc(:,:,n))
     enddo
@@ -254,7 +254,6 @@ contains
     use probdata_module
     use eos_type_module
     use eos_module
-    use meth_params_module, only : URHO, UMX, UMY, UMZ, UTEMP, UEDEN, UEINT, UFS, NVAR
     use chemistry_module, only: nspecies, naux
     use prob_params_module, only : Interior, Inflow, Outflow, SlipWall, NoSlipWall, &
                                    problo, probhi, dim
@@ -271,10 +270,9 @@ contains
     type (eos_t) :: eos_state
     double precision :: u(3), rho_inv
     double precision :: relax_U, relax_V, relax_T, beta, sigma_out
-    double precision, allocatable :: pmf_vals(:)
+    double precision :: pmf_vals(nspecies+4)
 
     call build(eos_state)
-    allocate(pmf_vals(nspecies+4))
 
     if (.not. bc_initialized) then
        call init_bc()
@@ -334,7 +332,6 @@ contains
        endif
     endif
 
-    deallocate(pmf_vals)
     call destroy(eos_state)
 
   end subroutine bcnormal
@@ -342,7 +339,6 @@ contains
   subroutine pc_reactfill(adv,adv_lo,adv_hi,domlo,domhi,delta,xlo,time,bc) &
        bind(C, name="pc_reactfill")
 
-    use meth_params_module, only: NVAR
     use prob_params_module, only: dim
 
     implicit none

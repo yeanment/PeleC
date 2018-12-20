@@ -1,13 +1,10 @@
+#include <PeleC_index_macros.H>
 module transverse_module
 
   use amrex_constants_module
   use chemistry_module, only : nspecies
-  use meth_params_module, only : NQ, QVAR, NVAR, QRHO, QU, QV, QW, QPRES, QREINT, QGAME, &
-                                 URHO, UMX, UMY, UEDEN, UEINT, QFS, QFX, &
-                                 GDU, GDV, GDPRES, GDGAME, &
-                                 NGDNV, &
-                                 small_pres, small_temp, &
-                                 npassive, qpass_map, upass_map, &
+  use meth_params_module, only : NGDNV, GDGAME, GDPRES, GDU, GDV, small_pres, small_temp, &
+                                 qpass_map, upass_map, &
                                  transverse_use_eos, ppm_type, ppm_trace_sources, &
                                  transverse_reset_density, transverse_reset_rhoe, &
                                  ppm_predict_gammae
@@ -42,10 +39,10 @@ contains
     integer vol_l1, vol_l2, vol_h1, vol_h2
     integer ilo, ihi, jlo, jhi
 
-    double precision qm(qd_l1:qd_h1,qd_l2:qd_h2,NQ)
-    double precision qmo(qd_l1:qd_h1,qd_l2:qd_h2,NQ)
-    double precision qp(qd_l1:qd_h1,qd_l2:qd_h2,NQ)
-    double precision qpo(qd_l1:qd_h1,qd_l2:qd_h2,NQ)
+    double precision qm(qd_l1:qd_h1,qd_l2:qd_h2,QVAR)
+    double precision qmo(qd_l1:qd_h1,qd_l2:qd_h2,QVAR)
+    double precision qp(qd_l1:qd_h1,qd_l2:qd_h2,QVAR)
+    double precision qpo(qd_l1:qd_h1,qd_l2:qd_h2,QVAR)
 
     double precision fx(fx_l1:fx_h1,fx_l2:fx_h2,NVAR)
     double precision qgdx(qgdx_l1:qgdx_h1,qgdx_l2:qgdx_h2,NGDNV)
@@ -401,10 +398,10 @@ contains
     integer src_l1, src_l2, src_h1, src_h2
     integer ilo, ihi, jlo, jhi
 
-    double precision qm(qd_l1:qd_h1,qd_l2:qd_h2,NQ)
-    double precision qmo(qd_l1:qd_h1,qd_l2:qd_h2,NQ)
-    double precision qp(qd_l1:qd_h1,qd_l2:qd_h2,NQ)
-    double precision qpo(qd_l1:qd_h1,qd_l2:qd_h2,NQ)
+    double precision qm(qd_l1:qd_h1,qd_l2:qd_h2,QVAR)
+    double precision qmo(qd_l1:qd_h1,qd_l2:qd_h2,QVAR)
+    double precision qp(qd_l1:qd_h1,qd_l2:qd_h2,QVAR)
+    double precision qpo(qd_l1:qd_h1,qd_l2:qd_h2,QVAR)
 
     double precision fy(fy_l1:fy_h1,fy_l2:fy_h2,NVAR)
     double precision qgdy(qgdy_l1:qgdy_h1,qgdy_l2:qgdy_h2,NGDNV)

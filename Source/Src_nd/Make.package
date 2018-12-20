@@ -14,7 +14,7 @@ f90EXE_sources += sums_nd.f90
 F90EXE_sources += timestep.F90
 F90EXE_sources += Derive_nd.F90
 F90EXE_sources += problem_derive_nd.F90
-f90EXE_sources += riemann_util.f90
+F90EXE_sources += riemann_util.F90
 
 F90EXE_sources += flatten_nd.F90
 
@@ -27,7 +27,7 @@ F90EXE_sources += React_nd.F90
 #endif
 F90EXE_sources += bc_fill_nd.F90
 F90EXE_sources += filcc_nd.F90
-f90EXE_sources += ext_src_nd.f90
+F90EXE_sources += ext_src_nd.F90
 F90EXE_sources += forcing_src_nd.F90
 F90EXE_sources += Prob_nd.F90
 F90EXE_sources += problem_tagging_nd.F90

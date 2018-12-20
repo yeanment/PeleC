@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module timestep_module
 
   implicit none
@@ -12,7 +13,6 @@ contains
 
     use chemistry_module, only: nspecies, naux
     use eos_module
-    use meth_params_module, only: NVAR, URHO, UMX, UMY, UMZ, UEINT, UTEMP, UFS, UFX
     use prob_params_module, only: dim
     use amrex_constants_module
     implicit none
@@ -83,7 +83,6 @@ contains
     use chemistry_module, only: nspecies, naux
     use eos_module
     use eos_type_module
-    use meth_params_module, only: NVAR, URHO, UTEMP, UFS
     use prob_params_module, only: dim
     use amrex_constants_module
     use transport_module
@@ -156,7 +155,6 @@ contains
     use chemistry_module, only: nspecies, naux
     use eos_module
     use eos_type_module
-    use meth_params_module, only: NVAR, URHO, UTEMP, UFS
     use prob_params_module, only: dim
     use amrex_constants_module
     use transport_module
@@ -239,8 +237,7 @@ contains
     use chemistry_module, only: nspecies, naux
     use eos_module
     use eos_type_module
-    use meth_params_module, only: NVAR, URHO, UEINT, UTEMP, UFS, UFX, &
-         diffuse_cutoff_density
+    use meth_params_module, only: diffuse_cutoff_density
     use prob_params_module, only: dim
     use amrex_constants_module
     use transport_module
@@ -333,8 +330,7 @@ contains
                                bind(C, name="pc_check_timestep")
 
     use amrex_constants_module, only: HALF, ONE
-    use meth_params_module, only: NVAR, URHO, UTEMP, UEINT, UFS, UFX, UMX, UMZ, &
-                                  cfl, do_hydro
+    use meth_params_module, only: cfl, do_hydro
     use prob_params_module, only: dim
     use chemistry_module, only: nspecies, naux
     use eos_module

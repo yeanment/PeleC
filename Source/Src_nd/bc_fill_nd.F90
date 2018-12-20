@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module bc_fill_module
 
   implicit none
@@ -12,7 +13,6 @@ contains
   subroutine pc_hypfill(adv,adv_lo,adv_hi,domlo,domhi,delta,xlo,time,bc) &
        bind(C, name="pc_hypfill")
 
-    use meth_params_module, only: NVAR
     use prob_params_module, only: dim
 
     implicit none

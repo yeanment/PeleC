@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module advection_util_2d_module
 
   implicit none
@@ -15,7 +16,6 @@ contains
                     lo,hi)
 
     use chemistry_module, only : nspecies
-    use meth_params_module, only : NVAR, URHO, UFS
     use amrex_constants_module
     
     implicit none
@@ -72,7 +72,6 @@ contains
   subroutine normalize_new_species(u,u_l1,u_l2,u_h1,u_h2,lo,hi)
 
     use chemistry_module, only : nspecies
-    use meth_params_module, only : NVAR, URHO, UFS
     use amrex_constants_module
     
     implicit none
@@ -113,7 +112,6 @@ contains
                               div,div_l1,div_l2,div_h1,div_h2)
 
     use prob_params_module, only : coord_type
-    use meth_params_module, only : QU, QV
     use amrex_constants_module
     
     implicit none

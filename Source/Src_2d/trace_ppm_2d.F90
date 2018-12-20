@@ -1,6 +1,6 @@
 ! These routines do the characteristic tracing under the parabolic
 ! profiles in each zone to the edge / half-time.
-
+#include <PeleC_index_macros.H>
 module trace_ppm_module
 
   implicit none
@@ -22,13 +22,11 @@ contains
     use eos_type_module
     use eos_module
     use amrex_constants_module
-    use meth_params_module, only : QVAR, QRHO, QU, QV, QREINT, QPRES, &
-         QTEMP, QFS, QFX, QGAME, &
+    use meth_params_module, only : &
          small_dens, small_pres, &
          ppm_type, ppm_trace_sources, ppm_temp_fix, &
          ppm_reference_eigenvectors, &
-         ppm_predict_gammae, &
-         npassive, qpass_map
+         ppm_predict_gammae, qpass_map
     use ppm_module, only : ppm
 
     implicit none

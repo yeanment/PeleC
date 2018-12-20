@@ -1,4 +1,5 @@
   ! Compute the MMS source for the conservative equations.
+#include <PeleC_index_macros.H>
 module mms_src_module
 
   implicit none
@@ -15,12 +16,10 @@ contains
                         problo,dx,time) bind(C, name = "pc_mms_src")
 
 
-    use meth_params_module, only : NVAR
 
 #ifdef USE_MASA
     use chemistry_module, only : nspecies
     use amrex_constants_module, only: HALF
-    use meth_params_module, only : URHO, UMX, UMY, UMZ, UEDEN, UEINT, UFS
     use prob_params_module, only: dim
     use masa
 #endif

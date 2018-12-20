@@ -3,7 +3,6 @@
 #include "AMReX_LevelBld.H"
 #include <AMReX_ParmParse.H>
 #include "PeleC.H"
-#include "PeleC_F.H"
 #include <Derive_F.H>
 #include "AMReX_buildInfo.H"
 
@@ -171,49 +170,9 @@ PeleC::variableSetUp ()
     // Set number of state variables and pointers to components
     //
 
-    int cnt = 0;
-    Density = cnt++;
-    Xmom = cnt++;
-    Ymom = cnt++;
-    Zmom = cnt++;
-    Eden = cnt++;
-    Eint = cnt++;
-    Temp = cnt++;
-  
-#ifdef NUM_ADV
-    NumAdv = NUM_ADV;
-#else
-    NumAdv = 0;
-#endif
-    
-    if (NumAdv > 0)
-    {
-	FirstAdv = cnt;
-	cnt += NumAdv;
-    }
+    NUM_STATE = NVAR;
 
     int dm = BL_SPACEDIM;
-
-    // Get the number of species from the network model.
-    get_num_spec(&NumSpec);
-  
-    if (NumSpec > 0)
-    {
-	FirstSpec = cnt;
-	cnt += NumSpec;
-    }
-
-    // Get the number of auxiliary quantities from the network model.
-    get_num_aux(&NumAux);
-  
-    if (NumAux > 0)
-    {
-	FirstAux = cnt;
-	cnt += NumAux;
-    }
-
-    NUM_STATE = cnt;
-
 
 #ifdef AMREX_PARTICLES
     // Set index locations for particle state vector and storage of field variables that 
@@ -245,16 +204,12 @@ PeleC::variableSetUp ()
 
     set_pelec_method_params();
 
-    set_method_params(dm, Density, Xmom, Eden, Eint, Temp, FirstAdv, FirstSpec, FirstAux, 
-		      NumAdv,
-		      diffuse_cutoff_density,
+    set_method_params(dm, diffuse_cutoff_density,
               pstate_loc, pstate_vel, pstate_T, pstate_dia, pstate_rho, pstate_spc,
               pfld_vel, pfld_rho, pfld_T, pfld_p, pfld_spc);
 
     // Get various values from Fortran
-    get_method_params(&NUM_GROW,&QTHERM,&QVAR,&cQRHO,&cQU,&cQV,&cQW,&cQGAME,&cQPRES,
-                      &cQREINT,&cQTEMP,&cQFA,&cQFS,&cQFX,&NQAUX,&cQGAMC,&cQC,&cQCSML,
-                      &cQDPDR,&cQDPDE,&cQRSPEC);
+    get_method_params(&NUM_GROW);
 
     Real run_stop = ParallelDescriptor::second() - run_strt;
  
@@ -354,7 +309,7 @@ PeleC::variableSetUp ()
     Vector<std::string> name(NUM_STATE);
 
     BCRec bc;
-    cnt = 0;
+    int cnt = 0;
     set_scalar_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "density";
     cnt++; set_x_vel_bc(bc,phys_bc);  bcs[cnt] = bc; name[cnt] = "xmom";
     cnt++; set_y_vel_bc(bc,phys_bc);  bcs[cnt] = bc; name[cnt] = "ymom";

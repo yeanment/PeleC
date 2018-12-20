@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module pelec_util_module
 
   implicit none
@@ -80,7 +81,6 @@ contains
   subroutine pc_enforce_consistent_e(lo,hi,state,s_lo,s_hi) &
        bind(C, name="pc_enforce_consistent_e")
 
-    use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT
     use amrex_constants_module
 
     implicit none
@@ -119,7 +119,6 @@ contains
   subroutine reset_internal_e(lo,hi,u,u_lo,u_hi,verbose) &
        bind(C, name="reset_internal_e")
 
-    use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UFS, UFX, UTEMP
     use amrex_constants_module
 
     implicit none
@@ -160,8 +159,7 @@ contains
     use chemistry_module, only : nspecies, naux
     use eos_type_module
     use eos_module
-    use meth_params_module, only : NVAR, URHO, UEDEN, UEINT, UTEMP, &
-         UFS, UFX, small_dens
+    use meth_params_module, only : small_dens
     use amrex_constants_module
 
     implicit none
@@ -221,7 +219,7 @@ contains
                                       bind(C, name="pc_check_initial_species")
 
     use chemistry_module, only : nspecies
-    use meth_params_module, only : NVAR, URHO, UFS, small_dens
+    use meth_params_module, only : small_dens
     use amrex_constants_module
 
     implicit none
@@ -493,7 +491,6 @@ contains
                                  problo,numpts_1d) &
                                  bind(C, name="pc_compute_avgstate")
 
-    use meth_params_module, only : URHO, UMX, UMY, UMZ
     use prob_params_module, only : center, dim
     use amrex_constants_module
 

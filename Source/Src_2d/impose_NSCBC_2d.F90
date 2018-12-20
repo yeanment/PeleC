@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module bcmod
 
   private
@@ -22,11 +23,7 @@ contains
     use prob_params_module, only : physbc_lo, physbc_hi, problo, probhi, &
                                    Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall
     
-    use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP,&
-                                   UFA, UFS, UFX, NQAUX, QC, QGAMC, QRSPEC, &
-                                   QC, QDPDE, QDPDR, QCSML, QGAMC, &
-                                   QVAR, QRHO, QU, QV, QREINT, QPRES, QTEMP, &
-                                   QFS, QFX, QGAME, NHYP
+    use meth_params_module, only : NHYP
     use meth_params_module, only: nb_nscbc_params
  
     implicit none
@@ -2260,11 +2257,7 @@ subroutine impose_NSCBC_with_perio(lo, hi, domlo, domhi, &
     use prob_params_module, only : physbc_lo, physbc_hi, problo, probhi, &
                                    Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall
     
-    use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP,&
-                                   UFA, UFS, UFX, NQAUX, QC, QGAMC, QRSPEC, &
-                                   QC, QDPDE, QDPDR, QCSML, QGAMC, &
-                                   QVAR, QRHO, QU, QV, QREINT, QPRES, QTEMP, &
-                                   QFS, QFX, QGAME, NHYP
+    use meth_params_module, only : NHYP
     use meth_params_module, only: nb_nscbc_params
 
     implicit none

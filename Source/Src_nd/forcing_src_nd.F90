@@ -1,4 +1,5 @@
   ! Compute the linear forcing term for turbulence (Rosales PoF 2015)
+#include <PeleC_index_macros.H>
 module forcing_src_module
 
   implicit none
@@ -17,7 +18,6 @@ contains
                             time,dt) bind(C, name = "pc_forcing_src")
 
     use amrex_constants_module, only: ZERO
-    use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ
     use prob_params_module, only: dim
 
     implicit none

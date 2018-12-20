@@ -1,5 +1,4 @@
 #include <PeleC.H>
-#include <PeleC_F.H>
 
 using std::string;
 using namespace amrex;
@@ -175,9 +174,9 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       coeff_cc.resize(gbox, nCompTr);
       get_transport_coeffs(ARLIM_3D(gbox.loVect()),
                            ARLIM_3D(gbox.hiVect()),
-                           BL_TO_FORTRAN_N_3D(q.fab(), cQFS),
-                           BL_TO_FORTRAN_N_3D(q.fab(), cQTEMP),
-                           BL_TO_FORTRAN_N_3D(q.fab(), cQRHO),
+                           BL_TO_FORTRAN_N_3D(q.fab(), QFS),
+                           BL_TO_FORTRAN_N_3D(q.fab(), QTEMP),
+                           BL_TO_FORTRAN_N_3D(q.fab(), QRHO),
                            BL_TO_FORTRAN_N_3D(coeff_cc, dComp_rhoD),
                            BL_TO_FORTRAN_N_3D(coeff_cc, dComp_mu),
                            BL_TO_FORTRAN_N_3D(coeff_cc, dComp_xi),
@@ -592,8 +591,9 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
                     BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], Xmom), &amrex::SpaceDim);
 
+      int nspec = NumSpec;
       pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
-                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], FirstSpec), &NumSpec);
+                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], FirstSpec), &nspec);
 
       const int one = 1;
       pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),

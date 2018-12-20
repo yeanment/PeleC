@@ -1,3 +1,5 @@
+#include <PeleC_index_macros.H>
+
 ! :::
 ! ::: ----------------------------------------------------------------
 ! :::
@@ -187,8 +189,7 @@ end subroutine set_amr_info
 ! ::: ----------------------------------------------------------------
 ! :::
 
-subroutine get_method_params(nGrowHyp,cQTHERM,cQVAR,cQRHO,cQU,cQV,cQW,cQGAME,cQPRES,&
-     cQREINT,cQTEMP,cQFA,cQFS,cQFX,cNQAUX,cQGAMC,cQC,cQCSML,cQDPDR,cQDPDE,cQRSPEC) &
+subroutine get_method_params(nGrowHyp) &
      bind(C, name="get_method_params")
 
   ! Passing data from f90 back to C++
@@ -197,31 +198,9 @@ subroutine get_method_params(nGrowHyp,cQTHERM,cQVAR,cQRHO,cQU,cQV,cQW,cQGAME,cQP
 
   implicit none
 
-  integer, intent(out) :: ngrowHyp, cQTHERM, cQVAR, cQRHO, cQU, cQV, cQW, cQGAME, cQPRES,&
-                          cQREINT, cQTEMP, cQFA, cQFS, cQFX, cNQAUX, cQGAMC, cQC, cQCSML,&
-                          cQDPDR, cQDPDE, cQRSPEC
+  integer, intent(out) :: ngrowHyp
 
   nGrowHyp = NHYP
-  cQTHERM = QTHERM
-  cQVAR = QVAR
-  cQRHO = QRHO - 1
-  cQU = QU - 1
-  cQV = QV - 1
-  cQW = QW - 1
-  cQGAME = QGAME - 1
-  cQPRES = QPRES - 1
-  cQREINT = QREINT - 1
-  cQTEMP = QTEMP - 1
-  cQFA = QFA - 1
-  cQFS = QFS - 1
-  cQFX = QFX - 1
-  cNQAUX = NQAUX
-  cQGAMC = QGAMC - 1
-  cQC = QC - 1
-  cQCSML = QCSML - 1
-  cQDPDR = QDPDR - 1
-  cQDPDE = QDPDE - 1
-  cQRSPEC = QRSPEC - 1
 
 end subroutine get_method_params
 
@@ -337,15 +316,14 @@ end subroutine swap_outflow_data
 ! ::: ----------------------------------------------------------------
 ! :::
 
-subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
-     FirstAdv,FirstSpec,FirstAux,numadv, &
+subroutine set_method_params(dm, &
      diffuse_cutoff_density_in, &
      pstate_loc, pstate_vel, pstate_T, pstate_dia, pstate_rho, pstate_ys, &
      pfld_vel, pfld_rho, pfld_T, pfld_p, pfld_ys) &
      bind(C, name="set_method_params")
 
   use meth_params_module
-  use chemistry_module, only : nspecies, naux
+  use chemistry_module, only : nspecies, naux, nadv
   use eos_module, only : eos_init
   use transport_module, only : transport_init
   use amrex_constants_module, only : ZERO, ONE
@@ -353,177 +331,59 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   implicit none
 
   integer, intent(in) :: dm
-  integer, intent(in) :: Density, Xmom, Eden, Eint, Temp, &
-       FirstAdv, FirstSpec, FirstAux
   integer, intent(in) :: pstate_loc, pstate_vel, pstate_T, pstate_dia, &
                          pstate_rho, pstate_ys, pfld_vel, pfld_rho, pfld_T, &
                          pfld_p, pfld_ys
-  integer, intent(in) :: numadv
   double precision, intent(in) :: diffuse_cutoff_density_in
-  integer :: iadv, ispec, countt
+  integer :: iadv, ispec, iaux, countt
 
   integer :: QLAST
 
   integer :: ioproc
 
 !  call parallel_initialize()
-#ifndef AMREX_USE_CUDA
-  !---------------------------------------------------------------------
-  ! conserved state components
-  !---------------------------------------------------------------------
-
-  ! NTHERM: number of thermodynamic variables (rho, 3 momenta, rho*e, rho*E, T)
-  ! NVAR  : number of total variables in initial system
-  NTHERM = 7
-
-  NVAR = NTHERM + nspecies + naux + numadv
-
-  nadv = numadv
-
-  ! We use these to index into the state "U"
-  URHO  = Density   + 1
-  UMX   = Xmom      + 1
-  UMY   = Xmom      + 2
-  UMZ   = Xmom      + 3
-  UEDEN = Eden      + 1
-  UEINT = Eint      + 1
-  UTEMP = Temp      + 1
-
-  if (numadv .ge. 1) then
-     UFA   = FirstAdv  + 1
-  else
-     UFA = 1
-  end if
-
-  UFS   = FirstSpec + 1
-
-  if (naux .ge. 1) then
-     UFX = FirstAux  + 1
-  else
-     UFX = 1
-  end if
-
-  USHK  = -1
-  !---------------------------------------------------------------------
-  ! primitive state components
-  !---------------------------------------------------------------------
-
-  ! QTHERM: number of primitive variables: rho, p, (rho e), T + 3 velocity components 
-  ! QVAR  : number of total variables in primitive form
-
-  QTHERM = NTHERM + 1 ! the + 1 is for QGAME which is always defined in primitive mode
-
-  QVAR = QTHERM + nspecies + naux + numadv
-  
-  ! NQ will be the number of hydro + radiation variables in the primitive
-  ! state.  Initialize it just for hydro here
-  NQ = QVAR
-
-  ! We use these to index into the state "Q"
-  !QRHO  = 1
-
-  !QU    = 2
-  !QV    = 3
-  !QW    = 4
-
-  !QGAME = 5
-
-  QLAST   = QGAME
-
-  !QPRES   = QLAST + 1
-  !QREINT  = QLAST + 2
-
-  !QTEMP   = QTHERM ! = QLAST + 3
-
-  if (numadv >= 1) then
-     QFA = QTHERM + 1
-     !QFS = QFA + numadv
-
-  else
-     QFA = 1   ! density
-     !QFS = QTHERM + 1
-
-  end if
-
-  if (naux >= 1) then
-     QFX = QFS + nspecies
-
-  else
-     QFX = 1
-
-  end if
-
-  ! The NQAUX here are auxiliary quantities (game, gamc, c, csml, dpdr, dpde, Rspecific)
-  ! that we create in the primitive variable call but that do not need to
-  ! participate in tracing.
-
-  NQAUX = 6
-  QGAMC   = 1
-  QC      = 2
-  QCSML   = 3
-  QDPDR   = 4
-  QDPDE   = 5
-  QRSPEC   = 6
-#endif
   ! easy indexing for the passively advected quantities.  This
   ! lets us loop over all groups (advected, species, aux)
   ! in a single loop.
   allocate(qpass_map(QVAR))
   allocate(upass_map(NVAR))
 
-  ! Transverse velocities
-
+  ! Unused velocities
   if (dm == 1) then
      upass_map(1) = UMY
      qpass_map(1) = QV
-
      upass_map(2) = UMZ
      qpass_map(2) = QW
-
-#ifndef AMREX_USE_CUDA
-     npassive = 2
-#else 
      countt   = 2
-#endif
-
-  else if (dm == 2) then
+  else if (dm == 2) then     
      upass_map(1) = UMZ
      qpass_map(1) = QW
-#ifndef AMREX_USE_CUDA
-     npassive = 1
-#else 
      countt = 1
-#endif
   else
-#ifndef AMREX_USE_CUDA
-     npassive = 0
-#else
      countt = 1
-#endif
   endif
 
   do iadv = 1, nadv
-     upass_map(npassive + iadv) = UFA + iadv - 1
-     qpass_map(npassive + iadv) = QFA + iadv - 1
+     upass_map(countt + iadv) = UFA + iadv - 1
+     qpass_map(countt + iadv) = QFA + iadv - 1
   enddo
-#ifndef AMREX_USE_CUDA
-  npassive = npassive + nadv
-#else 
-  countt = countt + nadv 
-#endif
-  if (QFS > -1) then
-     do ispec = 1, nspecies+naux
-#ifndef AMREX_USE_CUDA
-        upass_map(npassive + ispec) = UFS + ispec - 1
-        qpass_map(npassive + ispec) = QFS + ispec - 1
-#else 
-        upass_map(countt + ispec) = UFS + ispec - 1
-        qpass_map(countt + ispec) = QFS + ispec - 1
-#endif
-     enddo
-#ifndef AMREX_USE_CUDA
-     npassive = npassive + nspecies + naux
-#endif
+  countt = countt + nadv
+
+  do ispec = 1, nspecies
+     upass_map(countt + ispec) = UFS + ispec - 1
+     qpass_map(countt + ispec) = QFS + ispec - 1
+  enddo
+  countt = countt + nspecies
+
+  do iaux = 1, naux
+     upass_map(countt + iaux) = UFX + iaux - 1
+     qpass_map(countt + iaux) = QFX + iaux - 1
+  enddo
+  countt = countt + naux
+
+  if (countt .ne. npassive) then
+     print *,'Indexing screwup'
+     call bl_abort()
   endif
 
   !---------------------------------------------------------------------
@@ -585,8 +445,7 @@ end subroutine clear_method_params
 
 subroutine init_godunov_indices() bind(C, name="init_godunov_indices")
 #ifndef AMREX_USE_CUDA
-  use meth_params_module, only : GDRHO, GDU, GDV, GDW, GDPRES, GDGAME, NGDNV, &
-       QU, QV, QW
+  use meth_params_module, only : GDRHO, GDU, GDV, GDW, GDPRES, GDGAME, NGDNV
 
   implicit none
 

@@ -17,6 +17,7 @@
   ! will be the time n state in the first call and the n+1 in the
   ! second call.
   
+#include <PeleC_index_macros.H>
 module pc_ext_src_module
 
   implicit none
@@ -33,7 +34,6 @@ contains
                         src,src_lo,src_hi,problo,dx,time,dt) bind(C, name = "pc_ext_src")
 
     use amrex_constants_module, only: ZERO
-    use meth_params_module, only : NVAR
 
     implicit none
 

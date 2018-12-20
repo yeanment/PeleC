@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module pc_prob_module
 
   implicit none
@@ -88,7 +89,6 @@ contains
        dx,xlo,xhi) bind(C, name="pc_initdata")
     use eos_type_module
     use probdata_module
-    use meth_params_module, only : URHO, UMX, UMY, UMZ, UEINT, UEDEN, UTEMP, UFS
     use prob_params_module, only : problo, dim
     use eos_module
     use chemistry_module, only: nspecies

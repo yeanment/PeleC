@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module advection_module
 
   implicit none
@@ -44,9 +45,8 @@ AMREX_DEVICE
                      dloga, dloga_l1, dloga_l2, dloga_h1, dloga_h2, &
                      domlo, domhi)
 
-    use meth_params_module, only : QVAR, NVAR, ppm_type, hybrid_riemann, &
-                                   GDU, GDV, GDPRES, NGDNV, &
-                                   QC, QCSML, QGAMC, NQAUX
+    use meth_params_module, only : ppm_type, hybrid_riemann, &
+                                   GDU, GDV, GDPRES, NGDNV
     use trace_module, only : trace
     use trace_ppm_module, only : trace_ppm
     use transverse_module, only : transx, transy
@@ -257,9 +257,8 @@ AMREX_DEVICE  subroutine consup( uin, uin_l1, uin_l2, uin_h1, uin_h2, &
                      eden_lost,xang_lost,yang_lost,zang_lost, &
                      verbose)
 
-    use meth_params_module, only : difmag, NVAR, URHO, UMX, UMY, UMZ, &
-                                   UEDEN, UEINT, UTEMP, NGDNV, GDPRES, track_grid_losses, &
-                                   limit_fluxes_on_small_dens, QVAR
+    use meth_params_module, only : difmag, NGDNV, GDPRES, track_grid_losses, &
+                                   limit_fluxes_on_small_dens
     use prob_params_module, only : coord_type, domlo_level, domhi_level, center
     use amrex_constants_module, only : ZERO, HALF
     use advection_util_2d_module, only : normalize_species_fluxes

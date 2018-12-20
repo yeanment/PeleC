@@ -1,3 +1,5 @@
+#include <PeleC_index_macros.H>
+
 module slope_module
   
   implicit none
@@ -117,7 +119,6 @@ contains
                     ilo1,ilo2,ihi1,ihi2,dx,dy,idir)
     
     use amrex_constants_module
-    use meth_params_module, only: QU, QV, QVAR
     
     implicit none
     
