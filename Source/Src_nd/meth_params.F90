@@ -13,49 +13,9 @@
 module meth_params_module
 
   use amrex_error_module
+
   implicit none
-#ifdef AMREX_USE_CUDA
-  integer, managed, save, allocatable :: qpass_map(:), upass_map(:)
-  integer, parameter     :: NHYP    = 4
-  integer, parameter     :: nb_nscbc_params = 4
-  !Convservative Vars
-  integer, parameter  :: NTHERM = 7, NVAR = 16, URHO = 1, UMX = 2, UMY = 3,&
-  UMZ=4, UML=0, UMP=0, UEDEN=5, UEINT=6, UTEMP=7, UFS=8
-  !Auxillary
-  integer, parameter ::  UFA=1, UFX=1, USHK=-1, &
-  QTHERM=8, QVAR=17, NQAUX=6, QGAMC=1, QC=2, QCSML=3, QDPDR=4, QDPDE=5,&
-  QRSPEC=6 , QFA = 1, QFX=1, nadv=0, NQ=17, npassive = 10
-  ! Godunov Indexing Paramets 
-  integer, parameter ::  NGDNV=6, GDRHO=1,&
-  GDU =2, GDV=3, GDW=4, GDPRES=5, GDGAME=6, nspec=9, naux=0
-  !Primitive Var 
-  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
-  integer, parameter :: QFS=9
 
-  ! number of ghost cells for the hyperbolic solver
-!  integer, parameter     :: NHYP    = 4
-
-  ! Number of parameters for GC-NSCBC
-  ! NTHERM: number of thermodynamic variables
-!  integer, managed, save, allocatable :: NTHERM, NVAR
-!  integer, managed, save, allocatable:: URHO, UMX, UMY, UMZ, UMR, UML, UMP, UEDEN, UEINT, UTEMP, UFA, UFS, UFX
-!  integer, managed, save, allocatable:: USHK
-
-  ! QTHERM: number of primitive variables
-!  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
-!  integer, managed, save, allocatable:: QTHERM, QVAR
-!  integer, parameter :: QFS=9
-!  integer, managed, save, allocatable:: NQAUX, QGAMC, QC, QCSML, QDPDR, QDPDE, QRSPEC
-!  integer, managed, save, allocatable:: QFA, QFX
-!  integer, managed, save, allocatable:: nadv
-
-  ! NQ will be the total number of primitive variables, hydro + radiation
-!  integer, managed, save, allocatable:: NQ         
-
-!  integer, managed, save, allocatable:: npassive
-!  integer, managed, save, allocatable:: NGDNV, GDRHO, GDU, GDV, GDW, GDPRES, GDGAME
-
-#else
   ! number of ghost cells for the hyperbolic solver
   integer, parameter     :: NHYP    = 4
 
@@ -68,11 +28,13 @@ module meth_params_module
   integer, save :: USHK
 
   ! QTHERM: number of primitive variables
-  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
   integer, save :: QTHERM, QVAR
+  integer, parameter :: QRHO=1, QU=2, QV=3, QW=4, QPRES=6, QREINT=7, QTEMP=8, QGAME=5
   integer, save :: QFS=9
   integer, save :: NQAUX, QGAMC, QC, QCSML, QDPDR, QDPDE, QRSPEC
   integer, save :: QFA, QFX
+  !integer, save :: QRHO, QU, QV, QW, QPRES, QREINT, QTEMP, QGAME
+  !integer, save :: QFA, QFS, QFX
 
   integer, save :: nadv
 
@@ -86,7 +48,7 @@ module meth_params_module
   ! Note that the velocity indices here are picked to be the same value
   ! as in the primitive variable array
   integer, save :: NGDNV, GDRHO, GDU, GDV, GDW, GDPRES, GDGAME
-#endif
+
 
   ! This for keeping track of particles states, and 
   integer, save :: PLOC, PVEL, PTEMP, PDIA, PRHO, PSPC
@@ -191,10 +153,8 @@ module meth_params_module
   !$acc create(ppm_reference_eigenvectors, plm_iorder, hybrid_riemann) &
   !$acc create(riemann_solver, cg_maxiter, cg_tol) &
   !$acc create(cg_blend, use_flattening, transverse_use_eos) &
-  !$acc create(transverse_reset_density, transverse_reset_rhoe, dual_energy_update_E_from_e) &
-  !$acc create(dual_energy_eta1, dual_energy_eta2, dual_energy_eta3) &
-  !$acc create(use_pslope, fix_mass_flux, limit_fluxes_on_small_dens) &
-  !$acc create(density_reset_method, allow_negative_energy, allow_small_energy) &
+  !$acc create(transverse_reset_density, transverse_reset_rhoe, use_pslope) &
+  !$acc create(fix_mass_flux, limit_fluxes_on_small_dens, density_reset_method) &
   !$acc create(first_order_hydro, do_mms, cfl) &
   !$acc create(dtnuc_e, dtnuc_X, dtnuc_mode) &
   !$acc create(dxnuc, do_react, react_T_min) &
@@ -206,46 +166,6 @@ module meth_params_module
   double precision, save :: rot_vec(3)
 
 contains
-#if 0
-  subroutine pelec_allocate_managed_params() &
-             bind(C,name='pelec_allocate_managed_params')
- ! Allocate all the managed memory values
-    allocate(NTHERM)
-    allocate(NVAR)
-    allocate(URHO)
-    allocate(UMX) 
-    allocate(UMY) 
-    allocate(UMZ)
-    allocate(UML)
-    allocate(UMP)
-    allocate(UEDEN)
-    allocate(UEINT)
-    allocate(UFA)
-    allocate(UFS)
-    allocate(UFX)
-    allocate(USHK)
-    allocate(QTHERM)
-    allocate(QVAR)
-    allocate(NQAUX)
-    allocate(QGAMC)
-    allocate(QC)
-    allocate(QCSML)
-    allocate(QCSML)
-    allocate(QDPDR)
-    allocate(QDPDE)
-    allocate(QRSPEC)
-    allocate(QFA)
-    allocate(QFX)
-    allocate(nadv)
-    allocate(NQ)
-    allocate(NGDNV)
-    allocate(GDRHO)
-    allocate(GDU)
-    allocate(GDW)
-    allocate(GDPRES)
-    allocate(GDGAME) 
-  end subroutine pelec_allocate_managed_params
-#endif
 
   subroutine set_pelec_method_params() bind(C,name="set_pelec_method_params")
 
@@ -370,22 +290,6 @@ contains
     !$acc update &
     !$acc device(levmsk_interior, levmsk_covered, levmsk_notcovered) &
     !$acc device(levmsk_physbnd, difmag, small_dens) &
-<<<<<<< HEAD
-    !$acc device(small_temp, small_pres, small_ener) &
-    !$acc device(do_hydro, do_mol_AD, i_nscbc) &
-    !$acc device(hybrid_hydro, ppm_type, ppm_trace_sources) &
-    !$acc device(ppm_temp_fix, ppm_predict_gammae, ppm_reference_eigenvectors) &
-    !$acc device(plm_iorder, hybrid_riemann, riemann_solver) &
-    !$acc device(cg_maxiter, cg_tol, cg_blend) &
-    !$acc device(use_flattening, transverse_use_eos, transverse_reset_density) &
-    !$acc device(transverse_reset_rhoe, use_pslope, fix_mass_flux) &
-    !$acc device(limit_fluxes_on_small_dens, density_reset_method, first_order_hydro) &
-    !$acc device(do_mms, cfl, dtnuc_e) &
-    !$acc device(dtnuc_X, dtnuc_mode, dxnuc) &
-    !$acc device(do_react, react_T_min, react_T_max) &
-    !$acc device(react_rho_min, react_rho_max, disable_shock_burning) &
-    !$acc device(do_acc, track_grid_losses)
-=======
     !$acc device(small_massfrac, small_temp, small_pres) &
     !$acc device(small_ener, do_hydro, do_mol_AD) &
     !$acc device(i_nscbc, hybrid_hydro, ppm_type) &
@@ -393,16 +297,13 @@ contains
     !$acc device(ppm_reference_eigenvectors, plm_iorder, hybrid_riemann) &
     !$acc device(riemann_solver, cg_maxiter, cg_tol) &
     !$acc device(cg_blend, use_flattening, transverse_use_eos) &
-    !$acc device(transverse_reset_density, transverse_reset_rhoe, dual_energy_update_E_from_e) &
-    !$acc device(dual_energy_eta1, dual_energy_eta2, dual_energy_eta3) &
-    !$acc device(use_pslope, fix_mass_flux, limit_fluxes_on_small_dens) &
-    !$acc device(density_reset_method, allow_negative_energy, allow_small_energy) &
+    !$acc device(transverse_reset_density, transverse_reset_rhoe, use_pslope) &
+    !$acc device(fix_mass_flux, limit_fluxes_on_small_dens, density_reset_method) &
     !$acc device(first_order_hydro, do_mms, cfl) &
     !$acc device(dtnuc_e, dtnuc_X, dtnuc_mode) &
     !$acc device(dxnuc, do_react, react_T_min) &
     !$acc device(react_T_max, react_rho_min, react_rho_max) &
     !$acc device(disable_shock_burning, do_acc, track_grid_losses)
->>>>>>> 5125bd11c9207f6d5afff44e84d9f348f2cbd13c
 
 
     ! now set the external BC flags
