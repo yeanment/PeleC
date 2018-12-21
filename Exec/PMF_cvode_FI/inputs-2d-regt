@@ -67,9 +67,9 @@ pelec.cvode_meth = 2
 # 1 = functional iteration; 2 = Newton iteration
 pelec.cvode_itmeth = 2
 # Select CVODE Jacobian eval.
-pelec.cvode_iJac = 0
+pelec.cvode_iJac = 1
 # 1=full e, 2=full h
 pelec.cvode_iE = 1
 # choose sparse or dense
-pelec.cvode_iDense = 1
+pelec.cvode_iDense = 99
 

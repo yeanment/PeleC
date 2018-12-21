@@ -25,22 +25,22 @@ ifeq ($(USE_DVODE), TRUE)
 endif
 
 USE_SUNDIALS_3x4x=TRUE
-CVODE_LIB_DIR = /home/amfelden/CODES/PeleLM/Source/ChemDriver/sundials-3.2.1/instdir/include 
+#CVODE_LIB_DIR = /home/amfelden/CODES/PeleLM/Source/ChemDriver/sundials-3.2.1/instdir/lib 
 
-USE_FORTRAN_CVODE=TRUE
+USE_KLU = FALSE
+ifeq ($(USE_KLU), TRUE)
+    DEFINES  += -DUSE_KLU
+endif
+
+USE_FORTRAN_CVODE=FALSE
 ifeq ($(USE_FORTRAN_CVODE), TRUE)
     DEFINES  += -DUSE_FORTRAN_CVODE
-    USE_KLU = FALSE
-    ifeq ($(USE_KLU), TRUE)
-        DEFINES  += -DUSE_KLU
-    endif
     USE_PYJAC = FALSE
     ifeq ($(USE_PYJAC), TRUE)
         DEFINES  += -DUSE_PYJAC
     endif
 else
-USE_KLU = FALSE
-USE_PYJAC = FALSE
+    USE_PYJAC = FALSE
 endif
 
 USE_CUDA_CVODE = FALSE
