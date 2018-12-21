@@ -43,7 +43,7 @@
 #define QDPDR     QCSML  + 1
 #define QDPDE     QDPDR  + 1
 #define QRSPEC    QDPDE  + 1
-#define NQAUX     QRSPEC + 1
+#define NQAUX     6
 
 #define npassive  NUM_SPECIES + NUM_ADVECT + NUM_AUXILIARY + 3 - BL_SPACEDIM
 
