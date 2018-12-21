@@ -5,44 +5,70 @@
 
 #ifdef __cplusplus
 #define URHO      0
+#define UMX       1
+#define UMY       2
+#define UMZ       3
+#define UEDEN     4
+#define UEINT     5
+#define UTEMP     6
+#define UFA       7
+
 #define QRHO      0
+#define QU        1
+#define QV        2
+#define QW        3
+#define QGAME     4
+#define QPRES     5
+#define QREINT    6
+#define QTEMP     7
+#define QFA       8
+
 #define QGAMC     0
+#define QC        1
+#define QCSML     2
+#define QDPDR     3
+#define QDPDE     4
+#define QRSPEC    5
 #else
 #define URHO      1
+#define UMX       2
+#define UMY       3
+#define UMZ       4
+#define UEDEN     5
+#define UEINT     6
+#define UTEMP     7
+#define UFA       8
+
 #define QRHO      1
+#define QU        2
+#define QV        3
+#define QW        4
+#define QGAME     5
+#define QPRES     6
+#define QREINT    7
+#define QTEMP     8
+#define QFA       9
+
 #define QGAMC     1
+#define QC        2
+#define QCSML     3
+#define QDPDR     4
+#define QDPDE     5
+#define QRSPEC    6
 #endif
 
-#define UMX       URHO  + 1
-#define UMY       UMX   + 1
-#define UMZ       UMY   + 1
-#define UEDEN     UMZ   + 1
-#define UEINT     UEDEN + 1
-#define UTEMP     UEINT + 1
+
 #define NTHERM    7
-#define UFA       UTEMP + 1
+#define QTHERM    8
+
 #define UFS       UFA   + NUM_ADVECT
 #define UFX       UFS   + NUM_SPECIES
 #define NVAR      NTHERM + NUM_ADVECT + NUM_SPECIES + NUM_AUXILIARY
 
-#define QU        QRHO   + 1
-#define QV        QU     + 1
-#define QW        QV     + 1
-#define QGAME     QW     + 1
-#define QPRES     QGAME  + 1
-#define QREINT    QPRES  + 1
-#define QTEMP     QREINT + 1
-#define QFA       QTEMP  + 1
-#define QTHERM    NTHERM + 1
 #define QFS       QFA    + NUM_ADVECT
 #define QFX       QFS    + NUM_SPECIES
 #define QVAR      QTHERM + NUM_ADVECT + NUM_SPECIES + NUM_AUXILIARY
 
-#define QC        QGAMC  + 1
-#define QCSML     QC     + 1
-#define QDPDR     QCSML  + 1
-#define QDPDE     QDPDR  + 1
-#define QRSPEC    QDPDE  + 1
 #define NQAUX     6
 
 #define npassive  NUM_SPECIES + NUM_ADVECT + NUM_AUXILIARY + 3 - BL_SPACEDIM
