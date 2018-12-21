@@ -137,65 +137,149 @@ void PeleC_srctoprim(amrex::Box const& bx, amrex::FArrayBox const& qfab, amrex::
 }
 
 
-/*
+
 AMREX_GPU_DEVICE
 inline 
-void PeleC_consup(amrex::Box const &bx, amrex::FArrayBox const& uifab, amrex::FArrayBox const& qfab, 
-                  amrex::FArrayBox &uofab, amrex:FArrayBox const& upfab, 
+void PeleC_consup(amrex::Box const &bx, amrex::FArrayBox const& ufab, amrex::FArrayBox const& qfab, 
+                  amrex::FArrayBox &upfab, 
                   amrex::FArrayBox const &q1fab, amrex::FArrayBox const &q2fab, 
-                  amrex::FArrayBox const &flx1fab , amrex::FArrayBox const &flx2fab,
+                  amrex::FArrayBox &flx1fab , amrex::FArrayBox &flx2fab,
                   amrex::FArrayBox const &a1fab   , amrex::FArrayBox const &a2fab, 
                   amrex::FArrayBox const &volfab  , amrex::FArrayBox const &divfab, 
-                  amrex::FArrayBox const &pdivufab, amrex:Real const *dx, amrex::Real *added_flux, 
-                  amrex::Real *lost)
+                  amrex::FArrayBox const &pdivufab, amrex::Real const *dx,
+                  amrex::Real const difmag)
 {
-    const auto len   = length(bx); 
-    const auto lo    = lbound(bx); 
-    const auto u     = ufab.view(lo); 
-    const auto q     = qfab.view(lo); 
-    const auto uo    = uofab.view(lo); 
-    const auto up    = upfab.view(lo); 
-    const auto q1    = q1fab.view(lo); 
-    const auto q2    = q2fab.view(lo); 
-    const auto flx1  = flx1fab.view(lo); 
-    const auto flx2  = flx2fab.view(lo); 
-    const auto a1    = a1fab.view(lo); 
-    const auto a2    = a2fab.view(lo); 
-    const auto vol   = volfab.view(lo); 
-    const auto div   = divfab.view(lo); 
-    const auto pdivu = pdivufab.view(lo); 
+    const auto len    = length(bx); 
+    const auto lo     = lbound(bx); 
+    const auto u      = ufab.view(lo); 
+    const auto q      = qfab.view(lo); 
+    const auto update = upfab.view(lo); 
+    const auto q1     = q1fab.view(lo); 
+    const auto q2     = q2fab.view(lo); 
+    const auto flx1   = flx1fab.view(lo); 
+    const auto flx2   = flx2fab.view(lo); 
+    const auto a1     = a1fab.view(lo); 
+    const auto a2     = a2fab.view(lo); 
+    const auto vol    = volfab.view(lo); 
+    const auto div    = divfab.view(lo); 
+    const auto pdivu  = pdivufab.view(lo); 
    
     amrex::Real div1; 
+    amrex::Real summ; 
+    amrex::Real fac; 
+    
+//============== Add some artificial viscosity ========================
+//-------------------------- x-flux ----------------------------------- 
+    for         (int k = 0; k < len.z; ++k){
+        for     (int j = 0; j < len.y; ++j){
+            AMREX_PRAGMA_SIMD
+            for (int i = 0; i < len.x+1; ++i){
+                for(int n=0; n < NVAR; ++n){
+                    if(n == UTEMP){
+                        flx1(i,j,k,n) = 0; 
+                    }
+                    else{
+                        div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
+// Passing in difmag TODO not pass in. 
+                        div1 = difmag*std::min(0.0, div1); 
+                        flx1(i,j,k,n) = flx1(i,j,k,n) + dx[0]*div1*(u(i,j,k,n) - u(i-1,j,k,n));
+                    }
+                }
+            }
+        }
+ //-------------------------- y-flux ----------------------------------- 
+        for     (int j = 0; j < len.y+1; ++j){
+            AMREX_PRAGMA_SIMD
+            for (int i = 0; i < len.x; ++i){
+                for(int n=0; n < NVAR; ++n){
+                    if(n == UTEMP){
+                        flx2(i,j,k,n) = 0; 
+                    }
+                    else{
+                        div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
+                        div1 = difmag*std::min(0.0, div1); 
+                        flx2(i,j,k,n) = flx2(i,j,k,n) + dx[1]*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
+                    }
+                }
+            }
+        }
+    }
+
+// ===========  Normalize Species Fluxes =============================
+// -------------------------- x-flux ---------------------------------
+    for         (int k = 0; k < len.z; ++k){
+        for     (int j = 0; j < len.y; ++j){
+            AMREX_PRAGMA_SIMD
+            for (int i = 0; i < len.x+1; ++i){
+                summ = 0.0; 
+                for(int n = UFS; n < NVAR; ++n) summ+= flx1(i,j,k,n);
+                if(summ != 0.e0){
+                    fac = flx1(i,j,k,URHO) / summ; 
+                }
+                else{
+                    fac = 1.e0; 
+                }
+#pragma unroll
+                for(int n = UFS; n < NVAR; ++n) flx1(i,j,k,n) *= fac; 
+            }
+        }
+
+// ------------------------ y-flux -----------------------------------
+               
+        for     (int j = 0; j < len.y+1; ++j){
+            AMREX_PRAGMA_SIMD
+            for (int i = 0; i < len.x; ++i){
+                summ = 0.0; 
+                for(int n = UFS; n < NVAR; ++n) summ+= flx2(i,j,k,n);
+                if(summ != 0.e0){
+                    fac = flx2(i,j,k,URHO) / summ; 
+                }
+                else{
+                    fac = 1.e0; 
+                }
+#pragma unroll
+                for(int n = UFS; n < NVAR; ++n) flx2(i,j,k,n) *= fac; 
+            }
+        }
+    }                                                 
+
+// ============================ Extensive Fluxes =====================
+// -------------------------- x-flux ---------------------------------
+    for         (int k = 0; k < len.z; ++k){
+        for     (int j = 0; j < len.y; ++j){
+            AMREX_PRAGMA_SIMD
+            for (int i = 0; i < len.x+1; ++i){
+#pragma unroll 
+                for(int n = 0; n < NVAR; ++n) flx1(i,j,k,n) *= a1(i,j,k);
+            }
+        }
+
+// ------------------------ y-flux -----------------------------------
+               
+        for     (int j = 0; j < len.y+1; ++j){
+            AMREX_PRAGMA_SIMD
+            for (int i = 0; i < len.x; ++i){
+                for(int n = 0; n < NVAR; ++n) flx2(i,j,k,n) *= a2(i,j,k); 
+            }
+        }
+    }                                                 
+
+// === Fill the update array (this is essenitally the sources fab) ===
 
     for         (int k = 0; k < len.z; ++k){
         for     (int j = 0; j < len.y; ++j){
             AMREX_PRAGMA_SIMD
             for (int i = 0; i < len.x; ++i){
-//-------------- Add some artificial viscosity ------------------------
-                for(int n=0; n < NVAR; ++n){
-                    if(n == UTEMP){
-                        flx1(i,j,k,n) = 0; 
-                        flx2(i,j,k,n) = 0; 
-                    }
-                    else{
-                        div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
-                        //  Do we know what difmag is?                     
-                        div1 = difmag*std::min(0, div1); 
-                        flx1(i,j,k,n) = flx1(i,j,k,n) + dx*div1*(uin(i,j,k,n) - uin(i-1,j,k,n));
-                        div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
-                        div1 = difmag*std::min(0, div1); 
-                        flx2(i,j,k,n) = flx2(i,j,k,n) + dy*div1*(uin(i,j,k,n) - uin(i,j-1,k,n)); 
-                    }
-                }
-// -------------  Normalize Species Fluxes -----------------------------
-                amrex::Real summ = 0.0; 
-                for(int n = UFS; n < NVAR; ++n){
-                    summ+= flx2(i,j,k,n) 
-                }
-                                 
+#pragma unroll
+                for(int n = 0; i < NVAR; ++n)
+                    update(i,j,k,n) += (flx1(i,j,k,n) - flx1(i+1,j,k,n)
+                                    +   flx2(i,j,k,n) - flx2(i,j+1,k,n))
+                                    /   vol(i,j,k);
+                update(i,j,k,UEINT) -= pdivu(i,j,k);  
             }
         }
-    }
+    }   
+
 }
-*/
+
 #endif 
