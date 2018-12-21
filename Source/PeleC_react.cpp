@@ -55,6 +55,7 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
     rYs.setVal(0);
     rE.setVal(0);
     rEs.setVal(0);
+    int reInit = 1;
 #endif
 
     if (A_aux == nullptr || react_init)
@@ -159,12 +160,13 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
 		  double plo = 1013250.0;
 		  int cost = actual_cReact(tmp_vect, tmp_src_vect, 
 				  tmp_vect_energy, tmp_src_vect_energy,
-				  &plo, &dt, &time);
+				  &plo, &dt, &time, &reInit);
 		  for (int i=0;i<NumSpec+1; i++){
 			  Y(bit(),i) = tmp_vect[i];
 		  }
 		  E(bit(),0) = tmp_vect_energy[0];   
 		  w(bit(),0) = cost; 
+                  reInit                = 0;
 	  }
 
           pc_postreact_state(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
