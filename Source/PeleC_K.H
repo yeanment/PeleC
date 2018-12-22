@@ -5,13 +5,6 @@
 #include "PeleC_Parameters.H" 
 #include "PeleC_index_macros.H" 
 #include "PeleC_EOS.H"
-
-/*AMREX_GPU_DEVICE
-void PeleC_ctoprim(amrex::Box const& bx, amrex::FArrayBox const& state, amrex::FArrayBox& Q,
-                   amrex::FArrayBox& Qaux); 
-AMREX_GPU_DEVICE
-void PeleC_srctoprim(amrex::Box const& bx, amrex::FArrayBox const& qfab, amrex::FArrayBox const& qauxfab,
-                   amrex::FArrayBox const& srcfab, amrex::FArrayBox &srcQfab); */
 //TODO Add more fuctions! 
 struct Real3{
     amrex::Real x;
@@ -105,7 +98,7 @@ void PeleC_srctoprim(amrex::Box const& bx, amrex::FArrayBox const& qfab, amrex::
         for     (int j = 0; j < len.y; ++j){
             AMREX_PRAGMA_SIMD
             for (int i = 0; i < len.x; ++i){
-//--------------- Local loading Vars ==> Load once from global memory use multiple times -------------------
+//=============== Local loading Vars ==> Load once from global memory use multiple times =============
                 srcrho = src(i,j,k,URHO); 
                 rhoinv = 1.e0/q(i,j,k,QRHO); 
                 v.x = q(i,j,k,QU); 
@@ -114,7 +107,7 @@ void PeleC_srctoprim(amrex::Box const& bx, amrex::FArrayBox const& qfab, amrex::
                 um.x = src(i,j,k,UMX); 
                 um.y = src(i,j,k,UMY); 
                 um.z = src(i,j,k,UMZ);
-//--------------- SrcQ Calc ---------------------------------------------------------------------------------
+//=============== SrcQ Calc ==========================================================================
                 srcq(i,j,k,QRHO  ) = srcrho; 
                 srcq(i,j,k,QU    ) = (um.x - v.x*srcrho)*rhoinv; 
                 srcq(i,j,k,QV    ) = (um.y - v.y*srcrho)*rhoinv; 
