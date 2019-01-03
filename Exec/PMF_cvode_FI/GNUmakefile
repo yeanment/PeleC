@@ -19,6 +19,8 @@ USE_REACT  = TRUE
 USE_CUDA   =  FALSE
 
 #######################
+include ./Make.cvodeFiniterface
+
 USE_DVODE=FALSE
 ifeq ($(USE_DVODE), TRUE)
     DEFINES  += -DUSE_DVODE

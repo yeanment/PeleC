@@ -19,18 +19,18 @@ USE_REACT  = TRUE
 USE_CUDA   =  FALSE
 
 #######################
-USE_DVODE=TRUE
+USE_DVODE=FALSE
 ifeq ($(USE_DVODE), TRUE)
     DEFINES  += -DUSE_DVODE
 endif
 
-USE_SUNDIALS_3x4x=FALSE
-#CVODE_LIB_DIR = /home/amfelden/CODES/PeleLM/Source/ChemDriver/sundials-3.2.1/instdir/lib/ 
+USE_SUNDIALS_3x4x=TRUE
+CVODE_LIB_DIR = /home/amfelden/CODES/PeleLM/Source/ChemDriver/sundials-3.2.1/instdir/lib/ 
 
-USE_FORTRAN_CVODE=FALSE
+USE_FORTRAN_CVODE=TRUE
 ifeq ($(USE_FORTRAN_CVODE), TRUE)
     DEFINES  += -DUSE_FORTRAN_CVODE
-    USE_KLU = FALSE
+    USE_KLU = TRUE
     ifeq ($(USE_KLU), TRUE)
         DEFINES  += -DUSE_KLU
     endif
@@ -76,4 +76,4 @@ Bpack   := ./Make.package
 Blocs   := .
 
 include ../../Make.PeleC
-include ./Make.cvodeCinterface
+##include ./Make.cvodeCinterface

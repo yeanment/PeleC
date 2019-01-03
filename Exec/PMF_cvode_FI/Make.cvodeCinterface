@@ -1,0 +1,4 @@
+
+INCLUDE_LOCATIONS += /home/amfelden/CODES/PelePhysicsGIT/Reactions/Fuego
+INCLUDE_LOCATIONS += /home/amfelden/CODES/PelePhysicsGIT/Support/Fuego/Mechanism/Models/dodecane_wang
+INCLUDE_LOCATIONS += /home/amfelden/CODES/SuiteSparse/include 
