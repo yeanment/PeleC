@@ -17,31 +17,51 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
 
     if(hybrid_riemann == 1)
     {
-        PeleC_shock(q, shk, dx, dy); 
+        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+            PeleC_shock(q, shk, dx, dy); 
+        });
     }
     else shk.setVal(0.0); 
 
     if(ppm_type == 0){
-        PeleC_trace(q, qaux, flatn, qxm, qxp, qym, qyp, srcQ, dx, dy, dt); 
+        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+            PeleC_trace(q, qaux, flatn, qxm, qxp, qym, qyp, srcQ, dx, dy, dt); 
+        }); 
     }
     else{
-        PeleC_ppm(q, qaux, flatn, qxm, qxp, qym, qyp, srcQ, dx, dy, dt); 
+        AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+            PeleC_ppm(q, qaux, flatn, qxm, qxp, qym, qyp, srcQ, dx, dy, dt);
+        }); 
     }
-
+//TODO consider placing all functions into one Launch Lambda
     //===================== X initial fluxes ============================
-    PeleC_cmpflx(qxm, qxp, fx, q1, qaux, bcMask, shk, 0); 
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_cmpflx(qxm, qxp, fx, q1, qaux, bcMask, shk, 0);
+    }); 
     //===================== Y initial fluxes ============================
-    PeleC_cmpflx(qym, qyp, fy, q2, qaux, bcMask, shk, 1); 
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_cmpflx(qym, qyp, fy, q2, qaux, bcMask, shk, 1); 
+    }); 
     //===================== X interface corrections =====================
-    PeleC_transy(qxm, qm, qxp, qp, fy, q2, quax, srcQ, hdt, hdtdy); 
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_transy(qxm, qm, qxp, qp, fy, q2, quax, srcQ, hdt, hdtdy); 
+    }); 
     //===================== Final Riemann problem X =====================
-    PeleC_cmpflx(qm, qp, flx1, q1, qaux, bcMask, shk, 0);
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_cmpflx(qm, qp, flx1, q1, qaux, bcMask, shk, 0);
+    }); 
     //===================== Y interface corrections =====================
-    PeleC_transx(qym, qm, qyp, qp, fx, q1, quax, srcQ, hdt, hdtdx, area1, vol); 
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_transx(qym, qm, qyp, qp, fx, q1, quax, srcQ, hdt, hdtdx, area1, vol); 
+    });
     //===================== Final Riemann problem Y =====================
-    PeleC_cmpflx(qm, qp, flx2, q2, quax, bcMask, shk, 1); 
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_cmpflx(qm, qp, flx2, q2, quax, bcMask, shk, 1); 
+    }); 
     //===================== Construct p div{U} ==========================
-    PeleC_pdivu(pdivu, q1, q2, vol); 
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_pdivu(pdivu, q1, q2, vol); 
+    }); 
 }
 
 AMREX_GPU_DEVICE
