@@ -1,4 +1,5 @@
 #include "PeleC_K.H" 
+#include "PeleC_EOS.H" 
  
 void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
                    amrex::FArrayBox const& quax, amrex::FArrayBox const& srcQ, 
@@ -75,7 +76,6 @@ PeleC_shock(amrex::Box const& bx, amrex::FArrayBox const &qfab, amrex::FArrayBox
     const auto q   = qfab.view(lo); 
     const auto shk = shkfab.view(lo); 
 
-
 //TODO figure out the box stuff for fluxes
     for         (int k = 0; k < len.z; ++k){
         for     (int j = 0; j < len.y; ++j){
@@ -126,135 +126,171 @@ PeleC_shock(amrex::Box const& bx, amrex::FArrayBox const &qfab, amrex::FArrayBox
     }
 }
 
-
-//TODO Stolen from CNS need to transform to make PeleC 
+namespace{
+//Riemann_md 
 AMREX_GPU_DEVICE
 inline
 void
-riemann (const amrex::Real gamma, const amrex::Real smallp, const amrex::Real smallr,
-         const amrex::Real rl, const amrex::Real ul, const amrex::Real pl,
-         const amrex::Real ut1l, const amrex::Real ut2l,
-         const amrex::Real rr, const amrex::Real ur, const amrex::Real pr,
-         const amrex::Real ut1r, const amrex::Real ut2r,
-         amrex::Real& flxrho, amrex::Real& flxu, amrex::Real& flxut, amrex::Real& flxutt, amrex::Real& flxe)
+riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
+         const amrex::Real v2l, const amrex::Real pl, const amrex::Real rel, 
+         const amrex::Real *spl, const amrex::Real gamcl, 
+         const amrex::Real rr, const amrex::Real ur, const amrex::Real vr,
+         const amrex::Real v2r, const amrex::Real pr, const amrex::Real rer, 
+         const amrex::Real *spr, const amrex::Real gamcr, 
+         EOS &state, EOS &gdnv_state, amrex::Real &uflx_rho, amrex::Real &uflx_u, 
+         amrex::Real &uflx_v, amrex::Real &uflx_v, amrex::Real &uflx_w,
+         amrex::Real &uflx_eden, amrex::Real &uflx_eint, const int idir, const int coord_type, 
+         const amrex::Real bc_test_vall, const amrex::Real csmall, const amrex::Real cav)
+//TODO consider making a uflx array instead of passing each in. 
 {
-    constexpr amrex::Real weakwv = 1.e-3;
-    constexpr amrex::Real small = 1.e-6;
+    amrex::Real wsmall = small_dens*csmall; 
+    state.rho = rl; 
+    state.p   = pl; 
+#pragma unroll 
+    for(int i = 0; i < NUM_SPECIES; ++i)  state.massfrac[i] = spl[i]; 
+    state.eos_rp(); 
+    amrex::Real csl = state.cs; 
 
-    amrex::Real clsql = gamma*pl*rl;
-    amrex::Real clsqr = gamma*pr*rr;
-    amrex::Real wl = std::sqrt(clsql);
-    amrex::Real wr = std::sqrt(clsqr);
-    amrex::Real cleft = wl/rl;
-    amrex::Real cright = wr/rr;
-    amrex::Real ccsmall = small*(cleft+cright);
+    state.rho = rr; 
+    state.p   = pr; 
+#pragma unroll 
+    for(int i = 0; i < NUM_SPECIES; ++i) state.massfrac[i] = spr[i]; 
+    state.eos_rp(); 
+    amrex::Real csr = state.cs; 
 
-    amrex::Real pstar = (wl*pr + wr*pl - wr*wl*(ur-ul))/(wl+wr);
-    pstar = amrex::max(pstar,smallp);
-    amrex::Real pstnm1 = pstar;
+    amrex::Real wl = amrex::max(wsmall, sqrt(abs(gamcl*pl*rl))); 
+    amrex::Real wr = amrex::max(wsmall, sqrt(abs(gamcr*pr*rr))); 
 
-    amrex::Real wlsq = (.5*(gamma-1.)*(pstar+pl)+pstar)*rl;
-    amrex::Real wrsq = (.5*(gamma-1.)*(pstar+pr)+pstar)*rr;
-
-    wl = std::sqrt(wlsq);
-    wr = std::sqrt(wrsq);
-    amrex::Real ustarp = ul - (pstar-pl)/wl;
-    amrex::Real ustarm = ur + (pstar-pr)/wr;
-
-    pstar = (wl*pr + wr*pl - wr*wl*(ur-ul))/(wl+wr);
-    pstar = amrex::max(pstar,smallp);
-
-    amrex::Real ustar;
-    for (int iter = 0; iter < 3; ++iter)
-    {
-        wlsq = (.5*(gamma-1.)*(pstar+pl)+pstar)*rl;
-        wrsq = (.5*(gamma-1.)*(pstar+pr)+pstar)*rr;
-
-        wl = 1./sqrt(wlsq);
-        wr = 1./sqrt(wrsq);
-
-        amrex::Real ustnm1 = ustarm;
-        amrex::Real ustnp1 = ustarp;
-
-        ustarm = ur - (pr - pstar)*wr;
-        ustarp = ul + (pl - pstar)*wl;
-
-        amrex::Real dpditer = std::abs(pstnm1-pstar);
-        amrex::Real zp = std::abs(ustarp-ustnp1);
-        if (zp-weakwv*cleft < 0.0 ) {
-            zp = dpditer*wl;
-        }
-        amrex::Real zm = std::abs(ustarm-ustnm1);
-        if (zm-weakwv*cright < 0.0 ) {
-            zm = dpditer*wr;
-        }
-
-        amrex::Real zz = zp+zm;
-        amrex::Real denom = dpditer/ amrex::max(zz,ccsmall);
-        pstnm1 = pstar;
-        pstar = pstar - denom*(ustarm-ustarp);
-        pstar = amrex::max(pstar,smallp);
-        ustar = 0.5*(ustarm+ustarp);
+    amrex::Real pstar = ((wr*pl + wl*pr) + wl*wr*(ul - ur))/(wl + wr); 
+    amrex::Real ustar = ((wl*ul + wr*ur) + (pl - pr))/(wl + wr); 
+    
+    pstar = amrex::max(pstar, small_pres); 
+    if (abs(ustar) < smallu*0.5e0*(abs(ul) + abs(ur))) ustar = 0.e0; 
+    amrex::Real ro, uo, po; 
+    if(ustar > 0.e0){
+        ro = rl; 
+        uo = ul; 
+        po = pl; 
+#pragma unroll    
+        for(int i = 0; i < NUM_SPECIES; ++i) 
+            gdnv_state.massfrac[i] = spl[i];
     }
-
-    amrex::Real ro, uo, po, sgnm, utrans1, utrans2;
-    if (ustar > 0.) {
-        ro = rl;
-        uo = ul;
-        po = pl;
-        sgnm = 1.;
-        utrans1 = ut1l;
-        utrans2 = ut2l;
-    } else if (ustar < 0.) {
-        ro = rr;
-        uo = ur;
-        po = pr;
-        sgnm = -1.;
-        utrans1 = ut1r;
-        utrans2 = ut2r;
-    } else {
-        uo = 0.5*(ur+ul);
-        po = 0.5*(pr+pl);
-        ro = 2.*(rl*rr)/(rl+rr);
-        sgnm = 1.;
-        utrans1 = 0.5*(ut1l+ut1r);
-        utrans2 = 0.5*(ut2l+ut2r);
+    else if(ustar < 0.e0){
+        ro = rr; 
+        uo = ur; 
+        po = pr; 
+#pragma unroll    
+        for(int i = 0; i < NUM_SPECIES; ++i) 
+            gdnv_state.massfrac[i] = spr[i];
     }
-    amrex::Real wosq = (.5*(gamma-1.)*(pstar+po)+pstar)*ro;
-    amrex::Real co = std::sqrt(gamma * po / ro);
-    amrex::Real wo = std::sqrt(wosq);
-    amrex::Real dpjmp = pstar-po;
-    amrex::Real rstar = ro/(1.-ro*dpjmp/wosq);
-    amrex::Real cstar = sqrt(gamma * pstar / rstar);
-    amrex::Real spout = co-sgnm*uo;
-    amrex::Real spin = cstar - sgnm*uo;
-    if(pstar >= po) {
-        spin = wo/ro-sgnm*uo;
-        spout = spin;
-    }
-    amrex::Real ss = amrex::max(spout-spin, spout+spin);
-    amrex::Real frac = 0.5*(1.+(spin+spout)/amrex::max(ss,ccsmall));
+    else{
+        ro = 0.5e0*(rr+rl); 
+        uo = 0.5e0*(ur+ul); 
+        po = 0.5e0*(pr+pl); 
+#pragma unroll    
+        for(int i = 0; i < NUM_SPECIES; ++i) 
+            gdnv_state.massfrac[i] = 0.5e0*(spr[i] + spl[i]);
+    }  
+    gdnv_state.rho = ro; 
+    gdnv_state.p   = po; 
+    gdnv_state.eos_rp(); 
+    amrex::Real reo = gdnv_state.rho*gdnv_state.e;
+    amrex::Real co  = gdvn_state.cs; 
 
-    amrex::Real rgdnv, ugdnv, pgdnv;
-    if (spout < 0.) {
-        rgdnv = ro;
-        ugdnv = uo;
-        pgdnv = po;
-    } else if(spin >= 0.) {
-        rgdnv = rstar;
-        ugdnv = ustar;
-        pgdnv = pstar;
-    } else {
-        rgdnv = frac*rstar + (1. - frac)* ro;
-        ugdnv = frac*ustar + (1. - frac)* uo;
-        pgdnv = frac*pstar + (1. - frac)* po;
+    amrex::Real drho  = (pstar - po)/(co*co); 
+    amrex::Real rstar = ro + drho; 
+    rstar = amrex::max(small_dens, rstar); 
+
+    gdnv_state.rho = rstar; 
+    gdnv_state.p   = pstar; 
+
+    gdnv_state.eos_rp(); 
+    amrex::Real cstar = gdnv_state.cs; 
+    amrex::Real estar = gdnv_state.rho*gdnv_state.e; 
+
+    amrex::Real sgnm = sign(ustar); 
+    amrex::Real spoit = co - sgnm*uo; 
+    amrex::real spin  = cstar - sgnm*ustar; 
+    amrex::Real ushock = 0.5e0*(spin + spout); 
+
+    if(pstar - po >= 0.e0){
+        spin = ushock; 
+        spout = ushock; 
+    }
+    if(spout-spin == 0.e0) scr = small*cav; 
+    else scr = spout-spin; 
+    
+    amrex::Real frac = (1.e0 + (spout + spin)/scr)*0.5e0; 
+    fram = amrex::max(0.e0, amrex::min(1.e0, frac)); 
+
+    if(ustar > 0.e0){
+        vgd = vl; 
+        wgd = v2l; 
+    }
+    else if(ustar < 0.e0){
+        vgd = vr;
+        wgd = v2r; 
+    }
+    else{
+        vgd = 0.5e0*(vl + vr); 
+        wgd = 0.5e0*(v2l + v2r); 
     }
     
-    flxrho = rgdnv*ugdnv;
-    flxu = rgdnv*ugdnv*ugdnv+pgdnv;
-    flxut = rgdnv*ugdnv*utrans1;
-    flxutt = rgdnv*ugdnv*utrans2;
-    flxe = ugdnv*(0.5*rgdnv*(ugdnv*ugdnv+utrans1*utrans1+utrans2*utrans2) + pgdnv/(gamma -1.) + pgdnv);
+    amrex::Real rgd = frac*rstar + (1.e0 - frac)*ro; 
+    amrex::Real qint_iu = frac*ustar + (1.e0 - frac)*uo; 
+    amrex::Real qint_iv1 = vgd; 
+    amrex::Real qint_iv2 = wgd; 
+    
+    amrex::Real qint_gdpres = frac*pstar + (1.e0 - frac)*po; 
+    gdvn_state.rho = rgd; 
+    gdvn_state.p = qint_gdpres; 
+    gdvn_state.eos_rp(); 
+    amrex::Real regd = gdvn_state.rho*gdnv_state.e; 
+    
+    if(spout < 0.e0){
+        rgd = ro; 
+        qint_iu = uo; 
+        qint_gdpres = po; 
+        regd = reo; 
+    }
+    if(spin >= 0.e0){
+        rgd = rstar; 
+        qint_iu = ustar; 
+        qint_gdpres = pstar; 
+        regd = estar; 
+    }
+
+    gdnv_state.rho = rgd; 
+    gdnv_state.p = qint_gdpres; 
+    gdnv_state.eos_rp(); 
+    regd = gdnv_state.rho*gdnv_state.e; 
+
+    qint_gdgame = qint_gdpres/regd + 1.e0; 
+//Where is bc_test_val? 
+    qint_iu     = bc_test_val * qint_iu; 
+
+    uflx_rho    = rgd*qint_iu; 
+
+    if( idir == 1){
+        uflx_u = uflx_rho*qint_iu; 
+        uflx_v = uflx_rho*qint_iv1; 
+        uflx_w = uflx_rho*qint_iv2; 
+        if(coord_type ==0) uflx_u += qint_gdpres; 
+    }
+    else if(idir == 2){
+        uflx_u = uflx_rho*qint_iv1; 
+        uflx_v = uflx_rho*qint_iu + qint_gdpres; 
+        uflx_w = uflx_rho*qint_iv2; 
+    }
+    else{
+        uflx_u = uflx_rho*qint_iv1; 
+        uflx_v = uflx_rho*qint_iv2; 
+        uflx_w = uflx_rho*qint_iu + qint_gdpres; 
+    }
+    amrex::Real rhoetot = regd + 0.5e0*rgd*(qint_iu*qint_iu + 
+                          qint_iv1*qint_iv1 + qint_iv2*qint_iv2); 
+    uflx_eden = qint_iu*(rhoetot + qint_gdpres); 
+    uflx_eint = qint_iu*regd;              
 }
 }
 
@@ -265,10 +301,12 @@ PeleC_riemann(amrex::Box const& bx, amrex::FArrayBox& fluxfab, amrex::FArrayBox 
                amrex::FArrayBox const& qfab, int idir)
 {
 //TODO Stolen from CNS, need to transform to work with PeleC
-    const auto len = amrex::length(bx);
-    const auto lo  = amrex::lbound(bx);
-    const auto dq = dqfab.view(lo);
-    const auto  q =  qfab.view(lo);
+//CNS uses Parm object, maybe insert an eos object to get gamma at the left and right states? 
+    const auto  len = amrex::length(bx);
+    const auto   lo = amrex::lbound(bx);
+    const auto   dq = dqfab.view(lo);
+    const auto    q =  qfab.view(lo);
+    EOS state; 
 
     if(idir == 0) {
         const auto fx = fluxfab.view(lo);
@@ -305,6 +343,7 @@ PeleC_riemann(amrex::Box const& bx, amrex::FArrayBox& fluxfab, amrex::FArrayBox 
         }
     }
     else if(idir == 1){
+        const auto fy = fluxfab.view(lo);
         for         (int k = 0; k < len.z; ++k) {
             for     (int j = 0; j < len.y; ++j) {
                 for (int i = 0; i < len.x; ++i) {

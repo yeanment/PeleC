@@ -68,6 +68,17 @@ void EOS::eos_re()
     eos_bottom(); 
 }
 
+AMREX_GPU_DEVICE
+void EOS::eos_rp()
+{
+    eos_wb(); 
+    T = p*wbar/(rho*Ru)
+    CKUMS(&T, &iwrk, &rwrk, ei);
+    e = 0.0;  
+#pragma unroll
+    for(int i = 0; i < NUM_SPECIES; ++i) e += massfrac[i]*ei[i]; 
+    eos_bottom();     
+}
 
 /* THESE ASSUME THE ONLY PASSIVE VARS ARE THE SPECIES AND NON-USED VELOCITIES. TODO add additional passive vars*/
 AMREX_GPU_DEVICE

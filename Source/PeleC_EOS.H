@@ -32,7 +32,8 @@ public:
 AMREX_GPU_DEVICE  static int  upass_map(const int i); 
 AMREX_GPU_DEVICE  static int  qpass_map(const int i); 
 AMREX_GPU_DEVICE    void eos_wb();  
-AMREX_GPU_DEVICE    void eos_re(); 
+AMREX_GPU_DEVICE    void eos_re();
+AMREX_GPU_DEVICE    void eos_rp();  
 AMREX_GPU_DEVICE    void eos_bottom(); 
 //TODO add more later!  
 };
