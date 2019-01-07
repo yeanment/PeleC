@@ -766,7 +766,7 @@ PeleC::init (AmrLevel &old)
   MultiFab& React_new = get_new_data(Reactions_Type);
   MultiFab& react_src_new = get_new_data(SDC_React_Type);
 
-  if (do_react)
+  if (do_react && !do_mol_AD)
   {
     FillPatch(old,React_new,0,cur_time,Reactions_Type,0,React_new.nComp());
     FillPatch(old,react_src_new,0,cur_time,SDC_React_Type,0,react_src_new.nComp());
