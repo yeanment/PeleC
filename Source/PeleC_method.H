@@ -16,15 +16,14 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
 
 /* TODO make necessary temporary FABs. */ 
 
-    if(hybrid_riemann == 1)
+/*    if(hybrid_riemann == 1)
     {
         AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
             PeleC_shock(q, shk, dx, dy); 
         });
-    }
-    else shk.setVal(0.0); 
-
-    if(ppm_type == 0){
+    } */ 
+/*    else shk.setVal(0.0); 
+      if(ppm_type == 0){
         AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
             PeleC_trace(q, qaux, flatn, qxm, qxp, qym, qyp, srcQ, dx, dy, dt); 
         }); 
@@ -34,36 +33,174 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
             PeleC_ppm(q, qaux, flatn, qxm, qxp, qym, qyp, srcQ, dx, dy, dt);
         }); 
     }
-//TODO consider placing all functions into one Launch Lambda
-    //===================== X initial fluxes ============================
-    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+*/ 
+    const amrex::Box& bxg1 = amrex::grow(bx, 1); 
+    Gpu::AsyncFab slope(bxg1, QVAR); 
+    //===================== X slopes ===================================
+    int cdir = 0; 
+    const amrex::Box& xslpbx = amrex::grow(bx, cdir, 1); 
+    AMREX_LAUNCH_DEVICE_LAMBDA(xslpbx, tbx, { 
+        PeleC_slope_x(tbx, slope.fab(), q.fab());
+    }); 
+    //==================== X interp ====================================
+    AMREX_LAUNCH_DEVICE_LAMBDA(xslpbx, tbx, {
+        PeleC_plm_x(tbx, qxm.fab(), qxp.fab(), slope.fab(), q.fab(), dx, dt); 
+    });
+    const amrex::Box& xflxbx = amrex::surroundingNodes(bx,cdir); 
+    //===================== X initial fluxes ===========================
+    AMREX_LAUNCH_DEVICE_LAMBDA(xflxbx, tbx, {
         PeleC_cmpflx(qxm, qxp, fx, q1, qaux, bcMask, shk, 0);
     }); 
-    //===================== Y initial fluxes ============================
-    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-        PeleC_cmpflx(qym, qyp, fy, q2, qaux, bcMask, shk, 1); 
-    }); 
-    //===================== X interface corrections =====================
-    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-        PeleC_transy(qxm, qm, qxp, qp, fy, q2, quax, srcQ, hdt, hdtdy); 
-    }); 
-    //===================== Final Riemann problem X =====================
-    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-        PeleC_cmpflx(qm, qp, flx1, q1, qaux, bcMask, shk, 0);
-    }); 
-    //===================== Y interface corrections =====================
-    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-        PeleC_transx(qym, qm, qyp, qp, fx, q1, quax, srcQ, hdt, hdtdx, area1, vol); 
+    //==================== Y slopes ====================================
+    cdir = 1; 
+    const amrex::Box& yslpbx = amrex::grow(bx, cdir, 1); 
+    AMREX_LAUNCH_DEVICE_LAMBDA(yslpbx, tbx,{
+        PeleC_slope_x(tbx, slope.fab(), q.fab()); 
     });
-    //===================== Final Riemann problem Y =====================
+    //==================== Y interp ====================================
+    AMREX_LAUNCH_DEVICE_LAMBDA(yslpbx, tbx, {
+        PeleC_plm_y(tbx, qym.fab(), qyp.fab(), slope.fab(), q.fab(), dy, dt); 
+    });
+    const amrex::Box& yflxbx = amrex::surroundingNodes(bx,cdir); 
+    //===================== Y initial fluxes ===========================
+    AMREX_LAUNCH_DEVICE_LAMBDA(yflxbx, tbx, {
+        PeleC_cmpflx(tbx, qym.fab(), qyp.fab(), fy.fab(), q2.fab(), qaux.fab(), bcMask,fab(), 1); 
+    }); 
+    //TODO think about box size for these 
+    //===================== X interface corrections ====================
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_transy(tbx, qxm.fab(), qm.fab(), qxp.fab(), qp.fab(), fy.fab(),
+                     q2.fab(), quax.fab(), srcQ.fab(), hdt, hdtdy); 
+    }); 
+    //===================== Final Riemann problem X ====================
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_cmpflx(tbx, qm.fab(), qp.fab(), flx1.fab(), q1.fab(), qaux.fab(), bcMask.fab(), 0);
+    }); 
+    //===================== Y interface corrections ====================
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+        PeleC_transx(tbx, qym.fab(), qm.fab(), qyp.fab(), qp.fab(), fx.fab(),
+                     q1.fab(), quax.fab(), srcQ.fab(), hdt, hdtdx, area1, vol); 
+    });
+    //===================== Final Riemann problem Y ====================
     AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
         PeleC_cmpflx(qm, qp, flx2, q2, quax, bcMask, shk, 1); 
     }); 
-    //===================== Construct p div{U} ==========================
+    //===================== Construct p div{U} =========================
     AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
         PeleC_pdivu(pdivu, q1, q2, vol); 
     }); 
 }
+
+AMREX_GPU_DEVICE
+inline
+void
+PeleC_slope_x(amrex::Box const& bx, amrex::FArrayBox& dqfab, amrex::FArrayBox& const& qfab)
+{
+    const auto len = amrex::length(bx);
+    const auto lo  = amrex::lbound(bx);
+    const auto dq = dqfab.view(lo);
+    const auto  q =  qfab.view(lo);
+
+    for         (int k = 0; k < len.z; ++k) {
+        for     (int j = 0; j < len.y; ++j) {
+            AMREX_PRAGMA_SIMD 
+            for (int i = 0; i < len.x; ++i) {
+                auto f = [] (amrex::Real dlft, amrex::Real drgt) -> amrex::Real {
+                    amrex::Real dcen = 0.5*(dlft+drgt);
+                    amrex::Real dsgn = std::copysign(1.0, dcen);
+                    amrex::Real slop = 2.0 * amrex::min(std::abs(dlft),std::abs(drgt));
+                    amrex::Real dlim = (dlft*drgt >= 0.0) ? slop : 0.0;
+                    amrex::Real d = dsgn * amrex::min(dlim,std::abs(dcen));
+                    return d;
+                };
+
+                amrex::Real dlft = 0.5*(q(i,j,k,QPRES)-q(i-1,j,k,QPRES))/q(i,j,k,QCS) - 0.5*q(i,j,k,QRHO)*(q(i,j,k,QU) - q(i-1,j,k,QU));
+                amrex::Real drgt = 0.5*(q(i+1,j,k,QPRES)-q(i,j,k,QPRES))/q(i,j,k,QCS) - 0.5*q(i,j,k,QRHO)*(q(i+1,j,k,QU) - q(i,j,k,QU));
+                amrex::Real d0 = f(dlft, drgt);
+
+                amrex::Real cs2 = q(i,j,k,QCS)*q(i,j,k,QCS);
+                dlft = (q(i,j,k,QRHO)-q(i-1,j,k,QRHO)) - (q(i,j,k,QPRES) - q(i-1,j,k,QPRES))/cs2;
+                drgt = (q(i+1,j,k,QRHO)-q(i,j,k,QRHO)) - (q(i+1,j,k,QPRES) - q(i,j,k,QPRES))/cs2;
+                amrex::Real d1 = f(dlft, drgt);
+
+                dlft = 0.5*(q(i,j,k,QPRES)-q(i-1,j,k,QPRES))/q(i,j,k,QCS) + 0.5*q(i,j,k,QRHO)*(q(i,j,k,QU) - q(i-1,j,k,QU));
+                drgt = 0.5*(q(i+1,j,k,QPRES)-q(i,j,k,QPRES))/q(i,j,k,QCS) + 0.5*q(i,j,k,QRHO)*(q(i+1,j,k,QU) - q(i,j,k,QU));
+                amrex::Real d2 = f(dlft, drgt);
+
+                dlft = q(i,j,k,QV) - q(i-1,j,k,QV);
+                drgt = q(i+1,j,k,QV) - q(i,j,k,QV);
+                amrex::Real d3 = f(dlft, drgt);
+
+                dlft = q(i,j,k,QW) - q(i-1,j,k,QW);
+                drgt = q(i+1,j,k,QW) - q(i,j,k,QW);
+                amrex::Real d4 = f(dlft, drgt);
+
+                dq(i,j,k,0) = d0;
+                dq(i,j,k,1) = d1;
+                dq(i,j,k,2) = d2;
+                dq(i,j,k,3) = d3;
+                dq(i,j,k,4) = d4;
+            }
+        }
+    }
+}
+
+AMREX_GPU_DEVICE
+inline
+void
+PeleC_slope_y (amrex::Box const& bx, amrex::FArrayBox& dqfab, amrex::FArrayBox const& qfab)
+{
+    const auto len = amrex::length(bx);
+    const auto lo  = amrex::lbound(bx);
+    const auto dq = dqfab.view(lo);
+    const auto  q =  qfab.view(lo);
+
+    for         (int k = 0; k < len.z; ++k) {
+        for     (int j = 0; j < len.y; ++j) {
+            AMREX_PRAGMA_SIMD 
+            for (int i = 0; i < len.x; ++i) {
+                auto f = [] (amrex::Real dlft, amrex::Real drgt) -> amrex::Real {
+                    amrex::Real dcen = 0.5*(dlft+drgt);
+                    amrex::Real dsgn = std::copysign(1.0, dcen);
+                    amrex::Real slop = 2.0 * amrex::min(std::abs(dlft), std::abs(drgt));
+                    amrex::Real dlim = (dlft*drgt >= 0.0) ? slop : 0.0;
+                    amrex::Real d = dsgn * amrex::min(dlim, std::abs(dcen));
+                    return d;
+                };
+
+                amrex::Real dlft = 0.5*(q(i,j,k,QPRES)-q(i,j-1,k,QPRES))/q(i,j,k,QCS) - 0.5*q(i,j,k,QRHO)*(q(i,j,k,QV) - q(i,j-1,k,QV));
+                amrex::Real drgt = 0.5*(q(i,j+1,k,QPRES)-q(i,j,k,QPRES))/q(i,j,k,QCS) - 0.5*q(i,j,k,QRHO)*(q(i,j+1,k,QV) - q(i,j,k,QV));
+                amrex::Real d0 = f(dlft, drgt);
+
+                amrex::Real cs2 = q(i,j,k,QCS)*q(i,j,k,QCS);
+                dlft = (q(i,j,k,QRHO)-q(i,j-1,k,QRHO)) - (q(i,j,k,QPRES) - q(i,j-1,k,QPRES))/cs2;
+                drgt = (q(i,j+1,k,QRHO)-q(i,j,k,QRHO)) - (q(i,j+1,k,QPRES) - q(i,j,k,QPRES))/cs2;
+                amrex::Real d1 = f(dlft, drgt);
+
+                dlft = 0.5*(q(i,j,k,QPRES)-q(i,j-1,k,QPRES))/q(i,j,k,QCS) + 0.5*q(i,j,k,QRHO)*(q(i,j,k,QV) - q(i,j-1,k,QV));
+                drgt = 0.5*(q(i,j+1,k,QPRES)-q(i,j,k,QPRES))/q(i,j,k,QCS) + 0.5*q(i,j,k,QRHO)*(q(i,j+1,k,QV) - q(i,j,k,QV));
+                amrex::Real d2 = f(dlft, drgt);
+
+                dlft = q(i,j,k,QU) - q(i,j-1,k,QU);
+                drgt = q(i,j+1,k,QU) - q(i,j,k,QU);
+                amrex::Real d3 = f(dlft, drgt);
+
+                dlft = q(i,j,k,QW) - q(i,j-1,k,QW);
+                drgt = q(i,j+1,k,QW) - q(i,j,k,QW);
+                amrex::Real d4 = f(dlft, drgt);
+
+                dq(i,j,k,0) = d0;
+                dq(i,j,k,1) = d1;
+                dq(i,j,k,2) = d2;
+                dq(i,j,k,3) = d3;
+                dq(i,j,k,4) = d4;
+            }
+        }
+    }
+}
+
+
+
 
 AMREX_GPU_DEVICE
 inline 
@@ -114,7 +251,8 @@ PeleC_shock(amrex::Box const& bx, amrex::FArrayBox const &qfab, amrex::FArrayBox
                 e_y = pow(q(i,j+1,k,QV) - q(i,j-1,k,QV),2);
 //TODO need small here                
                 d   = 1.e0/(e_x + e_y + small); 
-
+                p_pre = e_x*px_pre + e_y*py_pre; 
+                p_post = e_x*px_post + e_y*py_post; 
                 if(p_pre == 0.0e0) pjump = 0.0e0; 
 //TODO need eps here
                 else pjump = eps - ( p_post - p_pre)/p_pre; 
@@ -313,31 +451,6 @@ PeleC_riemann(amrex::Box const& bx, amrex::FArrayBox& fluxfab, amrex::FArrayBox 
         for         (int k = 0; k < len.z; ++k) {
             for     (int j = 0; j < len.y; ++j) {
                 for (int i = 0; i < len.x; ++i) {
-                    amrex::Real cspeed = q(i-1,j,k,QCS);
-                    amrex::Real rl = q(i-1,j,k,QRHO) + 
-                    0.5 * ( (dq(i-1,j,k,0)+dq(i-1,j,k,2))/cspeed + dq(i-1,j,k,1));
-                    rl = amrex::max(rl, Parm::smallr);
-                    amrex::Real ul = q(i-1,j,k,QU) 
-                    + 0.5 * ( (dq(i-1,j,k,2)-dq(i-1,j,k,0))/q(i-1,j,k,QRHO));
-                    amrex::Real pl = q(i-1,j,k,QPRES) + 0.5 *  (dq(i-1,j,k,0)+dq(i-1,j,k,2))*cspeed;
-                    pl = amrex::max(pl, Parm::smallp);
-                    amrex::Real ut1l = q(i-1,j,k,QV) + 0.5 * dq(i-1,j,k,3);
-                    amrex::Real ut2l = q(i-1,j,k,QW) + 0.5 * dq(i-1,j,k,4);
-
-                    cspeed = q(i,j,k,QCS);
-                    amrex::Real rr = q(i,j,k,QRHO) 
-                    - 0.5 * ( (dq(i,j,k,0)+dq(i,j,k,2))/cspeed + dq(i,j,k,1));
-                    rr = amrex::max(rr, Parm::smallr);
-                    amrex::Real ur = q(i,j,k,QU) - 0.5 * ( (dq(i,j,k,2)-dq(i,j,k,0))/q(i,j,k,QRHO));
-                    amrex::Real pr = q(i,j,k,QPRES) - 0.5 * (dq(i,j,k,0)+dq(i,j,k,2))*cspeed;
-                    pr = amrex::max(pr, Parm::smallp);
-                    amrex::Real ut1r = q(i,j,k,QV) - 0.5 * dq(i,j,k,3);
-                    amrex::Real ut2r = q(i,j,k,QW) - 0.5 * dq(i,j,k,4);
-    
-                    riemann(Parm::eos_gamma, Parm::smallp, Parm::smallr,
-                            rl, ul, pl, ut1l, ut2l, rr, ur, pr, ut1r, ut2r,
-                            fx(i,j,k,URHO), fx(i,j,k,UMX), fx(i,j,k,UMY), fx(i,j,k,UMZ)
-                            , fx(i,j,k,UEDEN));
                 }
             }
         }
@@ -347,34 +460,113 @@ PeleC_riemann(amrex::Box const& bx, amrex::FArrayBox& fluxfab, amrex::FArrayBox 
         for         (int k = 0; k < len.z; ++k) {
             for     (int j = 0; j < len.y; ++j) {
                 for (int i = 0; i < len.x; ++i) {
-                    amrex::Real cspeed = q(i,j-1,k,QCS);
-                    amrex::Real rl = q(i,j-1,k,QRHO) 
-                    + 0.5 * ( (dq(i,j-1,k,0)+dq(i,j-1,k,2))/cspeed + dq(i,j-1,k,1));
-                    rl = amrex::max(rl, Parm::smallr);
-                    amrex::Real ul = q(i,j-1,k,QV) 
-                    + 0.5 * ( (dq(i,j-1,k,2)-dq(i,j-1,k,0))/q(i,j-1,k,QRHO));
-                    amrex::Real pl = q(i,j-1,k,QPRES) + 0.5 *  (dq(i,j-1,k,0)+dq(i,j-1,k,2))*cspeed;
-                    pl = amrex::max(pl, Parm::smallp);
-                    amrex::Real ut1l = q(i,j-1,k,QU) + 0.5 * dq(i,j-1,k,3);
-                    amrex::Real ut2l = q(i,j-1,k,QW) + 0.5 * dq(i,j-1,k,4);
-
-                    cspeed = q(i,j,k,QCS);
-                    amrex::Real rr = q(i,j,k,QRHO) 
-                    - 0.5 * ( (dq(i,j,k,0)+dq(i,j,k,2))/cspeed + dq(i,j,k,1));
-                    rr = amrex::max(rr, Parm::smallr);
-                    amrex::Real ur = q(i,j,k,QV) - 0.5 * ( (dq(i,j,k,2)-dq(i,j,k,0))/q(i,j,k,QRHO));
-                    amrex::Real pr = q(i,j,k,QPRES) - 0.5 * (dq(i,j,k,0)+dq(i,j,k,2))*cspeed;
-                    pr = amrex::max(pr, Parm::smallp);
-                    amrex::Real ut1r = q(i,j,k,QU) - 0.5 * dq(i,j,k,3);
-                    amrex::Real ut2r = q(i,j,k,QW) - 0.5 * dq(i,j,k,4);
-
-                    riemann(Parm::eos_gamma, Parm::smallp, Parm::smallr,
-                            rl, ul, pl, ut1l, ut2l, rr, ur, pr, ut1r, ut2r,
-                            fy(i,j,k,URHO), fy(i,j,k,UMY), fy(i,j,k,UMX), fy(i,j,k,UMZ),
-                            fy(i,j,k,UEDEN));
                 }
             }
         }
     }
 }
 
+
+
+AMREX_GPU_DEVICE
+inline 
+void 
+PeleC_plm_x(amrex::Box const& bx, amrex::FArrayBox qmfab, amrex::FArrayBox qpfab,
+            amrex::FArrayBox const& slopefab,  amrex::FArrayBox const& qfab,
+            amrex::FArrayBox const& qauxfab,   amrex::FArrayBox const& srcQfab, 
+            amrex::Real const dx, amrex::Real const dt)
+{
+    const auto len    = amrex::length(bx); 
+    const auto lo     = amrex::lbound(bx); 
+    const auto qm     = qmfab.view(lo); 
+    const auto qp     = qpfab.view(lo); 
+    const auto slope  = slopefab.view(lo); 
+    const auto q      = qfab.view(lo); 
+    const auto srcQ   = srcQfab.view(lo); 
+    const auto qa     = qauxfab.view(lo); 
+    amrex::Real e[3]; 
+    amrex::Real dtdx = dt/dx; 
+    
+    for             (int k = 0; k < len.z; ++k){
+        for         (int j = 0; j < len.y; ++j){
+            for     (int i = 0; i < len.x; ++i){
+                amrex::Real cc    = qa(i,j,k,QC); 
+                amrex::Real cs    = cc*cc; 
+                amrex::Real rho   = q(i,j,k,QRHO); 
+                amrex::Real u     = q(i,j,k,QU); 
+                amrex::Real v     = q(i,j,k,QV); 
+                amrex::Real p     = q(i,j,k,QPRES); 
+                amrex::Real rhoe  = q(i,j,k,QREINT); 
+                amrex::Real enth  = ((rhoe+p)/rho)/cs; 
+                
+                amrex::Real drho  = slope(i,j,k,QRHO); 
+                amrex::Real du    = slope(i,j,k,QU); 
+                amrex::Real dv    = slope(i,j,k,QV); 
+                amrex::Real dp    = slope(i,j,k,QPRES); 
+                amrex::Real drhoe = slope(i,j,k,QREINT); 
+                
+                amrex::Real alpham = 0.5e0*(dp/(rho*cc) - du)*rho/cc; 
+                amrex::Real alphap = 0.5e0*(dp/(rho*cc) + du)*rho/cc; 
+                amrex::Real alpha0r = drho - dp/cs;
+                amrex::Real alpha0e = drhoe - dp*enth;
+                amrex::Real alpha0v = dv; 
+                
+                e[0] = u - cc; 
+                e[1] = u; 
+                e[2] = u + cc; 
+// ------------ Construct the right state on the i-1/2 interface 
+                amrex::Real rho_ref  = rho - 0.5e0*(1.e0 + dtdx*min(e[0],0.e0))*drho;                
+                amrex::Real u_ref    = u - 0.5e0*(1.e0 + dtdx*min(e[0], 0.e0))*du; 
+                amrex::Real v_ref    = v - 0.5e0*(1.e0 + dtdx*min(e[0], 0.e0))*dv; 
+                amrex::Real p_ref    = p - 0.5e0*(1.e0 + dtdx*min(e[0], 0.e0))*dp; 
+                amrex::Real rhoe_ref = rhoe - 0.5e0*(1.e0 + dtdx*min(e[0], 0.e0))*drhoe; 
+
+                amrex::Real apright = 0.25e0*dtdx*(e[0] - e[2])*
+                                      (1.e0 - std::copysign(1.0, e[2]))*alphap; 
+                amrex::Real amright = 0.25e0*dtdx*(e[0] - e[2])*
+                                      (1.e0 - std::copysign(1.0, e[0]))*alpham; 
+
+                amrex::Real azrright = 0.25e0*dtdx*(e[0] - e[1])*
+                                      (1.e0 - std::copysign(1.0, e[1]))*alpha0r; 
+                amrex::Real azeright = 0.25e0*dtdx*(e[0] - e[1])*
+                                      (1.e0 - std::copysign(1.0, e[1]))*alpha0e; 
+                amrex::Real azv1rght = 0.25e0*dtdx*(e[0] - e[1])*
+                                      (1.e0 - std::copysign(1.0, e[1]))*alpha0v; 
+
+                qp(i,j,k,QRHO)   = rho_ref + apright + amright + azrright;
+                qp(i,j,k,QRHO)   = amrex::max(small_dens,qxp(i,j,QRHO));
+                qp(i,j,k,QU)     = u_ref + (apright - amright)*cc/rho;
+                qp(i,j,k,QV)     = v_ref + azv1rght;
+                qp(i,j,k,QPRES)  = p_ref + (apright + amright)*csq;
+                qp(i,j,k,QPRES)  = amrex::max(qxp(i,j,QPRES),small_pres);
+                qp(i,j,k,QREINT) = rhoe_ref + (apright + amright)*enth*csq + azeright;
+
+// ------------ Construct the left state on the i+1/2 interface 
+                
+                rho_ref = rho + 0.5e0*(1.e0 - dtdx*max(e[2],0.e0))*drho;
+                u_ref = u + 0.5e0*(1.e0 - dtdx*max(e[2],0.e0))*du;
+                v_ref = v + 0.5e0*(1.e0 - dtdx*max(e[2],0.e0))*dv;
+                p_ref = p + 0.5e0*(1.e0 - dtdx*max(e[2],0.e0))*dp;
+                rhoe_ref = rhoe + 0.5e0*(1.e0 - dtdx*max(e[2],0.e0))*drhoe;
+
+                apleft = 0.25e0*dtdx*(e[2] - e[2])*(1.e0 + std::copysign(1.e0,e[2]))*alphap;
+                amleft = 0.25e0*dtdx*(e[2] - e[0])*(1.e0 + std::copysign(1.e0,e[0]))*alpham;
+
+                azrleft = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0r;
+                azeleft = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0e;
+                azv1left = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0v;
+  
+                qm(i+1,j,k,QRHO) = rho_ref + apleft + amleft + azrleft;
+                qm(i+1,j,k,QRHO) = max(qxm(i+1,j,QRHO),small_dens);
+                qm(i+1,j,k,QU) = u_ref + (apleft - amleft)*cc/rho;
+                qm(i+1,j,k,QV) = v_ref + azv1left;
+                qm(i+1,j,k,QPRES) = p_ref + (apleft + amleft)*csq;
+                qm(i+1,j,k,QPRES) = max(qxm(i+1,j,QPRES), small_pres);
+                qm(i+1,j,k,QREINT) = rhoe_ref + (apleft + amleft)*enth*csq + azeleft;
+                                
+
+
+            }
+        }
+    }
+} 
