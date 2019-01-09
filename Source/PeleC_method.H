@@ -1,3 +1,5 @@
+#ifndef PELEC_METHOD_H_
+#define PELEC_METHOD_H_
 #include "PeleC_K.H" 
 #include "PeleC_EOS.H" 
  
@@ -432,15 +434,65 @@ PeleC_cmpflx(amrex::Box const& bx, amrex::FArrayBox& fluxfab, amrex::FArrayBox c
     const auto   qr = qrfab.view(lo); 
     const auto  flx = fluxfab.view(lo);
     EOS state, gdnv_state; 
-    amrex::Real cav, ul, vl, v2l, rel, ur, vr, v2r, rer; 
-
-
-//TODO coord type? 
+    amrex::Real cav;
+//    amrex::Real ul, ur, vl, vr, v2l, v2r, rel, rer; 
+//    int idx, IU, IV, IV2; 
+/*  if(idir == 0){
+         IU = QU; 
+         IV = QV; 
+        IV2 = QW; 
+    }
+    elseif( idir == 1){
+        IU = QV; 
+        IV = QU; 
+       IV2 = QW; 
+    }
+    else{
+        IU = QW; 
+        IV = QU; 
+       IV2 = QV; 
+    }
+       
+*/
     for         (int k = 0; k < len.z; ++k) {
         for     (int j = 0; j < len.y; ++j) {
             for (int i = 0; i < len.x; ++i) {
                  if(idir == 0) cav = 0.5e0*(qa(i,j,k,QC) + qa(i-1,j,k,QC)); 
                  else cav = 0.5e0*(qa(i,j,k,QC) + qa(i,j-1,k,QC));
+/* TODO assess if we need this. 
+//Outflow Hack --> 
+                   ul = ql(i,j,k,IU); 
+                   vl = ql(i,j,k,IV); 
+                  v2l = ql(i,j,k,IV2); 
+                  rel = ql(i,j,k,QREINT); 
+                
+                   ur = qr(i,j,k,IU); 
+                   vr = qr(i,j,k,IV); 
+                  v2r = qr(i,j,k,IV2); 
+                  rer = qr(i,j,k,QREINT); 
+                 idx = idir == 1 ? i : j; 
+                 if(bclo[idir] == Outflow && idx == domlo[idir])
+                 {
+                    ul = ur; 
+                    vl = vr; 
+                    v2l = v2r; 
+                    rel = rer; 
+                 }
+                 if(bchi[idir] == Outflow && idx == domhi[idir])
+                 {  
+                    ur  = ul; 
+                    vr  = vl; 
+                    v2r = v2l; 
+                    rer = rel;         
+                 } 
+                  riemann(ql(i,j,k,QRHO), ul, vl, v2l, 
+                         ql(i,j,k,QPRES), rel, spl,   
+                         qr(i,j,k,QRHO), ur, vr, v2r, 
+                         qr(i,j,k,QPRES), rer, spr,
+                         state, gdnv_state, flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
+                         flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT), idir, csmall, cav); 
+                
+*/                 
                  riemann(ql(i,j,k,QRHO), ql(i,j,k,QU), ql(i,j,k,QV), ql(i,j,k,QW), 
                          ql(i,j,k,QPRES), ql(i,j,k,QRIENT), spl,   
                          qr(i,j,k,QRHO), qr(i,j,k,QU), qr(i,j,k,QV), qr(i,j,k,QW), 
@@ -727,3 +779,45 @@ PeleC_plm_y(amrex::Box const& bx, amrex::FArrayBox qmfab, amrex::FArrayBox qpfab
         }
     }
 }
+
+//================================ Corrects the left and right x states with y flux ====== 
+AMREX_GPU_DEVICE 
+inline 
+void 
+PeleC_transy(amrex::Box const& bx, amrex::FArrayBox &qmfab, amrex::FArrayBox &qpfab, 
+             amrex::FArrayBox const& qxmfab, amrex::FArrayBox const& qxpfab, 
+             amrex::FArrayBox const& flxyfab, amrex::FArrayBox const& srcQfab, 
+             amrex::Real hdt, amrex::Real cdtdy) 
+{
+    const auto len    = amrex::length(bx); 
+    const auto lo     = amrex::lbound(bx); 
+    const auto qm     = qmfab.view(lo); 
+    const auto qp     = qpfab.view(lo); 
+    const auto qxm    = qxmfab.view(lo); 
+    const auto qxp    = qxpfab.view(lo); 
+    const auto flxy   = flxyfab.view(lo); 
+    const auto srcQ   = srcQfab.view(lo); 
+    EOS state; 
+    amrex::Real compn, rr, rrnew, compo, pggp, pggm, ugp, ugm, gegp, gegm; 
+    amrex::Real dup, pav, uav, du, geav, dge, rrr, rur, rvr, ekinr, rer, rrnewr; 
+    amrex::Real runewr, rvnewr, renewr, rhotmp, rhoekinr, pnrewr; 
+    amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, renewl; 
+    amrex::Real rhoekinl; 
+
+    for             (int k = 0; k < len.z; ++k){
+        for         (int j = 0; j < len.y; ++j){
+            for     (int i = 0; i < len.x; ++i){
+#pragma unroll 
+                for (int ipass = 0; ipass < npassive; ++ipass){
+                    int n   = EOS::upass_map(ipass); 
+                    int nqp = EOS::qpass_map(ipass); 
+                    amrex::Real compn = cdtdy*(flxy(i,j+1,k,n) - flxy(i,j,k,n)); 
+//TODO bounds                     
+                    
+                }                
+            }
+        }
+    } 
+}
+
+#endif 
