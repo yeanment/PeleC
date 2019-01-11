@@ -47,7 +47,7 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
     const amrex::Box& yflxbx = amrex::surroundingNodes(bx,cdir); 
     //===================== Y initial fluxes ===========================
     AMREX_LAUNCH_DEVICE_LAMBDA(yflxbx, tbx, {
-        PeleC_cmpflx(tbx, qym.fab(), qyp.fab(), fy.fab(), q2.fab(), qaux.fab(), bcMask,fab(), 1); 
+        PeleC_cmpflx(tbx, qym.fab(), qyp.fab(), fy.fab(), qaux.fab(), bcMask,fab(), 1); 
     }); 
     //TODO think about box size for these 
     //===================== X interface corrections ====================
@@ -57,12 +57,12 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
     }); 
     //===================== Final Riemann problem X ====================
     AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-        PeleC_cmpflx(tbx, qm.fab(), qp.fab(), flx1.fab(), q1.fab(), qaux.fab(), bcMask.fab(), 0);
+        PeleC_cmpflx(tbx, qm.fab(), qp.fab(), flx1.fab(), qaux.fab(), bcMask.fab(), 0);
     }); 
     //===================== Y interface corrections ====================
     AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
         PeleC_transx(tbx, qym.fab(), qm.fab(), qyp.fab(), qp.fab(), fx.fab(),
-                     q1.fab(), quax.fab(), srcQ.fab(), hdt, hdtdx, area1, vol); 
+                     quax.fab(), srcQ.fab(), hdt, hdtdx, area1, vol); 
     });
     //===================== Final Riemann problem Y ====================
     AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
@@ -70,7 +70,7 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
     }); 
     //===================== Construct p div{U} =========================
     AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-        PeleC_pdivu(pdivu, q1, q2, vol); 
+        PeleC_pdivu(tbx, pdivu, q1, q2, vol); 
     }); 
 }
 
@@ -780,6 +780,144 @@ PeleC_plm_y(amrex::Box const& bx, amrex::FArrayBox qmfab, amrex::FArrayBox qpfab
     }
 }
 
+//================================ Corrects the left and right y states with x flux =====
+AMREX_GPU_DEVICE 
+inline 
+void 
+PeleC_transx(amrex::Box const& bx, amrex::FArrayBox &qmfab, amrex::FArrayBox &qpfab, 
+             amrex::FArrayBox const& qymfab, amrex::FArrayBox const& qypfab, 
+             amrex::FArrayBox const& flxxfab, amrex::FArrayBox const& srcQfab, 
+             amrex::Real hdt, amrex::Real cdtdy) 
+{
+    const auto len    = amrex::length(bx); 
+    const auto lo     = amrex::lbound(bx); 
+    const auto qm     = qmfab.view(lo); 
+    const auto qp     = qpfab.view(lo); 
+    const auto qym    = qymfab.view(lo); 
+    const auto qyp    = qypfab.view(lo); 
+    const auto flxx   = flxxfab.view(lo); 
+    const auto srcQ   = srcQfab.view(lo); 
+    EOS state; 
+    amrex::Real compn, rr, rrnew, compo, rwl; 
+    amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr; 
+    amrex::Real runewr, rvnewr, renewr, rhoekinr ; 
+    amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, renewl; 
+    amrex::Real rhoekinl, rwl, srcr, srce, srcpass;
+//  Local variables to avoid reading from global memory too much 
+    amrex::Real flxrho, flxu, flxv, flxe; 
+
+    for             (int k = 0; k < len.z; ++k){
+        for         (int j = 0; j < len.y; ++j){
+            for     (int i = 0; i < len.x; ++i){
+                flxrho = cdtdy*(flxx(i+1,j,k,URHO)  - flxx(i,j,k,URHO));
+                flxu   = cdtdy*(flxx(i+1,j,k,UMX)   - flxx(i,j,k,UMX)); 
+                flxv   = cdtdy*(flxx(i+1,j,k,UMY)   - flxx(i,j,k,UMY)); 
+                flxe   = cdtdy*(flxx(i+1,j,k,UEDEN) - flxx(i,j,k,UEDEN));  
+                srcr   = srcQ(i,j,k,QRHO); 
+                srce   = srcQ(i,j,k,QREINT); 
+// ---------------------------  Update Passive Variables ------------------
+                for (int ipass = 0; ipass < npassive; ++ipass){
+                    int n   = EOS::upass_map(ipass); 
+                    int nqp = EOS::qpass_map(ipass); 
+                    srcpass = srcQ(i,j,k,nqp); 
+                    compn = cdtdy*(flxx(i+1,j,k,n) - flxx(i,j,k,n)); 
+//TODO bounds                     
+                    rr = qyp(i,j,k,QRHO); 
+                    rrnew = rr - flxrho; 
+                    compo = rr*qyp(i,j,k,nqp) - compn; 
+                    qp(i,j,k,nqp) = compo/rrnew + hdt*srcpass;  
+            
+                    rr = qm(i,j+1,k,QRHO); 
+                    rrnew = rr - flxrho; 
+                    compo = rr*qm(i,j+1,k,nqp) - compn; 
+                    qm(i,j+1,k,nqp) = compo/rrnew + hdt*srcpass;                     
+                }                
+
+//------------------------------- Update hydro vars -----------------------
+// TODO 
+// theres a whole bit on pggp pggm etc that I'm not sure that we actually need for testing
+// Used in PPM                              
+
+
+//========================= QP ===========================================
+
+//Again bounds... 
+
+//Convert to conservative 
+                rrr = qyp(i,j,k,QRHO); 
+                rur = qyp(i,j,k,QU);             
+                rvr = qyp(i,j,k,QV); 
+                rwr = qyp(i,j,k,QW); 
+                ekinr = 0.5e0*rrr*(rur*rur + rvr*rvr + rwr*rwr);
+                rur *= rrr; 
+                rvr *= rrr; 
+
+                rer = qyp(i,j,k,QREINT) + ekinr; 
+// Add transverse predictor 
+                rrnewr = rrr - flxrho; 
+                runewr = rur - flxu; 
+                rvnewr = rvr - flxv; 
+                renewr = rer - flxe; 
+
+// Convert back to primitive 
+                state.rho = rrnewr + hdt*srcr; 
+                qp(i,j,k,QRHO) = state.rho; 
+                qp(i,j,k,QU)   = runewr/rrnewr; 
+                qp(i,j,k,QV)   = rvnewr/rrnewr; 
+                rwr           *= rrnewr; 
+                rhoekinr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwr*rwr )/rrnewr; 
+                
+// Pressure using eos 
+                state.e   = (rernewr - rhoekinr + hdt*srce)/state.rho; 
+                state.T   = small_temp; 
+#pragma unroll
+                for(int isp = 0; isp < NUM_SPECIES; ++isp) 
+                    state.massfrac[isp] = qp(i,j,k,QFS + isp); 
+                state.eos_re(); 
+                qp(i,j,k,QPRES) = state.p; 
+                qp(i,j,k,QREINT) = state.e*state.rho; 
+
+//======================= QM ================================================
+
+//Conversion to Conservative 
+                rrl = qym(i,j+1,k,QRHO); 
+                rul = qym(i,j+1,k,QU); 
+                rvl = qym(i,j+1,k,QV); 
+                rwl = qym(i,j+1,k,QW);  
+                ekinl = 0.5e0*rrl*(rul*rul + rvl*rvl + rwl*rwl); 
+                rul *= rrl; 
+                rvl *= rrl; 
+                rel = qym(i,j+1,k,QREINT) + ekinl; 
+
+// Transverse fluxes 
+                rrnewl = rrl - fluxrho; 
+                runewl = rul - fluxu; 
+                rvnewl = rvl - fluxv; 
+                renewl = rel - flxe; 
+                rwl *= rrnewl; 
+                
+                state.rho = rrnewl + hdt*srcr; 
+                qm(i,j+1,k,QRHO) = state.rho;
+                qm(i,j+1,k,QU  ) = runewl/rrnewl; 
+                qm(i,j+1,k,QV  ) = rvnewl/rrnewl; 
+                rhoekinl = 0.5e0*(runewl*runewl + rvnewl*rvnewl + rwl*rwl)/rrnewl; 
+
+// Pressure using eos 
+                state.e   = (renewl - rhoekinl + hdt*srce)/state.rho; 
+                state.T   = small_temp; 
+#pragma unroll 
+                for(int isp = 0; isp < NUM_SPECIES; ++isp) 
+                    state.massfrac[isp] = qm(i,j+1,k,QFS + isp); 
+                state.eos_re(); 
+                qm(i,j+1,k,QPRES) = state.p; 
+                qm(i,j+1,k,QREINT) = state.e*state.rho;                 
+            }
+        }
+    } 
+}
+
+
+
 //================================ Corrects the left and right x states with y flux ====== 
 AMREX_GPU_DEVICE 
 inline 
@@ -798,26 +936,128 @@ PeleC_transy(amrex::Box const& bx, amrex::FArrayBox &qmfab, amrex::FArrayBox &qp
     const auto flxy   = flxyfab.view(lo); 
     const auto srcQ   = srcQfab.view(lo); 
     EOS state; 
-    amrex::Real compn, rr, rrnew, compo, pggp, pggm, ugp, ugm, gegp, gegm; 
-    amrex::Real dup, pav, uav, du, geav, dge, rrr, rur, rvr, ekinr, rer, rrnewr; 
-    amrex::Real runewr, rvnewr, renewr, rhotmp, rhoekinr, pnrewr; 
+    amrex::Real compn, rr, rrnew, compo, rwl; 
+    amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr; 
+    amrex::Real runewr, rvnewr, renewr, rhoekinr; 
     amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, renewl; 
-    amrex::Real rhoekinl; 
+    amrex::Real rhoekinl, rwl, srcr, srce, srcpass;
+//  Local variables to avoid reading from global memory too much 
+    amrex::Real flxrho, flxu, flxv, flxe; 
 
     for             (int k = 0; k < len.z; ++k){
         for         (int j = 0; j < len.y; ++j){
             for     (int i = 0; i < len.x; ++i){
-#pragma unroll 
+                flxrho = cdtdy*(flxy(i,j+1,k,URHO)  - flxy(i,j,k,URHO));
+                flxu   = cdtdy*(flxy(i,j+1,k,UMX)   - flxy(i,j,k,UMX)); 
+                flxv   = cdtdy*(flxy(i,j+1,k,UMY)   - flxy(i,j,k,UMY)); 
+                flxe   = cdtdy*(flxy(i,j+1,k,UEDEN) - flxy(i,j,k,UEDEN));  
+                srcr   = srcQ(i,j,k,QRHO); 
+                srce   = srcQ(i,j,k,QREINT); 
+// ---------------------------  Update Passive Variables ------------------
                 for (int ipass = 0; ipass < npassive; ++ipass){
                     int n   = EOS::upass_map(ipass); 
                     int nqp = EOS::qpass_map(ipass); 
-                    amrex::Real compn = cdtdy*(flxy(i,j+1,k,n) - flxy(i,j,k,n)); 
+                    srcpass = srcQ(i,j,k,nqp); 
+                    compn = cdtdy*(flxy(i,j+1,k,n) - flxy(i,j,k,n)); 
 //TODO bounds                     
-                    
+                    rr = qxp(i,j,k,QRHO); 
+                    rrnew = rr - flxrho; 
+                    compo = rr*qxp(i,j,k,nqp) - compn; 
+                    qp(i,j,k,nqp) = compo/rrnew + hdt*srcpass;  
+            
+                    rr = qm(i+1,j,k,QRHO); 
+                    rrnew = rr - flxrho; 
+                    compo = rr*qm(i+1,j,k,nqp) - compn; 
+                    qm(i+1,j,k,nqp) = compo/rrnew + hdt*srcpass;                     
                 }                
+
+//------------------------------- Update hydro vars -----------------------
+// TODO 
+// theres a whole bit on pggp pggm etc that I'm not sure that we actually need for testing
+// Used in PPM                              
+
+
+//========================= QP ===========================================
+
+//Again bounds... 
+
+//Convert to conservative 
+                rrr = qxp(i,j,k,QRHO); 
+                rur = qxp(i,j,k,QU);             
+                rvr = qxp(i,j,k,QV); 
+                rwr = qxp(i,j,k,QW); 
+                ekinr = 0.5e0*rrr*(rur*rur + rvr*rvr + rwr*rwr);
+                rur *= rrr; 
+                rvr *= rrr; 
+
+                rer = qxp(i,j,k,QREINT) + ekinr; 
+// Add transverse predictor 
+                rrnewr = rrr - flxrho; 
+                runewr = rur - flxu; 
+                rvnewr = rvr - flxv; 
+                renewr = rer - flxe; 
+
+// Convert back to primitive 
+                state.rho = rrnewr + hdt*srcr; 
+                qp(i,j,k,QRHO) = state.rho; 
+                qp(i,j,k,QU)   = runewr/rrnewr; 
+                qp(i,j,k,QV)   = rvnewr/rrnewr; 
+                rwr           *= rrnewr; 
+                rhoekinr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwr*rwr )/rrnewr; 
+                
+// Pressure using eos 
+                state.e   = (rernewr - rhoekinr + hdt*srce)/state.rho; 
+                state.T   = small_temp; 
+#pragma unroll
+                for(int isp = 0; isp < NUM_SPECIES; ++isp) 
+                    state.massfrac[isp] = qp(i,j,k,QFS + isp); 
+                state.eos_re(); 
+                qp(i,j,k,QPRES) = state.p; 
+                qp(i,j,k,QREINT) = state.e*state.rho; 
+
+//======================= QM ================================================
+
+//Conversion to Conservative 
+                rrl = qxm(i+1,j,k,QRHO); 
+                rul = qxm(i+1,j,k,QU); 
+                rvl = qxm(i+1,j,k,QV); 
+                rwl = qxm(i+1,j,k,QW);  
+                ekinl = 0.5e0*rrl*(rul*rul + rvl*rvl + rwl*rwl); 
+                rul *= rrl; 
+                rvl *= rrl; 
+                rel = qxm(i+1,j,k,QREINT) + ekinl; 
+
+// Transverse fluxes 
+                rrnewl = rrl - fluxrho; 
+                runewl = rul - fluxu; 
+                rvnewl = rvl - fluxv; 
+                renewl = rel - flxe; 
+                rwl *= rrnewl; 
+                
+                
+                state.rho = rrnewl + hdt*srcr; 
+                qm(i+1,j,k,QRHO) = state.rho;  
+                qm(i+1,j,k,QU  ) = runewl/rrnewl; 
+                qm(i+1,j,k,QV  ) = rvnewl/rrnewl; 
+                rhoekinl = 0.5e0*(runewl*runewl + rvnewl*rvnewl + rwl*rwl)/rrnewl; 
+
+// Pressure using eos 
+                state.e   = (renewl - rhoekinl + hdt*srce)/state.rho; 
+                state.T   = small_temp; 
+#pragma unroll 
+                for(int isp = 0; isp < NUM_SPECIES; ++isp) 
+                    state.massfrac[isp] = qm(i+1,j,k,QFS + isp); 
+                state.eos_re(); 
+                qm(i+1,j,k,QPRES) = state.p; 
+                qm(i+1,j,k,QREINT) = state.e*state.rho;                 
             }
         }
     } 
 }
+
+AMREX_GPU_DEVICE 
+inline
+void 
+PeleC_pdivu()
 
 #endif 
