@@ -1,5 +1,5 @@
-#ifndef PELEC_METHOD_H_
-#define PELEC_METHOD_H_
+#ifndef PELEC_METHOD_2D_H_
+#define PELEC_METHOD_2D_H_
 #include "PeleC_K.H" 
 #include "PeleC_EOS.H" 
  
@@ -47,7 +47,7 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
     const amrex::Box& yflxbx = amrex::surroundingNodes(bx,cdir); 
     //===================== Y initial fluxes ===========================
     AMREX_LAUNCH_DEVICE_LAMBDA(yflxbx, tbx, {
-        PeleC_cmpflx(tbx, qym.fab(), qyp.fab(), fy.fab(), qaux.fab(), bcMask,fab(), 1); 
+        PeleC_cmpflx(tbx, qym.fab(), qyp.fab(), fy.fab(), q2.fab(), qaux.fab(), bcMask.fab(), 1); 
     }); 
     //TODO think about box size for these 
     //===================== X interface corrections ====================
@@ -70,7 +70,7 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
     }); 
     //===================== Construct p div{U} =========================
     AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-        PeleC_pdivu(tbx, pdivu, q1, q2, vol); 
+        PeleC_pdivu(tbx, pdivu, q1.fab(), q2.fab(), vol); 
     }); 
 }
 
@@ -1055,9 +1055,36 @@ PeleC_transy(amrex::Box const& bx, amrex::FArrayBox &qmfab, amrex::FArrayBox &qp
     } 
 }
 
+
+//Use interface states from Riemann solver for pdivu. 
 AMREX_GPU_DEVICE 
 inline
 void 
-PeleC_pdivu()
+PeleC_pdivu(amrex::Box const &bx, amrex::FArrayBox &pdivufab, amrex::FArrayBox const &q1fab, 
+            amrex::FArrayBox const& q2fab, amrex::FArrayBox const& a1, 
+            amrex::FArrayBox const& a2,  amrex::FArrayBox const& volfab)
+{
+    const auto len   = amrex::length(bx); 
+    const auto lo    = amrex::lbound(bx); 
+    const auto pdivu = pdivufab.view(lo); 
+    const auto q1    = q1fab.view(lo); 
+    const auto q2    = q2fab.view(lo); 
+    const auto vol   = volfab.view(lo); 
+    const auto area1 = a1.view(lo); 
+    const auto area2 = a2.view(lo); 
+
+    for             (int k = 0; k < len.z; ++k){
+        for         (int j = 0; j < len.y; ++j){
+            AMREX_PRAGMA_SIMD
+            for     (int i = 0; i < len.x; ++i){
+                pdivu(i,j,k) = 0.5e0*((q1(i+1,j,k,GDPRES) + q1(i,j,k,GDPRES))
+                             * (q1(i+1,j,k,GDU)*area1(i+1,j,k) - q1(i,j,k,GDU)*area1(i,j,k))
+                             + (q2(i,j+1,k,GDPRES) + q2(i,j,k,GDPRES))
+                             * (q2(i,j+1,k,GDV)*area2(i,j+1,k) - q2(i,j,k,GDV)*area2(i,j,k)))
+                             / vol(i,j,k); 
+            }
+        }
+    }
+}
 
 #endif 
