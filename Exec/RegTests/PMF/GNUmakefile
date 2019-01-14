@@ -6,13 +6,12 @@ PROFILE    = FALSE
 
 DEBUG      = FALSE
 
-DIM        = 1
-DIM        = 2
+DIM        = 3
 
-COMP	   = gcc
+COMP	   = pgi
 
-USE_MPI    = TRUE
-
+USE_MPI    = FALSE
+USE_ACC    = TRUE
 USE_REACT  = TRUE
 
 #HYP_TYPE   = MOL

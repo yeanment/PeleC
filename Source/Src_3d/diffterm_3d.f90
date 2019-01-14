@@ -107,7 +107,7 @@ contains
 
     integer :: i, j, k, n
     double precision :: tauxx, tauxy, tauxz, tauyx, tauyy, tauyz, tauzx, tauzy, tauzz, divu
-    double precision :: Uface(3), dudx, dvdx, dwdx, dudy, dvdy, dwdy, dudz, dvdz, dwdz
+    double precision :: Uface1, Uface2, Uface3, dudx, dvdx, dwdx, dudy, dvdy, dwdy, dudz, dvdz, dwdz
     double precision :: pface, hface, Xface, Yface
     double precision :: dTdx, dTdy, dTdz, dXdx, dXdy, dXdz, Vd
     double precision :: Vc(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
@@ -122,9 +122,6 @@ contains
 
     dxinv = 1.d0/deltax
 
-    call eos_ytx_vec(Q(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,QFS:QFS+nspec-1),lo,hi,X,lo,hi,lo,hi,nspec)
-    call eos_hi_vec(Q(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,QFS:QFS+nspec-1),lo,hi,Q(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,QTEMP),lo,hi,hii,lo,hi,lo,hi,nspec)
-
     gfaci = dxinv(1)
     if (lo(1).le.dmnlo(1) .and. physbc_lo(1).eq.Inflow) gfaci(dmnlo(1)) = gfaci(dmnlo(1)) * TWO
     if (hi(1).gt.dmnhi(1) .and. physbc_hi(1).eq.Inflow) gfaci(dmnhi(1)+1) = gfaci(dmnhi(1)+1) * TWO
@@ -135,6 +132,15 @@ contains
     if (lo(3).le.dmnlo(3) .and. physbc_lo(3).eq.Inflow) gfack(dmnlo(3)) = gfack(dmnlo(3)) * TWO
     if (hi(3).gt.dmnhi(3) .and. physbc_hi(3).eq.Inflow) gfack(dmnhi(3)+1) = gfack(dmnhi(3)+1) * TWO
 
+    !$acc data copy(dlnpi,dlnpj,dlnpk,hi,lo,ax,ay,az,tx,ty,tz,dx,dy,dz,lamx,lamy,lamz,gfaci,gfacj,gfack,mux,muy,muz,xix,xiy,xiz,dxinv,v,hii,x,q,nspec,qfs,qvar,qfs,dmnlo,dmnhi,physbc_lo,physbc_hi) create(vc) copy(fx,fy,fz,d)
+
+    !$acc parallel
+    call eos_ytx_vec(q,x,lo,hi,nspec,qfs,qvar)
+    call eos_hi_vec(q,hii,lo,hi,nspec,qtemp,qvar,qfs)
+    !$acc end parallel
+
+    !$acc kernels
+    !$acc loop collapse(3)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)+1
@@ -150,16 +156,17 @@ contains
              tauxx = mux(i,j,k)*(2.d0*dudx-twoThirds*divu) + xix(i,j,k)*divu
              tauxy = mux(i,j,k)*(dudy+dvdx)
              tauxz = mux(i,j,k)*(dudz+dwdx)
-             Uface(1) = HALF*(Q(i,j,k,QU) + Q(i-1,j,k,QU))
-             Uface(2) = HALF*(Q(i,j,k,QV) + Q(i-1,j,k,QV))
-             Uface(3) = HALF*(Q(i,j,k,QW) + Q(i-1,j,k,QW))
+             Uface1 = HALF*(Q(i,j,k,QU) + Q(i-1,j,k,QU))
+             Uface2 = HALF*(Q(i,j,k,QV) + Q(i-1,j,k,QV))
+             Uface3 = HALF*(Q(i,j,k,QW) + Q(i-1,j,k,QW))
              fx(i,j,k,UMX)   = - tauxx
              fx(i,j,k,UMY)   = - tauxy
              fx(i,j,k,UMZ)   = - tauxz
-             fx(i,j,k,UEDEN) = - tauxx*Uface(1) - tauxy*Uface(2) - tauxz*Uface(3) - lamx(i,j,k)*dTdx
+             fx(i,j,k,UEDEN) = - tauxx*Uface1 - tauxy*Uface2 - tauxz*Uface3 - lamx(i,j,k)*dTdx
           enddo
        enddo
     enddo
+    !$acc loop collapse(3)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)+1
@@ -167,7 +174,10 @@ contains
           enddo
        enddo
     enddo
+    !$acc wait(1)
+    !$acc loop seq
     do n=1,nspec
+       !$acc loop collapse(3)
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)+1
@@ -185,7 +195,9 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop seq
     do n=1,nspec
+       !$acc loop collapse(3)
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)+1
@@ -197,6 +209,7 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop collapse(3)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)+1
@@ -207,6 +220,7 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop collapse(4)
     do n=UFS,UFS+nspec-1
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)
@@ -217,6 +231,7 @@ contains
        enddo
     enddo
 
+    !$acc loop collapse(3)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)+1
           do i=lo(1),hi(1)
@@ -232,16 +247,17 @@ contains
              tauyx = muy(i,j,k)*(dudy+dvdx)
              tauyy = muy(i,j,k)*(2.d0*dvdy-twoThirds*divu) + xiy(i,j,k)*divu
              tauyz = muy(i,j,k)*(dwdy+dvdz)
-             Uface(1) = HALF*(Q(i,j,k,QU) + Q(i,j-1,k,QU))
-             Uface(2) = HALF*(Q(i,j,k,QV) + Q(i,j-1,k,QV))
-             Uface(3) = HALF*(Q(i,j,k,QW) + Q(i,j-1,k,QW))
+             Uface1 = HALF*(Q(i,j,k,QU) + Q(i,j-1,k,QU))
+             Uface2 = HALF*(Q(i,j,k,QV) + Q(i,j-1,k,QV))
+             Uface3 = HALF*(Q(i,j,k,QW) + Q(i,j-1,k,QW))
              fy(i,j,k,UMX)   = - tauyx
              fy(i,j,k,UMY)   = - tauyy
              fy(i,j,k,UMZ)   = - tauyz
-             fy(i,j,k,UEDEN) = - tauyx*Uface(1) - tauyy*Uface(2) - tauyz*Uface(3) - lamy(i,j,k)*dTdy
+             fy(i,j,k,UEDEN) = - tauyx*Uface1 - tauyy*Uface2 - tauyz*Uface3 - lamy(i,j,k)*dTdy
           enddo
        enddo
     enddo
+    !$acc loop collapse(3)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)+1
           do i=lo(1),hi(1)
@@ -249,7 +265,9 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop seq
     do n=1,nspec
+       !$acc loop collapse(3)
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)+1
              do i=lo(1),hi(1)
@@ -267,7 +285,9 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop seq
     do n=1,nspec
+       !$acc loop collapse(3)
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)+1
              do i=lo(1),hi(1)
@@ -279,6 +299,7 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop collapse(3)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)+1
           do i=lo(1),hi(1)
@@ -289,6 +310,7 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop collapse(4)
     do n=UFS,UFS+nspec-1
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)+1
@@ -299,6 +321,7 @@ contains
        enddo
     enddo
 
+    !$acc loop collapse(3)
     do k=lo(3),hi(3)+1
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -314,16 +337,17 @@ contains
              tauzx = muz(i,j,k)*(dudz+dwdx)
              tauzy = muz(i,j,k)*(dvdz+dwdy)
              tauzz = muz(i,j,k)*(2.d0*dwdz-twoThirds*divu) + xiz(i,j,k)*divu
-             Uface(1) = HALF*(Q(i,j,k,QU) + Q(i,j,k-1,QU))
-             Uface(2) = HALF*(Q(i,j,k,QV) + Q(i,j,k-1,QV))
-             Uface(3) = HALF*(Q(i,j,k,QW) + Q(i,j,k-1,QW))
+             Uface1 = HALF*(Q(i,j,k,QU) + Q(i,j,k-1,QU))
+             Uface2 = HALF*(Q(i,j,k,QV) + Q(i,j,k-1,QV))
+             Uface3 = HALF*(Q(i,j,k,QW) + Q(i,j,k-1,QW))
              fz(i,j,k,UMX)   = - tauzx
              fz(i,j,k,UMY)   = - tauzy
              fz(i,j,k,UMZ)   = - tauzz
-             fz(i,j,k,UEDEN) = - tauzx*Uface(1) - tauzy*Uface(2) - tauzz*Uface(3) - lamz(i,j,k)*dTdz
+             fz(i,j,k,UEDEN) = - tauzx*Uface1 - tauzy*Uface2 - tauzz*Uface3 - lamz(i,j,k)*dTdz
           enddo
        enddo
     enddo
+    !$acc loop collapse(3)
     do k=lo(3),hi(3)+1
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -331,7 +355,9 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop seq
     do n=1,nspec
+       !$acc loop collapse(3)
        do k=lo(3),hi(3)+1
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)
@@ -349,7 +375,9 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop seq
     do n=1,nspec
+       !$acc loop collapse(3)
        do k=lo(3),hi(3)+1
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)
@@ -361,6 +389,7 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop collapse(3)
     do k=lo(3),hi(3)+1
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -371,6 +400,7 @@ contains
           enddo
        enddo
     enddo
+    !$acc loop collapse(4)
     do n=UFS,UFS+nspec-1
        do k=lo(3),hi(3)+1
           do j=lo(2),hi(2)
@@ -381,6 +411,7 @@ contains
        enddo
     enddo
 
+    !$acc loop collapse(4)
     do n=1,NVAR
        do k = lo(3), hi(3)
           do j = lo(2), hi(2)
@@ -392,6 +423,8 @@ contains
           end do
        end do
     end do
+    !$acc end kernels
+    !$acc end data
 
   end subroutine pc_diffterm
 
