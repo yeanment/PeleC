@@ -31,8 +31,10 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
     });
     const amrex::Box& xflxbx = amrex::surroundingNodes(bx,cdir); 
     //===================== X initial fluxes ===========================
+    //May omit bcmask. 
     AMREX_LAUNCH_DEVICE_LAMBDA(xflxbx, tbx, {
-        PeleC_cmpflx(tbx, qxm, qxp, fx, q1, qaux, bcMask, shk, 0);
+        PeleC_cmpflx(tbx, qxm.fab(), qxp.fab(), fx.fab(), q1.fab(), qaux.fab(),
+                     bcMask.fab(), 0);
     }); 
     //==================== Y slopes ====================================
     cdir = 1; 
@@ -260,8 +262,11 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
          const amrex::Real *spr, EOS &state, EOS &gdnv_state, 
          amrex::Real &uflx_rho, amrex::Real &uflx_u, 
          amrex::Real &uflx_v, amrex::Real &uflx_v, amrex::Real &uflx_w,
-         amrex::Real &uflx_eden, amrex::Real &uflx_eint, const int idir, const int coord_type, 
-         const amrex::Real csmall, const amrex::Real cav)
+         amrex::Real &uflx_eden, amrex::Real &uflx_eint,
+         amrex::Real &qint_iu, amrex::Real &qint_iv1, amrex::Real &qint_iv2, 
+         amrex::Real &qint_gdpres, amrex::Real &qint_gdgame,
+         amrex::Real &ustar, const int idir, const amrex::Real csmall,
+         const amrex::Real cav)
 //TODO consider making a uflx array instead of passing each in. 
 {
     amrex::Real wsmall = small_dens*csmall; 
@@ -286,7 +291,7 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
     amrex::Real wr = amrex::max(wsmall, rr*csr); 
 
     amrex::Real pstar = ((wr*pl + wl*pr) + wl*wr*(ul - ur))/(wl + wr); 
-    amrex::Real ustar = ((wl*ul + wr*ur) + (pl - pr))/(wl + wr); 
+    ustar = ((wl*ul + wr*ur) + (pl - pr))/(wl + wr); 
     
     pstar = amrex::max(pstar, small_pres); 
     if (abs(ustar) < smallu*0.5e0*(abs(ul) + abs(ur))) ustar = 0.e0; 
@@ -361,11 +366,11 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
     }
     
     amrex::Real rgd = frac*rstar + (1.e0 - frac)*ro; 
-    amrex::Real qint_iu = frac*ustar + (1.e0 - frac)*uo; 
-    amrex::Real qint_iv1 = vgd; 
-    amrex::Real qint_iv2 = wgd; 
+    qint_iu = frac*ustar + (1.e0 - frac)*uo; 
+    qint_iv1 = vgd; 
+    qint_iv2 = wgd; 
     
-    amrex::Real qint_gdpres = frac*pstar + (1.e0 - frac)*po; 
+    qint_gdpres = frac*pstar + (1.e0 - frac)*po; 
     gdvn_state.rho = rgd; 
     gdvn_state.p = qint_gdpres; 
     gdvn_state.eos_rp(); 
@@ -422,9 +427,9 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
 AMREX_GPU_DEVICE
 inline
 void
-PeleC_cmpflx(amrex::Box const& bx, amrex::FArrayBox& fluxfab, amrex::FArrayBox const& qlfab, 
-             amrex::FArrayBox const & qrfab, amrex::FArrayBox const& qfab,
-             amrex::FArrayBox const& qafab, int idir)
+PeleC_cmpflx(amrex::Box const& bx, amrex::FArrayBox const& qlfab, 
+             amrex::FArrayBox const & qrfab, amrex::FArrayBox& fluxfab,
+             amrex::FArrayBox const& qfab, amrex::FArrayBox const& qafab, int idir)
 {
     const auto  len = amrex::length(bx);
     const auto   lo = amrex::lbound(bx);
@@ -436,8 +441,8 @@ PeleC_cmpflx(amrex::Box const& bx, amrex::FArrayBox& fluxfab, amrex::FArrayBox c
     EOS state, gdnv_state; 
     amrex::Real cav;
 //    amrex::Real ul, ur, vl, vr, v2l, v2r, rel, rer; 
-//    int idx, IU, IV, IV2; 
-/*  if(idir == 0){
+    int idx, IU, IV, IV2; 
+*  if(idir == 0){
          IU = QU; 
          IV = QV; 
         IV2 = QW; 
@@ -453,7 +458,7 @@ PeleC_cmpflx(amrex::Box const& bx, amrex::FArrayBox& fluxfab, amrex::FArrayBox c
        IV2 = QV; 
     }
        
-*/
+
     for         (int k = 0; k < len.z; ++k) {
         for     (int j = 0; j < len.y; ++j) {
             for (int i = 0; i < len.x; ++i) {
@@ -498,7 +503,18 @@ PeleC_cmpflx(amrex::Box const& bx, amrex::FArrayBox& fluxfab, amrex::FArrayBox c
                          qr(i,j,k,QRHO), qr(i,j,k,QU), qr(i,j,k,QV), qr(i,j,k,QW), 
                          qr(i,j,k,QPRES), qr(i,j,k,QRIENT), spr,
                          state, gdnv_state, flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
-                         flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT), idir, csmall, cav); 
+                         flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT),
+                         q(i,j,k,IU), q(i,j,k,IV1), q(i,j,k,IV2), q(i,j,k,GDPRES),
+                         q(i,j,k,GDGAME), ustar, idir, csmall, cav); 
+
+                amrex::Real flxrho = flx(i,j,k,URHO); 
+                for(int ipass = 0; ipass < npassive; ++ipass){
+                    int n = EOS::upass_map(ipass); 
+                    int nqp = EOS::qpass_map(ipass);                     
+                    if(ustar > 0) flx(i,j,k,n) = flxrho*ql(i,j,k,nqp); 
+                    else if(ustar < 0) flx(i,j,k,n) = flxrho*qr(i,j,k,nqp); 
+                    else flx(i,j,k,n) = flxrho*0.5e0*(ql(i,j,k,nqp) + qr(i,j,k,nqp)); 
+                }
                     
             }
         }
@@ -786,8 +802,8 @@ inline
 void 
 PeleC_transx(amrex::Box const& bx, amrex::FArrayBox &qmfab, amrex::FArrayBox &qpfab, 
              amrex::FArrayBox const& qymfab, amrex::FArrayBox const& qypfab, 
-             amrex::FArrayBox const& flxxfab, amrex::FArrayBox const& srcQfab, 
-             amrex::Real hdt, amrex::Real cdtdy) 
+             amrex::FArrayBox const& flxxfab, amrex::FArrayBox const& srcQfab,
+             amrex::FArrayBox const& qintfab, amrex::Real hdt, amrex::Real cdtdy) 
 {
     const auto len    = amrex::length(bx); 
     const auto lo     = amrex::lbound(bx); 
@@ -797,12 +813,15 @@ PeleC_transx(amrex::Box const& bx, amrex::FArrayBox &qmfab, amrex::FArrayBox &qp
     const auto qyp    = qypfab.view(lo); 
     const auto flxx   = flxxfab.view(lo); 
     const auto srcQ   = srcQfab.view(lo); 
+    const auto qint   = qintfab.view(lo);
+ 
     EOS state; 
     amrex::Real compn, rr, rrnew, compo, rwl; 
     amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr; 
     amrex::Real runewr, rvnewr, renewr, rhoekinr ; 
     amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, renewl; 
     amrex::Real rhoekinl, rwl, srcr, srce, srcpass;
+    amrex::Real pggp, pggm, ugp, ugm, gegp, gegm; 
 //  Local variables to avoid reading from global memory too much 
     amrex::Real flxrho, flxu, flxv, flxe; 
 
@@ -835,10 +854,21 @@ PeleC_transx(amrex::Box const& bx, amrex::FArrayBox &qmfab, amrex::FArrayBox &qp
 
 //------------------------------- Update hydro vars -----------------------
 // TODO 
-// theres a whole bit on pggp pggm etc that I'm not sure that we actually need for testing
-// Used in PPM                              
+// Add area 
 
-
+                pggp = qint(i+1,j,k,GDPRES); 
+                pggm = qint(i,j,k,GDPRES); 
+                ugp  = qint(i+1,j,k,GDU); 
+                ugm  = qint(i,j,k,GDU); 
+                gegp = qint(i+1,j,k,GDGAME); 
+                gegm = qint(i,j,k,GDGAME); 
+                dAup = pggp*ugp - pggm*ugm; //
+                pav  = 0.5e0*(pggp + pggm); 
+                uav  = 0.5e0*(ugp + ugm); 
+                dAu  = ugp - ugm; //
+                geav = 0.5e0*(gegp+gegm); 
+                dge  = gegp-gegm; 
+            
 //========================= QP ===========================================
 
 //Again bounds... 
@@ -860,13 +890,13 @@ PeleC_transx(amrex::Box const& bx, amrex::FArrayBox &qmfab, amrex::FArrayBox &qp
                 renewr = rer - flxe; 
 
 // Convert back to primitive 
-                state.rho = rrnewr + hdt*srcr; 
-                qp(i,j,k,QRHO) = state.rho; 
+//                state.rho = rrnewr + hdt*srcr; 
+                qp(i,j,k,QRHO) = rrnewr + hdt*srcr; //state.rho; 
                 qp(i,j,k,QU)   = runewr/rrnewr; 
                 qp(i,j,k,QV)   = rvnewr/rrnewr; 
                 rwr           *= rrnewr; 
                 rhoekinr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwr*rwr )/rrnewr; 
-                
+/*                
 // Pressure using eos 
                 state.e   = (rernewr - rhoekinr + hdt*srce)/state.rho; 
                 state.T   = small_temp; 
@@ -876,7 +906,12 @@ PeleC_transx(amrex::Box const& bx, amrex::FArrayBox &qmfab, amrex::FArrayBox &qp
                 state.eos_re(); 
                 qp(i,j,k,QPRES) = state.p; 
                 qp(i,j,k,QREINT) = state.e*state.rho; 
+*/
 
+                amrex::Real pnewr = qxp(i,j,k,QPRES) 
+                                  - hdt*(dAup + pav*dAu*(qa(i,j,k,QGAMC) - 1.e0)); 
+                qp(i,j,k,QPRES) = amrex::max(pnewr + hdt*srcQ(i,j,k,QPRES), small_pres); 
+                qp(i,j,k,QREINT) = (rernewr - rhokinr + hdt*srce)/(rrnewr + hdt*srcr); 
 //======================= QM ================================================
 
 //Conversion to Conservative 
