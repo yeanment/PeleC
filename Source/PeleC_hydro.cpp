@@ -175,79 +175,58 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 pradial.resize(amrex::surroundingNodes(bx,0),1);
                 }
 
-        //TODO Remove ifdefs and integrate into to one function 
-        // It is two calls right now to 
-        #ifdef AMREX_USE_CUDA        
-                AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-                pc_umdrv
-                (&is_finest_level, &time,
-                 lo, hi, domain_lo, domain_hi,
-                 BL_TO_FORTRAN(*statein), 
-                 BL_TO_FORTRAN(*stateout),
-                 BL_TO_FORTRAN(q.fab()),
-                 BL_TO_FORTRAN(qaux.fab()),
-                 BL_TO_FORTRAN(src_q.fab()),
-                 BL_TO_FORTRAN(*source_out),
-                 BL_TO_FORTRAN(bcMask),
-                 dx, &dt,
-                 D_DECL(BL_TO_FORTRAN(flux[0]),
-                    BL_TO_FORTRAN(flux[1]),
-                    BL_TO_FORTRAN(flux[2])),
-        #if (BL_SPACEDIM < 3)
-                 BL_TO_FORTRAN(pradial),
-        #endif
-                 D_DECL(BL_TO_FORTRAN(area[0][mfi]),
-                    BL_TO_FORTRAN(area[1][mfi]),
-                    BL_TO_FORTRAN(area[2][mfi])),
-        #if (BL_SPACEDIM < 3)
-                 BL_TO_FORTRAN(dLogArea[0][mfi]),
-        #endif
-                 BL_TO_FORTRAN(volume[mfi]),
-                 &cflLoc, verbose,
-                 mass_added_flux,
-                 xmom_added_flux,
-                 ymom_added_flux,
-                 zmom_added_flux,
-                 E_added_flux,
-                 mass_lost, xmom_lost, ymom_lost, zmom_lost,
-                 eden_lost, xang_lost, yang_lost, zang_lost); // */
-                 }); 
-                 Gpu::Device::streamSynchronize();
-        #else
-                pc_umdrv
-                (&is_finest_level, &time,
-                 lo, hi, domain_lo, domain_hi,
-                 BL_TO_FORTRAN(*statein), 
-                 BL_TO_FORTRAN(*stateout),
-                 BL_TO_FORTRAN(q.fab()),
-                 BL_TO_FORTRAN(qaux.fab()),
-                 BL_TO_FORTRAN(src_q.fab()),
-                 BL_TO_FORTRAN(*source_out),
-                 BL_TO_FORTRAN(bcMask),
-                 dx, &dt,
-                 D_DECL(BL_TO_FORTRAN(flux[0]),
-                    BL_TO_FORTRAN(flux[1]),
-                    BL_TO_FORTRAN(flux[2])),
-        #if (BL_SPACEDIM < 3)
-                 BL_TO_FORTRAN(pradial),
-        #endif
-                 D_DECL(BL_TO_FORTRAN(area[0][mfi]),
-                    BL_TO_FORTRAN(area[1][mfi]),
-                    BL_TO_FORTRAN(area[2][mfi])),
-        #if (BL_SPACEDIM < 3)
-                 BL_TO_FORTRAN(dLogArea[0][mfi]),
-        #endif
-                 BL_TO_FORTRAN(volume[mfi]),
-                 &cflLoc, verbose,
-                 mass_added_flux,
-                 xmom_added_flux,
-                 ymom_added_flux,
-                 zmom_added_flux,
-                 E_added_flux,
-                 mass_lost, xmom_lost, ymom_lost, zmom_lost,
-                 eden_lost, xang_lost, yang_lost, zang_lost); // */
-        #endif
 
+
+                PeleC_umdrv
+                (&is_finest_level, &time,
+                 lo, hi, domain_lo, domain_hi,
+                 *statein, *stateout, q,
+                 qaux, src_q, *source_out,
+                 bcMask, dx, &dt,
+                 flux,
+        #if (BL_SPACEDIM < 3)
+                 BL_TO_FORTRAN(pradial),
+        #endif
+                 D_DECL(area[0][mfi], area[1][mfi], area[2][mfi]),
+        #if (BL_SPACEDIM < 3)
+                 dLogArea[0][mfi],
+        #endif
+                 volume[mfi],
+                 &cflLoc, verbose); 
+
+
+/*                pc_umdrv
+                (&is_finest_level, &time,
+                 lo, hi, domain_lo, domain_hi,
+                 BL_TO_FORTRAN(*statein), 
+                 BL_TO_FORTRAN(*stateout),
+                 BL_TO_FORTRAN(q.fab()),
+                 BL_TO_FORTRAN(qaux.fab()),
+                 BL_TO_FORTRAN(src_q.fab()),
+                 BL_TO_FORTRAN(*source_out),
+                 BL_TO_FORTRAN(bcMask),
+                 dx, &dt,
+                 D_DECL(BL_TO_FORTRAN(flux[0]),
+                    BL_TO_FORTRAN(flux[1]),
+                    BL_TO_FORTRAN(flux[2])),
+        #if (BL_SPACEDIM < 3)
+                 BL_TO_FORTRAN(pradial),
+        #endif
+                 D_DECL(BL_TO_FORTRAN(area[0][mfi]),
+                    BL_TO_FORTRAN(area[1][mfi]),
+                    BL_TO_FORTRAN(area[2][mfi])),
+        #if (BL_SPACEDIM < 3)
+                 BL_TO_FORTRAN(dLogArea[0][mfi]),
+        #endif
+                 BL_TO_FORTRAN(volume[mfi]),
+                 &cflLoc, verbose,
+                 mass_added_flux,
+                 xmom_added_flux,
+                 ymom_added_flux,
+                 zmom_added_flux,
+                 E_added_flux,
+                 mass_lost, xmom_lost, ymom_lost, zmom_lost,
+                 eden_lost, xang_lost, yang_lost, zang_lost); */
                 courno = std::max(courno,cflLoc);
 
                     if (do_reflux  && sub_iteration == sub_ncycle-1 )
