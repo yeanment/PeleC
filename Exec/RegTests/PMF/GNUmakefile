@@ -8,10 +8,12 @@ DEBUG      = FALSE
 
 DIM        = 3
 
-COMP	   = pgi
+COMP	   = gnu
 
 USE_MPI    = FALSE
-USE_ACC    = TRUE
+
+USE_ACC    = FALSE
+
 USE_REACT  = TRUE
 
 #HYP_TYPE   = MOL
@@ -36,5 +38,7 @@ Transport_dir := EGLib
 
 Bpack   := ./Make.package
 Blocs   := .
+
+#DEFINES += -p
 
 include ../../Make.PeleC

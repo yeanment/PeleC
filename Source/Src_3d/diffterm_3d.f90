@@ -119,6 +119,8 @@ contains
 
     double precision, parameter :: twoThirds = 2.d0/3.d0
     double precision :: dxinv(3)
+    !$acc routine(eos_ytx_vec) gang nohost
+    !$acc routine(eos_hi_vec) gang nohost
 
     dxinv = 1.d0/deltax
 
@@ -132,7 +134,7 @@ contains
     if (lo(3).le.dmnlo(3) .and. physbc_lo(3).eq.Inflow) gfack(dmnlo(3)) = gfack(dmnlo(3)) * TWO
     if (hi(3).gt.dmnhi(3) .and. physbc_hi(3).eq.Inflow) gfack(dmnhi(3)+1) = gfack(dmnhi(3)+1) * TWO
 
-    !$acc data copy(dlnpi,dlnpj,dlnpk,hi,lo,ax,ay,az,tx,ty,tz,dx,dy,dz,lamx,lamy,lamz,gfaci,gfacj,gfack,mux,muy,muz,xix,xiy,xiz,dxinv,v,hii,x,q,nspec,qfs,qvar,qfs,dmnlo,dmnhi,physbc_lo,physbc_hi) create(vc) copy(fx,fy,fz,d)
+    !$acc data copyin(dlnpi,dlnpj,dlnpk,hi,lo,ax,ay,az,tx,ty,tz,dx,dy,dz,lamx,lamy,lamz,gfaci,gfacj,gfack,mux,muy,muz,xix,xiy,xiz,dxinv,v,hii,x,q,nspec,qfs,qvar,qfs,dmnlo,dmnhi,physbc_lo,physbc_hi) create(vc) copy(fx,fy,fz) copyout(d)
 
     !$acc parallel
     call eos_ytx_vec(q,x,lo,hi,nspec,qfs,qvar)
