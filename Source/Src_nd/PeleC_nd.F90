@@ -80,7 +80,7 @@ subroutine pc_reactor_init() bind(C, name="pc_reactor_init")
 #elif USE_SDC_FORTRAN
   use reactor_module, only: reactor_init_sdc
 
-  call reactor_init_sdc(1, 2, 2)
+  call reactor_init_sdc(1, 2, 2, 1)
 #endif
 end subroutine pc_reactor_init
 
