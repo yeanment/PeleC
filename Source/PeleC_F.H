@@ -13,7 +13,7 @@ extern "C"
 
   void pc_network_close();
 
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
   void pc_reactor_init();
 
   void pc_reactor_close();
@@ -404,7 +404,7 @@ extern "C"
      const amrex::Real* dx, BL_FORT_FAB_ARG_3D(vol), amrex::Real* mass);
 
 #ifdef REACTIONS
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
   void pc_react_state
     (const int* lo, const int* hi,
      const amrex::Real*  uold, const int* uo_lo, const int* uo_hi,

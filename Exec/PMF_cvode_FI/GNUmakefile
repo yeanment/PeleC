@@ -11,7 +11,7 @@ DIM        = 2
 
 COMP	   = gcc
 
-USE_MPI    = TRUE
+USE_MPI    = FALSE
 USE_OMP    = FALSE
 
 USE_REACT  = TRUE
@@ -26,7 +26,7 @@ ifeq ($(USE_DVODE), TRUE)
     DEFINES  += -DUSE_DVODE
 endif
 
-USE_SUNDIALS_3x4x=TRUE
+USE_SUNDIALS_3x4x=FALSE
 #CVODE_LIB_DIR = /home/amfelden/CODES/PeleLM/Source/ChemDriver/sundials-3.2.1/instdir/lib 
 
 USE_KLU = FALSE
@@ -47,9 +47,9 @@ endif
 
 USE_CUDA_CVODE = FALSE
 
-USE_SDC_FORTRAN = FALSE
+USE_SDC_FORTRAN = TRUE
 ifeq ($(USE_SDC_FORTRAN), TRUE)
-    DEFINES  += -DUSE_SDC_F
+    DEFINES  += -DUSE_SDC_FORTRAN
 endif
 
 #######################
@@ -78,4 +78,4 @@ Bpack   := ./Make.package
 Blocs   := .
 
 include ../Make.PeleC
-include ./Make.cvodeCinterface
+#include ./Make.cvodeCinterface

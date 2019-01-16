@@ -4,7 +4,7 @@
 
 #include "AMReX_DistributionMapping.H"
 
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
 #else
 #include <actual_Creactor.h>
 #endif
@@ -43,7 +43,7 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
     // Create a MultiFab with all of the non-reacting source terms.
 
     MultiFab Atmp, *Ap;
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
 #else
     MultiFab rY, rYs;
     MultiFab rE, rEs;
@@ -115,7 +115,7 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
           const IArrayBox& m    = (*interior_mask)[mfi];
           w.resize(bx,1);
           FArrayBox& I_R        = reactions[mfi];
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
 #else
           FArrayBox& Y          = rY[mfi];
           FArrayBox& Ys         = rYs[mfi];
@@ -124,7 +124,7 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
 #endif
           int do_update         = react_init ? 0 : 1;  // TODO: Update here? Or just get reaction source?
 
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
           pc_react_state(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
                          uold.dataPtr(),  ARLIM_3D(uold.loVect()),  ARLIM_3D(uold.hiVect()),
                          unew.dataPtr(),  ARLIM_3D(unew.loVect()),  ARLIM_3D(unew.hiVect()),
@@ -145,6 +145,7 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
                          Es.dataPtr(),     ARLIM_3D(Es.loVect()),     ARLIM_3D(Es.hiVect()),
                          time, dt);
 
+	  printf("BEFORE BoxIterator \n" );
 	  for (BoxIterator bit(bx); bit.ok(); ++bit) {
 		  double tmp_vect[NumSpec+1];
 		  double tmp_src_vect[NumSpec];
@@ -158,6 +159,7 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
 		  tmp_vect_energy[0] = E(bit(),0);   
 		  tmp_src_vect_energy[0] = Es(bit(),0);   
 		  double plo = 1013250.0;
+		  printf("time, dt %14.6e %14.6e \n",time, dt );
 		  int cost = actual_cReact(tmp_vect, tmp_src_vect, 
 				  tmp_vect_energy, tmp_src_vect_energy,
 				  &plo, &dt, &time, &reInit);
@@ -166,7 +168,7 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
 		  }
 		  E(bit(),0) = tmp_vect_energy[0];   
 		  w(bit(),0) = cost; 
-                  reInit                = 0;
+                  //reInit                = 0;
 	  }
 
           pc_postreact_state(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),

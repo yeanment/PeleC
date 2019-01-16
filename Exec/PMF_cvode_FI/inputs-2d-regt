@@ -39,7 +39,7 @@ amr.max_grid_size   = 64
 amr.n_error_buf     = 2 8 2 2 # number of buffer cells in error est
 
 # CHECKPOINT FILES
-amr.checkpoint_files_output = 1
+amr.checkpoint_files_output = 0
 amr.check_file              = chk    # root name of checkpoint file
 amr.check_int               = 500    # number of timesteps between checkpoints
 
@@ -67,9 +67,9 @@ pelec.cvode_meth = 2
 # 1 = functional iteration; 2 = Newton iteration
 pelec.cvode_itmeth = 2
 # Select CVODE Jacobian eval.
-pelec.cvode_iJac = 1
+pelec.cvode_iJac = 0
 # 1=full e, 2=full h
 pelec.cvode_iE = 1
 # choose sparse or dense
-pelec.cvode_iDense = 99
+pelec.cvode_iDense = 1
 

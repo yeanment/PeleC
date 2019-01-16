@@ -6,7 +6,7 @@ module reactions_module
 
 contains
 
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
   subroutine pc_react_state(lo,hi, &
                             uold,uo_lo,uo_hi, &
                             unew,un_lo,un_hi, &
@@ -24,6 +24,8 @@ contains
     use reactor_module, only : react
 #elif USE_FORTRAN_CVODE
     use reactor_module, only : react_cvode
+#elif USE_SDC_FORTRAN
+    use reactor_module, only : react_sdc
 #endif
     use bl_constants_module, only : HALF
     use react_type_module
@@ -86,6 +88,8 @@ contains
                 stat = react(react_state_in, react_state_out, dt_react, time)
 #elif USE_FORTRAN_CVODE
                 stat = react_cvode(react_state_in, react_state_out, dt_react, time)
+#elif USE_SDC_FORTRAN
+                stat = react_sdc(react_state_in, react_state_out, dt_react, time)
 #endif
 
                 rho_new = sum(react_state_out % rhoY(:))

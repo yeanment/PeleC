@@ -50,7 +50,7 @@ using namespace amrex;
 using namespace MASA;
 #endif
 
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
 #else
 #include <actual_Creactor.h>
 #endif
@@ -201,7 +201,7 @@ PeleC::variableCleanUp ()
   close_transport();
 
 #ifdef REACTIONS
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
   if (do_react == 1)
   {
     close_reactor();
@@ -237,7 +237,7 @@ PeleC::read_params ()
   pp.query("sum_interval",sum_interval);
   pp.query("dump_old",dump_old);
 
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
 #else
   // Select CVODE solve method.
   // 2 = BDF (for stiff problems)
@@ -1765,7 +1765,7 @@ PeleC::init_extern ()
 void
 PeleC::init_reactor ()
 {
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
   pc_reactor_init();
 #else
   amrex::Print() << "Initializing CVODE reactor ..." << std::endl;
@@ -1795,7 +1795,7 @@ PeleC::init_reactor ()
 #endif
 }
 
-#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) 
+#if defined(USE_DVODE) || defined(USE_FORTRAN_CVODE) || defined(USE_SDC_FORTRAN)
 void
 PeleC::close_reactor ()
 {
