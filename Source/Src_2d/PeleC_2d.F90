@@ -116,7 +116,6 @@ subroutine pc_umdrv(is_finest_level, time, &
   dx_3D   = [delta(1), delta(2), ZERO]
 
 
-!TODO get rid of all allocates. 
   allocate( flatn(q_l1:q_h1,q_l2:q_h2))
 
   allocate(   div(lo(1)  :hi(1)+1,lo(2)  :hi(2)+1))
@@ -124,13 +123,11 @@ subroutine pc_umdrv(is_finest_level, time, &
 
   allocate(q1(flux1_l1-1:flux1_h1+1,flux1_l2-1:flux1_h2+1,NGDNV))
   allocate(q2(flux2_l1-1:flux2_h1+1,flux2_l2-1:flux2_h2+1,NGDNV))
-!just do it. 
 
   dx = delta(1)
   dy = delta(2)
 
   ! Check if we have violated the CFL criterion.
-!Todo GPUize
   call compute_cfl(q, q_lo_3D, q_hi_3D, &
                    qaux, [qa_l1, qa_l2, 0], [qa_h1, qa_h2, 0], &
                    lo_3D, hi_3D, dt, dx_3D, courno)
