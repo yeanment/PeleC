@@ -3,12 +3,13 @@
 #include "PeleC_K.H" 
 #include "PeleC_EOS.H" 
  
-void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
-                   amrex::FArrayBox const& quax, amrex::FArrayBox const& srcQ, 
-                   amrex::FArrayBox const& bcMask, amrex::FArrayBox &flx1, 
-                   amrex::FArrayBox &flx2, amrex::FArrayBox &q1, 
+void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox const &q, 
+                   amrex::FArrayBox const& quax,
+                   amrex::FArrayBox const& srcQ, amrex::FArrayBox const& bcMask,
+                   amrex::FArrayBox &flx1, amrex::FArrayBox &flx2, 
+                   amrex::FArrayBox const& dloga, amrex::FArrayBox &q1,
                    amrex::FArrayBox &q2, amrex::FArrayBox &a1, 
-                   amrex::FArrayBox &a2, amrex::FArrayBox &pdiv, 
+                   amrex::FArrayBox &a2, amrex::FArrayBox &pdivu, 
                    amrex::FArrayBox &vol, amrex::Real *dx, amrex::Real dt)
 {
     amrex::Real const dxdt  = dt/dx[0]; 
@@ -28,6 +29,7 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
     }); 
 
     //==================== X interp ====================================
+    //Need to include dlogA.
     Gpu::AsyncFab qxm(xslpbx, QVAR); 
     Gpu::AsyncFab qxp(xslpbx, QVAR); 
     AMREX_LAUNCH_DEVICE_LAMBDA(xslpbx, tbx, {
@@ -56,7 +58,8 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox &flatn,
 
     //==================== Y interp ====================================
     AMREX_LAUNCH_DEVICE_LAMBDA(yslpbx, tbx, {
-        PeleC_plm_y(tbx, qym.fab(), qyp.fab(), slope.fab(), q.fab(), dy, dt); 
+        PeleC_plm_y(tbx, qym.fab(), qyp.fab(), slope.fab(), slope.fab(), q.fab(), quax.fab(), 
+                    srcQ.fab(), dloga.fab(), dy, dt); 
     });
 
     //===================== Y initial fluxes ===========================

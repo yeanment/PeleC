@@ -275,4 +275,46 @@ void PeleC_consup(amrex::Box const &bx, amrex::FArrayBox const& ufab, amrex::FAr
 
 }
 
+void 
+PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const &bx, 
+            amrex::Real const *dom_lo, amrex::Real const *dom_hi, amrex::FArrayBox const &uin, 
+            amrex::FArrayBox &uout, amrex::FArrayBox const &q, amrex::FArrayBox const &quax
+            amrex::FArrayBox const &src_q, amrex::FArrayBox const &bcMask,
+            const amrex::Real *dx, const amrex::Real dt, amrex::FArrayBox flux[], 
+#if (AMREX_SPACEDIM < 3) 
+            amrex::FArrayBox pradial, 
+#endif
+            D_DECL(amrex::FArrayBox const &a1, amrex::FArrayBox const &a2, 
+                   amrex::FArrayBox const &a3), 
+#if (AMREX_SPACEDIM < 3)
+            amrex::FArrayBox const &dloga, 
+#endif
+            amrex::FArrayBox const &vol, amrex::Real &cflLoc, const int verbose);
+//TODO assess if we want verbose           
+{
+
+    //Check for CFL violation, this is a reduce operation. 
+    PeleC_cfl(bx, q, qaux, dt, dx, courno); 
+
+    //TODO Do Flattening when we go to PPM. 
+    
+    //Call the method!
+
+#if AMREX_SPACEDIM == 1
+    PeleC_umeth1D(bx, q,  qaux, src_q, bcMask, flux[0], dloga, q1, pdivu, dx, dt);  
+#elif AMREX_SPACEDIM==2 
+    PeleC_umeth2D(bx, q,  qaux, src_q, bcMask, flux[0], flux[1], dloga, q1, q2, a1, a2, 
+                  pdivu, vol, dx, dt); 
+#else
+    PeleC_umeth3D(bx, q,  qaux, src_q, bcMask, flux[0], flux[1], dloga, q1, q2, q3, a1, a2, 
+                  a3, pdivu, vol, dx, dt);   
+#endif
+
+    //divu 
+
+    //consup 
+
+}
+
+
 #endif 
