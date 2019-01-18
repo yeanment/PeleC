@@ -275,6 +275,34 @@ void PeleC_consup(amrex::Box const &bx, amrex::FArrayBox const& ufab, amrex::FAr
 
 }
 
+AMREX_GPU_DEVICE
+inline 
+void 
+PeleC_divu(amrex::Box const &bx, amrex::FArrayBox const &qfab, 
+           const amrex::Real *dx, amrex::FArrayBox &divufab)
+{
+    const auto len    = length(bx);
+    const auto lo     = lbound(bx);
+    const auto q      = qfab.view(lo);
+    const auto divu   = divufab.view(lo);
+
+    amrex::Real ux, vy; 
+
+    for         (int k = 0; k < len.z; ++k){
+        for     (int j = 0; j < len.y; ++j){
+            AMREX_PRAGMA_SIMD
+            for (int i = 0; i < len.x; ++i){
+                ux = 0.5e0*(q(i,j,k,QU) - q(i-1,j,k,QU) + 
+                            q(i,j-1,k,QU) - q(i-1,j-1,k,QU))/dx[0]; 
+                vy = 0.5e0*(q(i,j,k,QV) - q(i,j-1,k,QV) + 
+                            q(i-1,j,k,QV) - q(i-1,j-1,k,QV))/dx[1]; 
+                divu(i,j,k) = ux + vy; 
+            }
+        }
+    }
+}
+
+
 void 
 PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const &bx, 
             amrex::Real const *dom_lo, amrex::Real const *dom_hi, amrex::FArrayBox const &uin, 
@@ -293,26 +321,36 @@ PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const
 //TODO assess if we want verbose           
 {
 
-    //Check for CFL violation, this is a reduce operation. 
-    PeleC_cfl(bx, q, qaux, dt, dx, courno); 
-
+//    TODO Check for CFL violation, this is a reduce operation. 
+//    amrex::Real cour = PeleC_cfl(bx, q, qaux, dt, dx, courno); 
+//    if(cour > 1.e0) 
+        
     //TODO Do Flattening when we go to PPM. 
     
     //Call the method!
 
 #if AMREX_SPACEDIM == 1
-    PeleC_umeth1D(bx, q,  qaux, src_q, bcMask, flux[0], dloga, q1, pdivu, dx, dt);  
+    PeleC_umeth1D(bx, q,  qaux, src_q, bcMask, flux[0], q1, pdivu, dx, dt);  
 #elif AMREX_SPACEDIM==2 
     PeleC_umeth2D(bx, q,  qaux, src_q, bcMask, flux[0], flux[1], dloga, q1, q2, a1, a2, 
                   pdivu, vol, dx, dt); 
 #else
-    PeleC_umeth3D(bx, q,  qaux, src_q, bcMask, flux[0], flux[1], dloga, q1, q2, q3, a1, a2, 
-                  a3, pdivu, vol, dx, dt);   
+    PeleC_umeth3D(bx, q,  qaux, src_q, bcMask, flux[0], flux[1], flux[2], 
+                  dloga, q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
 #endif
 
+//PeleC_divu will be a device function
     //divu 
-
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+    PeleC_divu(tbx, q.fab(), dx, div.fab()); 
+    });
     //consup 
+    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
+    PeleC_consup(tbx, uin.fab(), q.fab(), uout.fab(), q1.fab(), q2.fab(),
+                D_DECL(flux[0].fab(), flux[1].fab(), flux[2].fab()),
+                D_DECL(a1.fab(), a2.fab(), a3.fab()), 
+                vol.fab(), div.fab(), pdivu.fab(), dx, difmag); 
+    }); 
 
 }
 
