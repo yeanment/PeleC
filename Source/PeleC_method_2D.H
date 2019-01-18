@@ -1,8 +1,12 @@
 #ifndef PELEC_METHOD_2D_H_
 #define PELEC_METHOD_2D_H_
-#include "PeleC_K.H" 
+#include <AMReX_FArrayBox.H>
+#include "PeleC_Parameters.H"
+#include "PeleC_index_macros.H"
 #include "PeleC_EOS.H" 
  
+using namespace amrex; 
+
 void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox const &q, 
                    amrex::FArrayBox const& quax,
                    amrex::FArrayBox const& srcQ, amrex::FArrayBox const& bcMask,
@@ -12,7 +16,7 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox const &q,
                    amrex::FArrayBox &a2, amrex::FArrayBox &pdivu, 
                    amrex::FArrayBox &vol, amrex::Real *dx, amrex::Real dt)
 {
-    amrex::Real const dxdt  = dt/dx[0]; 
+    amrex::Real const dtdx  = dt/dx[0]; 
     amrex::Real const hdtdx = 0.5*dtdx; 
     amrex::Real const hdtdy = 0.5*dt/dx[1]; 
     amrex::Real const hdt   = 0.5*dt; 
@@ -20,54 +24,65 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox const &q,
     const amrex::Box& bxg1 = amrex::grow(bx, 1); 
     const amrex::Box& bxg2 = amrex::grow(bx, 2); 
     Gpu::AsyncFab slope(bxg2, QVAR);
+    Array4<Real> slfab = slope.array(); 
+    Array4<Real> qfab  = q.array(); 
+    Array4<Real> qauxfab = qaux.array(); 
+    Array4<Real> srcQfab = srcQ.array(); 
+    Array4<Real> dlogafab = dloga.array(); 
 
     //===================== X slopes ===================================
     int cdir = 0; 
-    const amrex::Box& xslpbx = amrex::grow(bxgx1, cdir, 1); 
-    AMREX_LAUNCH_DEVICE_LAMBDA(xslpbx, tbx, { 
-        PeleC_slope_x(tbx, slope.fab(), q.fab());
+    const amrex::Box& xslpbx = amrex::grow(bxg1, cdir, 1); 
+    AMREX_FOR_3D (xslpbx,i,j,k, { 
+        PeleC_slope_x(i,j,k, slfab, qfab);
     }); 
 
     //==================== X interp ====================================
     //Need to include dlogA.
     Gpu::AsyncFab qxm(xslpbx, QVAR); 
-    Gpu::AsyncFab qxp(xslpbx, QVAR); 
-    AMREX_LAUNCH_DEVICE_LAMBDA(xslpbx, tbx, {
-        PeleC_plm_x(tbx, qxm.fab(), qxp.fab(), slope.fab(), q.fab(), quax.fab(), 
-                    srcQ.fab(), dloga.fab(), dx, dt); 
+    Gpu::AsyncFab qxp(xslpbx, QVAR);
+    Array4<Real> qxmfab = qxm.array(); 
+    Array4<Real> qxpfab = qxp.array(); 
+
+    AMREX_FOR_3D(xslpbx, i,j,k, {
+        PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, quaxfab, 
+                    srcQfab, dlogafab, dx, dt); 
     });
 
     //===================== X initial fluxes ===========================
     const amrex::Box& xflxbx = amrex::surroundingNodes(bxg1,cdir); 
     Gpu::AsyncFab fx(xflxbx, NUM_VAR);
-    Gpu::AsyncFab q1(xflxbx, QVAR); 
+    Array4<Real> fxfab = fx.array(); 
+    Array4<Real> q1fab = q1.array();  
     //May omit bcmask. 
-    AMREX_LAUNCH_DEVICE_LAMBDA(xflxbx, tbx, {
-        PeleC_cmpflx(tbx, qxm.fab(), qxp.fab(), fx.fab(), q1.fab(), qaux.fab(),
-                     bcMask.fab(), 0);
+    AMREX_FOR_3D (xflxbx, i,j,k, {
+        PeleC_cmpflx(i,j,k, qxmfab, qxpfab, fxfab, q1fab, qauxfab,
+                     bcMaskfab, 0);
     });
  
     //==================== Y slopes ====================================
     cdir = 1; 
     const amrex::Box& yslpbx = amrex::grow(bxg1, cdir, 1); 
     Gpu::AsyncFab qym(yslpbx, QVAR);
-    Gpu::AsyncFab qyp(yslpbx, QVAR);  
-    AMREX_LAUNCH_DEVICE_LAMBDA(yslpbx, tbx,{
-        PeleC_slope_x(tbx, slope.fab(), q.fab()); 
+    Gpu::AsyncFab qyp(yslpbx, QVAR);
+    Array4<Real> qymfab = qym.array(), qypfab = qyp.array();   
+    AMREX_FOR_3D(yslpbx, i,j,k,{
+        PeleC_slope_y(i,j,k, slfab, qfab); 
     });
 
     //==================== Y interp ====================================
-    AMREX_LAUNCH_DEVICE_LAMBDA(yslpbx, tbx, {
-        PeleC_plm_y(tbx, qym.fab(), qyp.fab(), slope.fab(), slope.fab(), q.fab(), quax.fab(), 
-                    srcQ.fab(), dloga.fab(), dy, dt); 
+    AMREX_FOR_3D(yslpbx, i,j,k, {
+        PeleC_plm_y(i,j,k, qymfab, qypfab, slfab, qfab, quaxfab, 
+                    srcQfab, dlogafab, dy, dt); 
     });
 
     //===================== Y initial fluxes ===========================
     const amrex::Box& yflxbx = amrex::surroundingNodes(bxg1,cdir); 
     Gpu::AsyncFab fy(yflxbx, NUM_VAR); 
     Gpu::AsyncFab q2(yflxbx, QVAR); 
-    AMREX_LAUNCH_DEVICE_LAMBDA(yflxbx, tbx, {
-        PeleC_cmpflx(tbx, qym.fab(), qyp.fab(), fy.fab(), q2.fab(), qaux.fab(), bcMask.fab(), 1); 
+    Array4<Real> fyfab = fy.array(), q2fab = q2.array(); 
+    AMREX_FOR_3D(yflxbx, i,j,k, {
+        PeleC_cmpflx(i,j,k, qymfab, qypfab, fyfab, q2fab, qauxfab, bcMaskfab, 1); 
     }); 
 
     //===================== X interface corrections ====================
@@ -110,17 +125,9 @@ void PeleC_umeth2d(amrex::Box const& bx, amrex::FArrayBox const &q,
 AMREX_GPU_DEVICE
 inline
 void
-PeleC_slope_x(amrex::Box const& bx, amrex::FArrayBox& dqfab, amrex::FArrayBox& const& qfab)
+PeleC_slope_x(const int i, const int j, const int k, 
+              Array4<Real> &dq, Array4<Real> const& q)
 {
-    const auto len = amrex::length(bx);
-    const auto lo  = amrex::lbound(bx);
-    const auto dq = dqfab.view(lo);
-    const auto  q =  qfab.view(lo);
-
-    for         (int k = 0; k < len.z; ++k) {
-        for     (int j = 0; j < len.y; ++j) {
-            AMREX_PRAGMA_SIMD 
-            for (int i = 0; i < len.x; ++i) {
                 auto f = [] (amrex::Real dlft, amrex::Real drgt) -> amrex::Real {
                     amrex::Real dcen = 0.5*(dlft+drgt);
                     amrex::Real dsgn = std::copysign(1.0, dcen);
@@ -155,10 +162,6 @@ PeleC_slope_x(amrex::Box const& bx, amrex::FArrayBox& dqfab, amrex::FArrayBox& c
                 dq(i,j,k,1) = d1;
                 dq(i,j,k,2) = d2;
                 dq(i,j,k,3) = d3;
-                dq(i,j,k,4) = d4;
-            }
-        }
-    }
 }
 
 AMREX_GPU_DEVICE

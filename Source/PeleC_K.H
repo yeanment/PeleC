@@ -5,6 +5,15 @@
 #include "PeleC_Parameters.H" 
 #include "PeleC_index_macros.H" 
 #include "PeleC_EOS.H"
+
+#if AMREX_SPACEDIM == 1
+#include "PeleC_method_1D.H" 
+#elif AMREX_SPACEDIM == 2
+#include "PeleC_method_2D.H"
+#else
+#include "PeleC_method_3D.H"
+#endif 
+
 //TODO Add more fuctions! 
 struct Real3{
     amrex::Real x;
@@ -306,7 +315,7 @@ PeleC_divu(amrex::Box const &bx, amrex::FArrayBox const &qfab,
 void 
 PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const &bx, 
             amrex::Real const *dom_lo, amrex::Real const *dom_hi, amrex::FArrayBox const &uin, 
-            amrex::FArrayBox &uout, amrex::FArrayBox const &q, amrex::FArrayBox const &quax
+            amrex::FArrayBox &uout, amrex::FArrayBox const &q, amrex::FArrayBox const &qaux,
             amrex::FArrayBox const &src_q, amrex::FArrayBox const &bcMask,
             const amrex::Real *dx, const amrex::Real dt, amrex::FArrayBox flux[], 
 #if (AMREX_SPACEDIM < 3) 
@@ -317,7 +326,7 @@ PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const
 #if (AMREX_SPACEDIM < 3)
             amrex::FArrayBox const &dloga, 
 #endif
-            amrex::FArrayBox const &vol, amrex::Real &cflLoc, const int verbose);
+            amrex::FArrayBox const &vol, amrex::Real &cflLoc, const int verbose)
 //TODO assess if we want verbose           
 {
 
@@ -328,6 +337,16 @@ PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const
     //TODO Do Flattening when we go to PPM. 
     
     //Call the method!
+    amrex::FArrayBox q1(bx.surroundingNodes(),QVAR); 
+#if AMREX_SPACEDIM > 1
+    amrex::FArrayBox q2(bx.surroundingNodes(),QVAR); 
+#endif
+#if AMREX_SPACEDIME > 2 
+    amrex::FArrayBox q3(bx.surroudingNodes(),QVAR); 
+#endif
+
+    amrex::FArrayBox divu(bx, 1); 
+    amrex::FArrayBox pdivu(bx, 1); 
 
 #if AMREX_SPACEDIM == 1
     PeleC_umeth1D(bx, q,  qaux, src_q, bcMask, flux[0], q1, pdivu, dx, dt);  

@@ -72,7 +72,7 @@ AMREX_GPU_DEVICE
 void EOS::eos_rp()
 {
     eos_wb(); 
-    T = p*wbar/(rho*Ru)
+    T = p*wbar/(rho*Ru);
     CKUMS(&T, &iwrk, &rwrk, ei);
     e = 0.0;  
 #pragma unroll
