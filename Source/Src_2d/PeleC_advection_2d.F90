@@ -28,7 +28,6 @@ contains
 ! ::: :: flux1      <=  (modify) flux in X direction on X edges
 ! ::: :: flux2      <=  (modify) flux in Y direction on Y edges
 ! ::: ----------------------------------------------------------------
-AMREX_DEVICE
   subroutine umeth2d(q, flatn, qd_l1, qd_l2, qd_h1, qd_h2, &
                      qaux, qa_l1, qa_l2, qa_h1, qa_h2, &
                      srcQ, src_l1, src_l2, src_h1, src_h2, &
@@ -240,7 +239,7 @@ AMREX_DEVICE
 ! ::: ------------------------------------------------------------------
 ! :::
 
-AMREX_DEVICE  subroutine consup( uin, uin_l1, uin_l2, uin_h1, uin_h2, &
+  subroutine consup( uin, uin_l1, uin_l2, uin_h1, uin_h2, &
                      q, q_l1, q_l2, q_h1, q_h2, &
                      uout,uout_l1,uout_l2,uout_h1,uout_h2, &
                      update,updt_l1,updt_l2,updt_h1,updt_h2, &
