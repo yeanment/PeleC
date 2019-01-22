@@ -4,124 +4,11 @@
 #include "PeleC_Parameters.H"
 #include "PeleC_index_macros.H"
 #include "PeleC_EOS.H" 
- 
-using namespace amrex 
-{
+#include <cmath> 
 
-void PeleC_umeth2d(Box const& bx, FArrayBox const &q, 
-           FArrayBox const& quax,
-           FArrayBox const& srcQ, FArrayBox const& bcMask,
-           FArrayBox &flx1, FArrayBox &flx2, 
-           FArrayBox const& dloga, FArrayBox &q1,
-           FArrayBox &q2, FArrayBox &a1, 
-           FArrayBox &a2, FArrayBox &pdivu, 
-           FArrayBox &vol, Real *dx, Real dt)
-{
-    Real const dtdx  = dt/dx[0]; 
-    Real const hdtdx = 0.5*dtdx; 
-    Real const hdtdy = 0.5*dt/dx[1]; 
-    Real const hdt   = 0.5*dt; 
+namespace { 
+using namespace amrex; 
 
-    const Box& bxg1 = grow(bx, 1); 
-    const Box& bxg2 = grow(bx, 2); 
-    Gpu::AsyncFab slope(bxg2, QVAR);
-    Array4<Real> slfab = slope.array(), qfab  = q.array(); 
-    Array4<Real> qauxfab = qaux.array(), srcQfab = srcQ.array(); 
-    Array4<Real> dlogafab = dloga.array(), area1 = a1.array(), area2 = a2.array();  
-
-//===================== X slopes ===================================
-    int cdir = 0; 
-    const Box& xslpbx = grow(bxg1, cdir, 1); 
-    AMREX_FOR_3D (xslpbx,i,j,k, { 
-        PeleC_slope_x(i,j,k, slfab, qfab);
-    }); 
-
-//==================== X interp ====================================
-//Need to include dlogA.
-    Gpu::AsyncFab qxm(xslpbx, QVAR); 
-    Gpu::AsyncFab qxp(xslpbx, QVAR);
-    Array4<Real> qxmfab = qxm.array(); 
-    Array4<Real> qxpfab = qxp.array(); 
-
-    AMREX_FOR_3D(xslpbx, i,j,k, {
-        PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, quaxfab, 
-                srcQfab, dlogafab, dx, dt); 
-    });
-
-//===================== X initial fluxes ===========================
-    const Box& xflxbx = surroundingNodes(bxg1,cdir); 
-    Gpu::AsyncFab fx(xflxbx, NUM_VAR);
-    Array4<Real> fxfab = fx.array(); 
-    Array4<Real> q1fab = q1.array();  
-    //May omit bcmask. 
-    AMREX_FOR_3D (xflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k, qxmfab, qxpfab, fxfab, q1fab, qauxfab,
-                 bcMaskfab, 0);
-    });
-
-//==================== Y slopes ====================================
-    cdir = 1; 
-    const Box& yslpbx = grow(bxg1, cdir, 1); 
-    Gpu::AsyncFab qym(yslpbx, QVAR);
-    Gpu::AsyncFab qyp(yslpbx, QVAR);
-    Array4<Real> qymfab = qym.array(), qypfab = qyp.array();   
-    AMREX_FOR_3D(yslpbx, i,j,k,{
-        PeleC_slope_y(i,j,k, slfab, qfab); 
-    });
-
-//==================== Y interp ====================================
-    AMREX_FOR_3D(yslpbx, i,j,k, {
-        PeleC_plm_y(i,j,k, qymfab, qypfab, slfab, qfab, quaxfab, 
-                srcQfab, dlogafab, dy, dt); 
-    });
-
-//===================== Y initial fluxes ===========================
-    const Box& yflxbx = surroundingNodes(bxg1,cdir); 
-    Gpu::AsyncFab fy(yflxbx, NUM_VAR); 
-    Gpu::AsyncFab q2(yflxbx, QVAR); 
-    Array4<Real> fyfab = fy.array(), q2fab = q2.array(); 
-    AMREX_FOR_3D(yflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k, qymfab, qypfab, fyfab, q2fab, qauxfab, bcMaskfab, 1); 
-    }); 
-
-//===================== X interface corrections ====================
-    cdir = 0; 
-    Gpu::AsyncFab qm(bgx1, QVAR); 
-    Gpu::AsyncFab qp(bgx1, QVAR);
-    Array4<Real> qmfab = qm.array(), qpfab = qp.array();  
-    //TODO think about box size for these 
-    const Box& xbx = grow(bx, cdir, 1);
-    AMREX_FOR_3D(xbx, i,j,k, {
-        PeleC_transy(i,j,k, qxmfab, qmfab, qxpfab, qpfab, fyfab,
-                 q2fab, quaxfab, srcQfab, hdt, hdtdy); 
-    }); 
-
-//===================== Final Riemann problem X ====================
-    const Box& xfxbx = surroundingNodes(bx, cdir); 
-    Array4<Real> flx1fab = flx1.array(); 
-    AMREX_FOR_3D(xfxbx, i,j,k, {
-        PeleC_cmpflx(tbx, qmfab, qpfab, flx1fab, qauxfab, 0);
-    }); 
-
-//===================== Y interface corrections ====================
-    cdir = 1; 
-    const Box& ybx = grow(bx, cdir, 1);
-    AMREX_FOR_3D(bx, tbx, {
-    PeleC_transx(tbx, qymfab, qmfab, qypfab, qpfab, fxfab,
-                 quaxfab, srcQfab, hdt, hdtdx, area1, vol); 
-    });
-
-//===================== Final Riemann problem Y ====================
-    const Box& yfxbx = surroundingNodes(bx, cdir); 
-    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-        PeleC_cmpflx(tbx, qmfab, qpfab, flx2fab, q2fab, quaxfab 1); 
-    });
-
-//===================== Construct p div{U} =========================
-    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-        PeleC_pdivu(tbx, pdivufab, q1fab, q2fab, vol); 
-    }); 
-}
 
 AMREX_GPU_DEVICE
 inline
@@ -129,40 +16,36 @@ void
 PeleC_slope_x(const int i, const int j, const int k, 
       Array4<Real> &dq, Array4<Real> const& q)
 {
-        auto f = [] (Real dlft, Real drgt) -> Real {
-            Real dcen = 0.5*(dlft+drgt);
-            Real dsgn = std::copysign(1.0, dcen);
-            Real slop = 2.0 * min(std::abs(dlft),std::abs(drgt));
-            Real dlim = (dlft*drgt >= 0.0) ? slop : 0.0;
-            Real d = dsgn * min(dlim,std::abs(dcen));
-            return d;
-        };
+    Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn;
+    Real qm, qp, qi;
+#pragma unroll 
+    for(int n = 0; n < QVAR; ++n){
+        qi = q(i,j,k,n); 
+        qm = q(i-1,j,k,n); 
+        qp = q(i+1,j,k,n); 
 
-        Real dlft = 0.5*(q(i,j,k,QPRES)-q(i-1,j,k,QPRES))/q(i,j,k,QCS) - 0.5*q(i,j,k,QRHO)*(q(i,j,k,QU) - q(i-1,j,k,QU));
-        Real drgt = 0.5*(q(i+1,j,k,QPRES)-q(i,j,k,QPRES))/q(i,j,k,QCS) - 0.5*q(i,j,k,QRHO)*(q(i+1,j,k,QU) - q(i,j,k,QU));
-        Real d0 = f(dlft, drgt);
+        dlft = qm - q(i-2,j,k,n); 
+        drgt = qi - qm; 
+        dcen = 0.5*(dlft+drgt);         
+        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
+        dlim = (dlft*drgt > 0.0) ? 2.0*min(fabs(dlft), fabs(drgt)) : 0.0; 
+        dfm = dsgn*min(dlim, fabs(dcen));
 
-        Real cs2 = q(i,j,k,QCS)*q(i,j,k,QCS);
-        dlft = (q(i,j,k,QRHO)-q(i-1,j,k,QRHO)) - (q(i,j,k,QPRES) - q(i-1,j,k,QPRES))/cs2;
-        drgt = (q(i+1,j,k,QRHO)-q(i,j,k,QRHO)) - (q(i+1,j,k,QPRES) - q(i,j,k,QPRES))/cs2;
-        Real d1 = f(dlft, drgt);
+        dlft = qp - qi; 
+        drgt = q(i+2,j,k,n) - qp; 
+        dcen = 0.5*(dlft+drgt);         
+        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
+        dlim = (dlft*drgt > 0.0) ? 2.0*min(fabs(dlft), fabs(drgt)) : 0.0; 
+        dfp = dsgn*min(dlim, fabs(dcen)); 
 
-        dlft = 0.5*(q(i,j,k,QPRES)-q(i-1,j,k,QPRES))/q(i,j,k,QCS) + 0.5*q(i,j,k,QRHO)*(q(i,j,k,QU) - q(i-1,j,k,QU));
-        drgt = 0.5*(q(i+1,j,k,QPRES)-q(i,j,k,QPRES))/q(i,j,k,QCS) + 0.5*q(i,j,k,QRHO)*(q(i+1,j,k,QU) - q(i,j,k,QU));
-        Real d2 = f(dlft, drgt);
-
-        dlft = q(i,j,k,QV) - q(i-1,j,k,QV);
-        drgt = q(i+1,j,k,QV) - q(i,j,k,QV);
-        Real d3 = f(dlft, drgt);
-
-        dlft = q(i,j,k,QW) - q(i-1,j,k,QW);
-        drgt = q(i+1,j,k,QW) - q(i,j,k,QW);
-        Real d4 = f(dlft, drgt);
-
-        dq(i,j,k,0) = d0;
-        dq(i,j,k,1) = d1;
-        dq(i,j,k,2) = d2;
-        dq(i,j,k,3) = d3;
+        dlft = qi - qm; 
+        drgt = qp - qi; 
+        dcen = 0.5*(dlft+drgt);         
+        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
+        dlim = (dlft*drgt > 0.0) ? 2.0*min(fabs(dlft), fabs(drgt)) : 0.0; 
+        
+        dq(i,j,k,n) = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
+    }
 }
 
 AMREX_GPU_DEVICE
@@ -171,41 +54,36 @@ void
 PeleC_slope_y (const int i, const int j, const int k,
                Array4<Real>& dq, Array4<Real> const& q)
 {
-        auto f = [] (Real dlft, Real drgt) -> Real {
-            Real dcen = 0.5*(dlft+drgt);
-            Real dsgn = std::copysign(1.0, dcen);
-            Real slop = 2.0 * min(std::abs(dlft), std::abs(drgt));
-            Real dlim = (dlft*drgt >= 0.0) ? slop : 0.0;
-            Real d = dsgn * min(dlim, std::abs(dcen));
-            return d;
-        };
+    Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn;
+    Real qm, qp, qj;
+#pragma unroll 
+    for(int n = 0; n < QVAR; ++n){
+        qi = q(i,j,k,n); 
+        qm = q(i,j-1,k,n); 
+        qp = q(i,j+1,k,n); 
 
-        Real dlft = 0.5*(q(i,j,k,QPRES)-q(i,j-1,k,QPRES))/q(i,j,k,QCS) - 0.5*q(i,j,k,QRHO)*(q(i,j,k,QV) - q(i,j-1,k,QV));
-        Real drgt = 0.5*(q(i,j+1,k,QPRES)-q(i,j,k,QPRES))/q(i,j,k,QCS) - 0.5*q(i,j,k,QRHO)*(q(i,j+1,k,QV) - q(i,j,k,QV));
-        Real d0 = f(dlft, drgt);
+        dlft = qm - q(i,j-2,k,n); 
+        drgt = qj - qm; 
+        dcen = 0.5*(dlft+drgt);         
+        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
+        dlim = (dlft*drgt > 0.0) ? 2.0*min(fabs(dlft), fabs(drgt)) : 0.0; 
+        dfm = dsgn*min(dlim, fabs(dcen));
 
-        Real cs2 = q(i,j,k,QCS)*q(i,j,k,QCS);
-        dlft = (q(i,j,k,QRHO)-q(i,j-1,k,QRHO)) - (q(i,j,k,QPRES) - q(i,j-1,k,QPRES))/cs2;
-        drgt = (q(i,j+1,k,QRHO)-q(i,j,k,QRHO)) - (q(i,j+1,k,QPRES) - q(i,j,k,QPRES))/cs2;
-        Real d1 = f(dlft, drgt);
+        dlft = qp - qj; 
+        drgt = q(i,j+2,k,n) - qp; 
+        dcen = 0.5*(dlft+drgt);         
+        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
+        dlim = (dlft*drgt > 0.0) ? 2.0*min(fabs(dlft), fabs(drgt)) : 0.0; 
+        dfp = dsgn*min(dlim, fabs(dcen)); 
 
-        dlft = 0.5*(q(i,j,k,QPRES)-q(i,j-1,k,QPRES))/q(i,j,k,QCS) + 0.5*q(i,j,k,QRHO)*(q(i,j,k,QV) - q(i,j-1,k,QV));
-        drgt = 0.5*(q(i,j+1,k,QPRES)-q(i,j,k,QPRES))/q(i,j,k,QCS) + 0.5*q(i,j,k,QRHO)*(q(i,j+1,k,QV) - q(i,j,k,QV));
-        Real d2 = f(dlft, drgt);
-
-        dlft = q(i,j,k,QU) - q(i,j-1,k,QU);
-        drgt = q(i,j+1,k,QU) - q(i,j,k,QU);
-        Real d3 = f(dlft, drgt);
-
-        dlft = q(i,j,k,QW) - q(i,j-1,k,QW);
-        drgt = q(i,j+1,k,QW) - q(i,j,k,QW);
-        Real d4 = f(dlft, drgt);
-
-        dq(i,j,k,0) = d0;
-        dq(i,j,k,1) = d1;
-        dq(i,j,k,2) = d2;
-        dq(i,j,k,3) = d3;
-        dq(i,j,k,4) = d4;
+        dlft = qj - qm; 
+        drgt = qp - qj; 
+        dcen = 0.5*(dlft+drgt);         
+        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
+        dlim = (dlft*drgt > 0.0) ? 2.0*min(fabs(dlft), fabs(drgt)) : 0.0; 
+        
+        dq(i,j,k,n) = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
+    }
 }
 
 
@@ -1046,6 +924,123 @@ PeleC_pdivu(const int i, const int j, const int k,
                      + (q2(i,j+1,k,GDPRES) + q2(i,j,k,GDPRES))
                      * (q2(i,j+1,k,GDV)*a2(i,j+1,k) - q2(i,j,k,GDV)*a2(i,j,k)))
                      / vol(i,j,k); 
+}
+
+
+//Host function to call gpu hydro functions
+void PeleC_umeth2d(Box const& bx, FArrayBox const &q, 
+           FArrayBox const& qaux,
+           FArrayBox const& srcQ, FArrayBox const& bcMask,
+           FArrayBox &flx1, FArrayBox &flx2, 
+           FArrayBox const& dloga, FArrayBox &q1,
+           FArrayBox &q2, FArrayBox &a1, 
+           FArrayBox &a2, FArrayBox &pdivu, 
+           FArrayBox &vol, Real *dx, Real dt)
+{
+    Real const dtdx  = dt/dx[0]; 
+    Real const hdtdx = 0.5*dtdx; 
+    Real const hdtdy = 0.5*dt/dx[1]; 
+    Real const hdt   = 0.5*dt; 
+
+    const Box& bxg1 = grow(bx, 1); 
+    const Box& bxg2 = grow(bx, 2); 
+    Gpu::AsyncFab slope(bxg2, QVAR);
+    Array4<Real> slfab = slope.array(), qfab  = q.array(); 
+    Array4<Real> qauxfab = qaux.array(), srcQfab = srcQ.array(); 
+    Array4<Real> dlogafab = dloga.array(), area1 = a1.array(), area2 = a2.array();  
+
+//===================== X slopes ===================================
+    int cdir = 0; 
+    const Box& xslpbx = grow(bxg1, cdir, 1); 
+    AMREX_FOR_3D (xslpbx,i,j,k, { 
+        PeleC_slope_x(i,j,k, slfab, qfab);
+    }); 
+
+//==================== X interp ====================================
+//Need to include dlogA.
+    Gpu::AsyncFab qxm(xslpbx, QVAR); 
+    Gpu::AsyncFab qxp(xslpbx, QVAR);
+    Array4<Real> qxmfab = qxm.array(); 
+    Array4<Real> qxpfab = qxp.array(); 
+
+    AMREX_FOR_3D (xslpbx, i,j,k, {
+        PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
+                srcQfab, dlogafab, dx, dt); 
+    });
+
+//===================== X initial fluxes ===========================
+    const Box& xflxbx = surroundingNodes(bxg1,cdir); 
+    Gpu::AsyncFab fx(xflxbx, NUM_VAR);
+    Array4<Real> fxfab = fx.array(); 
+    Array4<Real> q1fab = q1.array();  
+    //May omit bcmask. 
+    AMREX_FOR_3D (xflxbx, i,j,k, {
+        PeleC_cmpflx(i,j,k, qxmfab, qxpfab, fxfab, q1fab, qauxfab,
+                 bcMaskfab, 0);
+    });
+
+//==================== Y slopes ====================================
+    cdir = 1; 
+    const Box& yslpbx = grow(bxg1, cdir, 1); 
+    Gpu::AsyncFab qym(yslpbx, QVAR);
+    Gpu::AsyncFab qyp(yslpbx, QVAR);
+    Array4<Real> qymfab = qym.array(), qypfab = qyp.array();   
+    AMREX_FOR_3D (yslpbx, i,j,k,{
+        PeleC_slope_y(i,j,k, slfab, qfab); 
+    });
+
+//==================== Y interp ====================================
+    AMREX_FOR_3D (yslpbx, i,j,k, {
+        PeleC_plm_y(i,j,k, qymfab, qypfab, slfab, qfab, qauxfab, 
+                srcQfab, dlogafab, dy, dt); 
+    });
+
+//===================== Y initial fluxes ===========================
+    const Box& yflxbx = surroundingNodes(bxg1,cdir); 
+    Gpu::AsyncFab fy(yflxbx, NUM_VAR); 
+    Gpu::AsyncFab q2(yflxbx, QVAR); 
+    Array4<Real> fyfab = fy.array(), q2fab = q2.array(); 
+    AMREX_FOR_3D (yflxbx, i,j,k, {
+        PeleC_cmpflx(i,j,k, qymfab, qypfab, fyfab, q2fab, qauxfab, bcMaskfab, 1); 
+    }); 
+
+//===================== X interface corrections ====================
+    cdir = 0; 
+    Gpu::AsyncFab qm(bgx1, QVAR); 
+    Gpu::AsyncFab qp(bgx1, QVAR);
+    Array4<Real> qmfab = qm.array(), qpfab = qp.array();  
+    //TODO think about box size for these 
+    const Box& xbx = grow(bx, cdir, 1);
+    AMREX_FOR_3D (xbx, i,j,k, {
+        PeleC_transy(i,j,k, qxmfab, qmfab, qxpfab, qpfab, fyfab,
+                 q2fab, qauxfab, srcQfab, hdt, hdtdy); 
+    }); 
+
+//===================== Final Riemann problem X ====================
+    const Box& xfxbx = surroundingNodes(bx, cdir); 
+    Array4<Real> flx1fab = flx1.array(); 
+    AMREX_FOR_3D (xfxbx, i,j,k, {
+        PeleC_cmpflx(tbx, qmfab, qpfab, flx1fab, qauxfab, 0);
+    }); 
+
+//===================== Y interface corrections ====================
+    cdir = 1; 
+    const Box& ybx = grow(bx, cdir, 1);
+    AMREX_FOR_3D (ybx, i, j , k, {
+    PeleC_transx(tbx, qymfab, qmfab, qypfab, qpfab, fxfab,
+                 qauxfab, srcQfab, hdt, hdtdx, area1, vol); 
+    });
+
+//===================== Final Riemann problem Y ====================
+    const Box& yfxbx = surroundingNodes(bx, cdir); 
+    AMREX_FOR_3D (yfxbx, i, j, k, {
+        PeleC_cmpflx(tbx, qmfab, qpfab, flx2fab, q2fab, qauxfab 1); 
+    });
+
+//===================== Construct p div{U} =========================
+    AMREX_FOR_3D (bx, i, j, k, {
+        PeleC_pdivu(tbx, pdivufab, q1fab, q2fab, vol); 
+    }); 
 }
 
 
