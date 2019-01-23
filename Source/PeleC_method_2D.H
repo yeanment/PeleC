@@ -58,7 +58,7 @@ PeleC_slope_y (const int i, const int j, const int k,
     Real qm, qp, qj;
 #pragma unroll 
     for(int n = 0; n < QVAR; ++n){
-        qi = q(i,j,k,n); 
+        qj = q(i,j,k,n); 
         qm = q(i,j-1,k,n); 
         qp = q(i,j+1,k,n); 
 
@@ -96,11 +96,12 @@ PeleC_shock(const int i, const int j, const int k,
          Array4<Real> const &q, Array4<Real> &shk, 
          Real dx, Real dy)
 {
-
-        Real divU; 
-        if(coord_type == 0) divU = 0.5*(q(i+1,j,k,QU) - q(i-1,j,k,QU))/dx + 
+        Real eps = 0.33e0; 
+        Real divU, pjump; 
+//        if(coord_type == 0)
+         divU = 0.5*(q(i+1,j,k,QU) - q(i-1,j,k,QU))/dx + 
                             0.5*(q(i,j+1,k,QV) - q(i,j-1,k,QV))/dy; 
-        else if(coord_type == 1){
+/*        else if(coord_type == 1){
             Real rc, rm, rp; 
             rc = double(i + 0.5e0)*dx;
             rm = double(i - 1.e0)*dx; 
@@ -108,7 +109,7 @@ PeleC_shock(const int i, const int j, const int k,
 
             divU = 0.5e0*(rp*q(i+1,j,k,QU) - rm*q(i-1,j,k,QU))/(rc*dx) + 
                    0.5e0*(q(i,j+1,k,QV) - q(i,j-1,k,QV))/dy; 
-        }
+        } */ 
         Real px_pre, px_post, py_pre, py_post; 
         if (q(i+1,j,k,QPRES) - q(i-1,j,k,QPRES) < 0.0e0){ 
              px_pre  = q(i+1,j,k,QPRES);
@@ -153,7 +154,7 @@ riemann (const Real rl, const Real ul, const Real vl,
  const Real v2r, const Real pr, const Real rer, 
  const Real *spr, EOS &state, EOS &gdnv_state, 
  Real &uflx_rho, Real &uflx_u, 
- Real &uflx_v, Real &uflx_v, Real &uflx_w,
+ Real &uflx_v, Real &uflx_w,
  Real &uflx_eden, Real &uflx_eint,
  Real &qint_iu, Real &qint_iv1, Real &qint_iv2, 
  Real &qint_gdpres, Real &qint_gdgame,
@@ -216,7 +217,7 @@ riemann (const Real rl, const Real ul, const Real vl,
         gdnv_state.p   = po; 
         gdnv_state.eos_rp(); 
         Real reo = gdnv_state.rho*gdnv_state.e;
-        Real co  = gdvn_state.cs; 
+        Real co  = gdnv_state.cs; 
 
         Real drho  = (pstar - po)/(co*co); 
         Real rstar = ro + drho; 
@@ -229,21 +230,23 @@ riemann (const Real rl, const Real ul, const Real vl,
         Real cstar = gdnv_state.cs; 
         Real estar = gdnv_state.rho*gdnv_state.e; 
 
-        Real sgnm = sign(ustar); 
-        Real spoit = co - sgnm*uo; 
-        real spin  = cstar - sgnm*ustar; 
+        Real sgnm = ustar > 0 ? 1.0 : -1.0; 
+        Real spout = co - sgnm*uo; 
+        Real spin  = cstar - sgnm*ustar; 
         Real ushock = 0.5e0*(spin + spout); 
 
         if(pstar - po >= 0.e0){
                 spin = ushock; 
                 spout = ushock; 
         }
+        Real scr; 
         if(spout-spin == 0.e0) scr = small*cav; 
         else scr = spout-spin; 
 
         Real frac = (1.e0 + (spout + spin)/scr)*0.5e0; 
-        fram = max(0.e0, min(1.e0, frac)); 
-
+        frac = max(0.e0, min(1.e0, frac)); 
+        
+        Real vgd, wgd; 
         if(ustar > 0.e0){
                 vgd = vl; 
                 wgd = v2l; 
@@ -263,10 +266,10 @@ riemann (const Real rl, const Real ul, const Real vl,
         qint_iv2 = wgd; 
 
         qint_gdpres = frac*pstar + (1.e0 - frac)*po; 
-        gdvn_state.rho = rgd; 
-        gdvn_state.p = qint_gdpres; 
-        gdvn_state.eos_rp(); 
-        Real regd = gdvn_state.rho*gdnv_state.e; 
+        gdnv_state.rho = rgd; 
+        gdnv_state.p = qint_gdpres; 
+        gdnv_state.eos_rp(); 
+        Real regd = gdnv_state.rho*gdnv_state.e; 
 
         if(spout < 0.e0){
                 rgd = ro; 
@@ -297,7 +300,8 @@ riemann (const Real rl, const Real ul, const Real vl,
                 uflx_u = uflx_rho*qint_iu; 
                 uflx_v = uflx_rho*qint_iv1; 
                 uflx_w = uflx_rho*qint_iv2; 
-                if(coord_type ==0) uflx_u += qint_gdpres; 
+//                if(coord_type ==0) 
+                uflx_u += qint_gdpres; 
         }
         else if(idir == 2){
                 uflx_u = uflx_rho*qint_iv1; 
@@ -321,11 +325,11 @@ inline
 void
 PeleC_cmpflx(const int i, const int j, const int k,
      Array4<Real> const& ql, 
-     Array4<Real> const & qr, Array4<Real>& flux,
+     Array4<Real> const & qr, Array4<Real>& flx,
      Array4<Real> const& q, Array4<Real> const& qa, int idir)
 {
     EOS state, gdnv_state; 
-    Real cav;
+    Real cav, ustar;
     Real spl[NUM_SPECIES];
     Real spr[NUM_SPECIES]; 
 //    Real ul, ur, vl, vr, v2l, v2r, rel, rer; 
@@ -389,12 +393,12 @@ PeleC_cmpflx(const int i, const int j, const int k,
         
 */                 
          riemann(ql(i,j,k,QRHO), ql(i,j,k,QU), ql(i,j,k,QV), ql(i,j,k,QW), 
-                 ql(i,j,k,QPRES), ql(i,j,k,QRIENT), spl,   
+                 ql(i,j,k,QPRES), ql(i,j,k,QREINT), spl,   
                  qr(i,j,k,QRHO), qr(i,j,k,QU), qr(i,j,k,QV), qr(i,j,k,QW), 
-                 qr(i,j,k,QPRES), qr(i,j,k,QRIENT), spr,
+                 qr(i,j,k,QPRES), qr(i,j,k,QREINT), spr,
                  state, gdnv_state, flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
                  flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT),
-                 q(i,j,k,IU), q(i,j,k,IV1), q(i,j,k,IV2), q(i,j,k,GDPRES),
+                 q(i,j,k,IU), q(i,j,k,IV), q(i,j,k,IV2), q(i,j,k,GDPRES),
                  q(i,j,k,GDGAME), ustar, idir, csmall, cav); 
 
         Real flxrho = flx(i,j,k,URHO); 
@@ -416,8 +420,8 @@ void
 PeleC_plm_x(const int i, const int j, const int k,
     Array4<Real> qm, Array4<Real> qp,
     Array4<Real> const& slope,  Array4<Real> const& q,
-    Array4<Real> const& qaux,   Array4<Real> const& srcQ, 
-    Array4<Real> const& dlog,   Real const dx, Real const dt)
+    Array4<Real> const& qa,   Array4<Real> const& srcQ, 
+    Array4<Real> const& dloga, Real const dx, Real const dt)
 {
 
 Real e[3]; 
@@ -470,9 +474,9 @@ Real dtdx = dt/dx;
         qp(i,j,k,QRHO)   = max(small_dens,qp(i,j,k,QRHO));
         qp(i,j,k,QU)     = u_ref + (apright - amright)*cc/rho;
         qp(i,j,k,QV)     = v_ref + azv1rght;
-        qp(i,j,k,QPRES)  = p_ref + (apright + amright)*csq;
+        qp(i,j,k,QPRES)  = p_ref + (apright + amright)*cs;
         qp(i,j,k,QPRES)  = max(qp(i,j,k,QPRES),small_pres);
-        qp(i,j,k,QREINT) = rhoe_ref + (apright + amright)*enth*csq + azeright;
+        qp(i,j,k,QREINT) = rhoe_ref + (apright + amright)*enth*cs + azeright;
 
 // ------------ Construct the left state on the i+1/2 interface 
         
@@ -482,20 +486,20 @@ Real dtdx = dt/dx;
         p_ref = p + 0.5e0*(1.e0 - dtdx*max(e[2],0.e0))*dp;
         rhoe_ref = rhoe + 0.5e0*(1.e0 - dtdx*max(e[2],0.e0))*drhoe;
 
-        apleft = 0.25e0*dtdx*(e[2] - e[2])*(1.e0 + std::copysign(1.e0,e[2]))*alphap;
-        amleft = 0.25e0*dtdx*(e[2] - e[0])*(1.e0 + std::copysign(1.e0,e[0]))*alpham;
+        Real apleft = 0.25e0*dtdx*(e[2] - e[2])*(1.e0 + std::copysign(1.e0,e[2]))*alphap;
+        Real amleft = 0.25e0*dtdx*(e[2] - e[0])*(1.e0 + std::copysign(1.e0,e[0]))*alpham;
 
-        azrleft = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0r;
-        azeleft = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0e;
-        azv1left = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0v;
+        Real azrleft = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0r;
+        Real azeleft = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0e;
+        Real azv1left = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0v;
 
         qm(i+1,j,k,QRHO) = rho_ref + apleft + amleft + azrleft;
         qm(i+1,j,k,QRHO) = max(qm(i+1,j,k,QRHO),small_dens);
         qm(i+1,j,k,QU) = u_ref + (apleft - amleft)*cc/rho;
         qm(i+1,j,k,QV) = v_ref + azv1left;
-        qm(i+1,j,k,QPRES) = p_ref + (apleft + amleft)*csq;
+        qm(i+1,j,k,QPRES) = p_ref + (apleft + amleft)*cs;
         qm(i+1,j,k,QPRES) = max(qm(i+1,j,k,QPRES), small_pres);
-        qm(i+1,j,k,QREINT) = rhoe_ref + (apleft + amleft)*enth*csq + azeleft;
+        qm(i+1,j,k,QREINT) = rhoe_ref + (apleft + amleft)*enth*cs + azeleft;
                         
         if(dloga(i,j,k)!=0){
             Real courn = dtdx*(cc+abs(u)); 
@@ -503,7 +507,7 @@ Real dtdx = dt/dx;
             Real dlogatmp = min(eta, 1.e0)*dloga(i,j,k);
             Real sourcr = -0.5e0*dt*rho*dlogatmp*u; 
             Real sourcp = sourcr*cs; 
-            Real source = courcp*enth; 
+            Real source = sourcp*enth; 
             
             qm(i+1,j,k,QRHO) += sourcr; 
             qm(i+1,j,k,QRHO) = max(qm(i+1,j,k,QRHO), small_dens); 
@@ -511,7 +515,7 @@ Real dtdx = dt/dx;
             qm(i+1,j,k,QREINT) += source; 
             
             qp(i,j,k,QRHO) += sourcr; 
-            qp(i,j,k,QRHO) = Max(qp(i,j,k,QRHO), small_dens); 
+            qp(i,j,k,QRHO) = max(qp(i,j,k,QRHO), small_dens); 
             qp(i,j,k,QPRES) += sourcp; 
             qp(i,j,k,QREINT) += source; 
         }
@@ -524,7 +528,7 @@ Real dtdx = dt/dx;
             Real spzero; 
             spzero = u > 0 ? -1.e0 : u*dtdx; 
             Real acmprght = 0.5e0*(-1.e0 - spzero)*slope(i,j,k,n); 
-            qp(i,j,k,n) = q(i,j,k,n) + acmpright;
+            qp(i,j,k,n) = q(i,j,k,n) + acmprght;
 
             u = q(i-1,j,k,QU); 
             spzero = u > 0 ? u*dtdx : -1.e0; 
@@ -537,14 +541,14 @@ AMREX_GPU_DEVICE
 inline 
 void 
 PeleC_plm_y(const int i, const int j, const int k, 
-    Array4<Real> qmfab, Array4<Real> qpfab,
+    Array4<Real> qm, Array4<Real> qp,
     Array4<Real> const& slope,  Array4<Real> const& q,
-    Array4<Real> const& qaux,   Array4<Real> const& srcQ, 
+    Array4<Real> const& qa,   Array4<Real> const& srcQ, 
     Array4<Real> const& dloga,  Real const dy, Real const dt)
 {
 
-Real e[3]; 
-Real dtdy = dt/dy; 
+        Real e[3]; 
+        Real dtdy = dt/dy; 
 
         Real cc    = qa(i,j,k,QC); 
         Real cs    = cc*cc; 
@@ -593,9 +597,9 @@ Real dtdy = dt/dy;
         qp(i,j,k,QRHO)   = max(small_dens,qp(i,j,k,QRHO));
         qp(i,j,k,QV)     = v_ref + (apright - amright)*cc/rho;
         qp(i,j,k,QU)     = u_ref + azu1rght;
-        qp(i,j,k,QPRES)  = p_ref + (apright + amright)*csq;
+        qp(i,j,k,QPRES)  = p_ref + (apright + amright)*cs;
         qp(i,j,k,QPRES)  = max(qp(i,j,k,QPRES),small_pres);
-        qp(i,j,k,QREINT) = rhoe_ref + (apright + amright)*enth*csq + azeright;
+        qp(i,j,k,QREINT) = rhoe_ref + (apright + amright)*enth*cs + azeright;
 
 // ------------ Construct the "left" state on the j+1/2 interface 
         
@@ -605,28 +609,28 @@ Real dtdy = dt/dy;
         p_ref = p + 0.5e0*(1.e0 - dtdy*max(e[2],0.e0))*dp;
         rhoe_ref = rhoe + 0.5e0*(1.e0 - dtdy*max(e[2],0.e0))*drhoe;
 
-        apleft = 0.25e0*dtdy*(e[2] - e[2])*(1.e0 + std::copysign(1.e0,e[2]))*alphap;
-        amleft = 0.25e0*dtdy*(e[2] - e[0])*(1.e0 + std::copysign(1.e0,e[0]))*alpham;
+        Real apleft = 0.25e0*dtdy*(e[2] - e[2])*(1.e0 + std::copysign(1.e0,e[2]))*alphap;
+        Real amleft = 0.25e0*dtdy*(e[2] - e[0])*(1.e0 + std::copysign(1.e0,e[0]))*alpham;
 
-        azrleft = 0.25e0*dtdy*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0r;
-        azeleft = 0.25e0*dtdy*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0e;
-        azv1left = 0.25e0*dtdy*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0v;
+        Real azrleft = 0.25e0*dtdy*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0r;
+        Real azeleft = 0.25e0*dtdy*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0e;
+        Real azu1left = 0.25e0*dtdy*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0u;
 
         qm(i,j+1,k,QRHO) = rho_ref + apleft + amleft + azrleft;
         qm(i,j+1,k,QRHO) = max(qm(i,j+1,k,QRHO),small_dens);
         qm(i,j+1,k,QV) = v_ref + (apleft - amleft)*cc/rho;
         qm(i,j+1,k,QU) = u_ref + azu1left;
-        qm(i,j+1,k,QPRES) = p_ref + (apleft + amleft)*csq;
+        qm(i,j+1,k,QPRES) = p_ref + (apleft + amleft)*cs;
         qm(i,j+1,k,QPRES) = max(qm(i,j+1,k,QPRES), small_pres);
-        qm(i,j+1,k,QREINT) = rhoe_ref + (apleft + amleft)*enth*csq + azeleft;
+        qm(i,j+1,k,QREINT) = rhoe_ref + (apleft + amleft)*enth*cs + azeleft;
                         
         if(dloga(i,j,k)!=0){
-            Real courn = dtdx*(cc+abs(u)); 
+            Real courn = dtdy*(cc+abs(u)); 
             Real eta = (1.e0-courn)/(cc*dt*abs(dloga(i,j,k))); 
             Real dlogatmp = min(eta, 1.e0)*dloga(i,j,k);
             Real sourcr = -0.5e0*dt*rho*dlogatmp*u; 
             Real sourcp = sourcr*cs; 
-            Real source = courcp*enth; 
+            Real source = sourcp*enth; 
             
             qm(i,j+1,k,QRHO)   += sourcr; 
             qm(i,j+1,k,QRHO)    = max(qm(i+1,j,k,QRHO), small_dens); 
@@ -660,15 +664,16 @@ Real dtdy = dt/dy;
 AMREX_GPU_DEVICE 
 inline 
 void 
-PeleC_transx(const i, const j, const k,
+PeleC_transx(const int i, const int j, const int k,
      Array4<Real> &qm, Array4<Real> &qp, 
      Array4<Real> const& qym, Array4<Real> const& qyp, 
      Array4<Real> const& flxx, Array4<Real> const& srcQ,
-     Array4<Real> const& qint, Real hdt, Real cdtdy) 
+     Array4<Real> const& qa, Array4<Real> const& qint,
+     Real hdt, Real cdtdy) 
 {
 
 EOS state; 
-Real compn, rr, rrnew, compo, rwl; 
+Real compn, rr, rrnew, compo, rwr; 
 Real rrr, rur, rvr, ekinr, rer, rrnewr; 
 Real runewr, rvnewr, renewr, rhoekinr ; 
 Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, renewl; 
@@ -746,10 +751,10 @@ Real flxrho, flxu, flxv, flxe;
         qp(i,j,k,QV)   = rvnewr/rrnewr; 
         rwr           *= rrnewr; 
         rhoekinr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwr*rwr )/rrnewr; 
-        Real pnewr = qxp(i,j,k,QPRES) 
+        Real pnewr = qyp(i,j,k,QPRES) 
                           - hdt*(dAup + pav*dAu*(qa(i,j,k,QGAMC) - 1.e0)); 
         qp(i,j,k,QPRES) = max(pnewr , small_pres); 
-        qp(i,j,k,QREINT) = rernewr - rhokinr + hdt*srce; 
+        qp(i,j,k,QREINT) = renewr - rhoekinr + hdt*srce; 
 //======================= QM ================================================
 
 //Conversion to Conservative 
@@ -763,9 +768,9 @@ Real flxrho, flxu, flxv, flxe;
         rel = qym(i,j+1,k,QREINT) + ekinl; 
 
 // Transverse fluxes 
-        rrnewl = rrl - fluxrho; 
-        runewl = rul - fluxu; 
-        rvnewl = rvl - fluxv; 
+        rrnewl = rrl - flxrho; 
+        runewl = rul - flxu; 
+        rvnewl = rvl - flxv; 
         renewl = rel - flxe; 
         rwl *= rrnewl; 
         
@@ -775,7 +780,7 @@ Real flxrho, flxu, flxv, flxe;
         qm(i,j+1,k,QV  ) = rvnewl/rrnewl; 
         rhoekinl = 0.5e0*(runewl*runewl + rvnewl*rvnewl + rwl*rwl)/rrnewl; 
 
-        qm(i,j+1,k,QRIENT) = renewl - rhoekinl + hdt*srce;               
+        qm(i,j+1,k,QREINT) = renewl - rhoekinl + hdt*srce;               
         Real pnewl = qym(i,j+1,k,QPRES) 
                           - hdt*(dAup + pav*dAu*(qa(i,j,k,QGAMC) - 1.e0)); 
         qm(i,j+1,k,QPRES) = max(pnewr , small_pres); 
@@ -791,11 +796,12 @@ PeleC_transy(const int i, const int j, const int k,
      Array4<Real> &qm, Array4<Real> &qp, 
      Array4<Real> const& qxm, Array4<Real> const& qxp, 
      Array4<Real> const& flxy, Array4<Real> const& srcQ, 
-     Array4<Real> const& qint, Real hdt, Real cdtdy) 
+     Array4<Real> const& qa,  Array4<Real> const& qint,
+     Real hdt, Real cdtdy) 
 {
 
 EOS state; 
-Real compn, rr, rrnew, compo, rwl; 
+Real compn, rr, rrnew, compo, rwr; 
 Real rrr, rur, rvr, ekinr, rer, rrnewr; 
 Real runewr, rvnewr, renewr, rhoekinr; 
 Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, renewl; 
@@ -843,7 +849,7 @@ Real flxrho, flxu, flxv, flxe;
         uav  = 0.5e0*(ugp + ugm); 
         du   = ugp - ugm; 
         geav = 0.5e0*(gegp+gegm); 
-        gde  = gegp - gegm; 
+        dge  = gegp - gegm; 
 
 //========================= QP ===========================================
 
@@ -875,7 +881,7 @@ Real flxrho, flxu, flxv, flxe;
         
         pnewr = qxp(i,j,k,QPRES) - cdtdy*(dup + pav*du*(qa(i,j,k,QGAMC) - 1.e0)); 
         qp(i,j,k,QPRES) = max(pnewr, small_pres); 
-        qp(i,j,k,QREINT) = rernewr - rhoekinr + hdt*srce; 
+        qp(i,j,k,QREINT) = renewr - rhoekinr + hdt*srce; 
 
 
 //======================= QM ================================================
@@ -891,9 +897,9 @@ Real flxrho, flxu, flxv, flxe;
         rel = qxm(i+1,j,k,QREINT) + ekinl; 
 
 // Transverse fluxes 
-        rrnewl = rrl - fluxrho; 
-        runewl = rul - fluxu; 
-        rvnewl = rvl - fluxv; 
+        rrnewl = rrl - flxrho; 
+        runewl = rul - flxu; 
+        rvnewl = rvl - flxv; 
         renewl = rel - flxe; 
         rwl *= rrnewl; 
         
@@ -906,7 +912,7 @@ Real flxrho, flxu, flxv, flxe;
 
         pnewr = qxm(i+1,j,k,QPRES) - cdtdy*(dup + pav*du*(qa(i,j,k,QGAMC) - 1.e0)); 
         qm(i+1,j,k,QPRES) = max(pnewr , small_pres); 
-        qm(i+1,j,k,QREINT) = rernewr - rhoekinr + hdt*srce; 
+        qm(i+1,j,k,QREINT) = renewr - rhoekinr + hdt*srce; 
 }
 
 
@@ -928,7 +934,7 @@ PeleC_pdivu(const int i, const int j, const int k,
 
 
 //Host function to call gpu hydro functions
-void PeleC_umeth2d(Box const& bx, FArrayBox const &q, 
+void PeleC_umeth2D(Box const& bx, FArrayBox const &q, 
            FArrayBox const& qaux,
            FArrayBox const& srcQ, FArrayBox const& bcMask,
            FArrayBox &flx1, FArrayBox &flx2, 
@@ -965,12 +971,12 @@ void PeleC_umeth2d(Box const& bx, FArrayBox const &q,
 
     AMREX_FOR_3D (xslpbx, i,j,k, {
         PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
-                srcQfab, dlogafab, dx, dt); 
+                    srcQfab, dlogafab, dx[0], dt); 
     });
 
 //===================== X initial fluxes ===========================
     const Box& xflxbx = surroundingNodes(bxg1,cdir); 
-    Gpu::AsyncFab fx(xflxbx, NUM_VAR);
+    Gpu::AsyncFab fx(xflxbx, NVAR);
     Array4<Real> fxfab = fx.array(); 
     Array4<Real> q1fab = q1.array();  
     //May omit bcmask. 
@@ -992,13 +998,12 @@ void PeleC_umeth2d(Box const& bx, FArrayBox const &q,
 //==================== Y interp ====================================
     AMREX_FOR_3D (yslpbx, i,j,k, {
         PeleC_plm_y(i,j,k, qymfab, qypfab, slfab, qfab, qauxfab, 
-                srcQfab, dlogafab, dy, dt); 
+                srcQfab, dlogafab, dx[1], dt); 
     });
 
 //===================== Y initial fluxes ===========================
     const Box& yflxbx = surroundingNodes(bxg1,cdir); 
-    Gpu::AsyncFab fy(yflxbx, NUM_VAR); 
-    Gpu::AsyncFab q2(yflxbx, QVAR); 
+    Gpu::AsyncFab fy(yflxbx, NVAR); 
     Array4<Real> fyfab = fy.array(), q2fab = q2.array(); 
     AMREX_FOR_3D (yflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k, qymfab, qypfab, fyfab, q2fab, qauxfab, bcMaskfab, 1); 
@@ -1006,8 +1011,8 @@ void PeleC_umeth2d(Box const& bx, FArrayBox const &q,
 
 //===================== X interface corrections ====================
     cdir = 0; 
-    Gpu::AsyncFab qm(bgx1, QVAR); 
-    Gpu::AsyncFab qp(bgx1, QVAR);
+    Gpu::AsyncFab qm(bxg1, QVAR); 
+    Gpu::AsyncFab qp(bxg1, QVAR);
     Array4<Real> qmfab = qm.array(), qpfab = qp.array();  
     //TODO think about box size for these 
     const Box& xbx = grow(bx, cdir, 1);
@@ -1020,26 +1025,26 @@ void PeleC_umeth2d(Box const& bx, FArrayBox const &q,
     const Box& xfxbx = surroundingNodes(bx, cdir); 
     Array4<Real> flx1fab = flx1.array(); 
     AMREX_FOR_3D (xfxbx, i,j,k, {
-        PeleC_cmpflx(tbx, qmfab, qpfab, flx1fab, qauxfab, 0);
+        PeleC_cmpflx(i,j,k, qmfab, qpfab, flx1fab,q1fab, bcMaskfab, qauxfab, 0);
     }); 
 
 //===================== Y interface corrections ====================
     cdir = 1; 
     const Box& ybx = grow(bx, cdir, 1);
     AMREX_FOR_3D (ybx, i, j , k, {
-    PeleC_transx(tbx, qymfab, qmfab, qypfab, qpfab, fxfab,
+    PeleC_transx(i,j,k, qymfab, qmfab, qypfab, qpfab, fxfab,
                  qauxfab, srcQfab, hdt, hdtdx, area1, vol); 
     });
 
 //===================== Final Riemann problem Y ====================
     const Box& yfxbx = surroundingNodes(bx, cdir); 
     AMREX_FOR_3D (yfxbx, i, j, k, {
-        PeleC_cmpflx(tbx, qmfab, qpfab, flx2fab, q2fab, qauxfab 1); 
+        PeleC_cmpflx(i,j,k, qmfab, qpfab, flx2fab, q2fab, bcMaskfab, qauxfab 1); 
     });
 
 //===================== Construct p div{U} =========================
     AMREX_FOR_3D (bx, i, j, k, {
-        PeleC_pdivu(tbx, pdivufab, q1fab, q2fab, vol); 
+        PeleC_pdivu(i,j,k, pdivufab, q1fab, q2fab, vol); 
     }); 
 }
 
