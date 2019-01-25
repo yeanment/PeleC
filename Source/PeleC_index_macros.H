@@ -29,6 +29,14 @@
 #define QDPDR     3
 #define QDPDE     4
 #define QRSPEC    5
+
+#define GDRHO     0
+#define GDU       1
+#define GDV       2
+#define GDW       3
+#define GDPRES    4
+#define GDGAME    5
+
 #else
 #define URHO      1
 #define UMX       2
@@ -55,6 +63,13 @@
 #define QDPDR     4
 #define QDPDE     5
 #define QRSPEC    6
+
+#define GDRHO     1
+#define GDU       2
+#define GDV       3
+#define GDW       4
+#define GDPRES    5
+#define GDGAME    6
 #endif
 
 
@@ -70,6 +85,7 @@
 #define QVAR      QTHERM + NUM_ADVECT + NUM_SPECIES + NUM_AUXILIARY
 
 #define NQAUX     6
+#define NGDNV     6
 
 #define npassive  NUM_SPECIES + NUM_ADVECT + NUM_AUXILIARY + 3 - BL_SPACEDIM
 

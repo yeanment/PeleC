@@ -139,32 +139,20 @@ void PeleC_srctoprim(amrex::Box const& bx, amrex::FArrayBox const& qfab, amrex::
 }
 
 
-
+//TODO make consup a host function and split the interior up into device functions. 
 AMREX_GPU_DEVICE
 inline 
-void PeleC_consup(amrex::Box const &bx, amrex::FArrayBox const& ufab, amrex::FArrayBox const& qfab, 
-                  amrex::FArrayBox &upfab, 
-                  amrex::FArrayBox const &q1fab, amrex::FArrayBox const &q2fab, 
-                  amrex::FArrayBox &flx1fab , amrex::FArrayBox &flx2fab,
-                  amrex::FArrayBox const &a1fab   , amrex::FArrayBox const &a2fab, 
-                  amrex::FArrayBox const &volfab  , amrex::FArrayBox const &divfab, 
-                  amrex::FArrayBox const &pdivufab, amrex::Real const *dx,
+void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u, 
+                  amrex::Array4<amrex::Real> const& q, amrex::Array4<amrex::Real> &update, 
+                  amrex::Array4<amrex::Real> const &q1, amrex::Array4<amrex::Real> const &q2, 
+                  amrex::Array4<amrex::Real> &flx1 , amrex::Array4<amrex::Real> &flx2,
+                  amrex::Array4<amrex::Real> const &a1   , amrex::Array4<amrex::Real> const &a2, 
+                  amrex::Array4<amrex::Real> const &vol  , amrex::Array4<amrex::Real> const &div, 
+                  amrex::Array4<amrex::Real> const &pdivu, amrex::Real const *dx,
                   amrex::Real const difmag)
 {
     const auto len    = length(bx); 
     const auto lo     = lbound(bx); 
-    const auto u      = ufab.view(lo); 
-    const auto q      = qfab.view(lo); 
-    const auto update = upfab.view(lo); 
-    const auto q1     = q1fab.view(lo); 
-    const auto q2     = q2fab.view(lo); 
-    const auto flx1   = flx1fab.view(lo); 
-    const auto flx2   = flx2fab.view(lo); 
-    const auto a1     = a1fab.view(lo); 
-    const auto a2     = a2fab.view(lo); 
-    const auto vol    = volfab.view(lo); 
-    const auto div    = divfab.view(lo); 
-    const auto pdivu  = pdivufab.view(lo); 
    
     amrex::Real div1; 
     amrex::Real summ; 
@@ -176,6 +164,7 @@ void PeleC_consup(amrex::Box const &bx, amrex::FArrayBox const& ufab, amrex::FAr
         for     (int j = 0; j < len.y; ++j){
             AMREX_PRAGMA_SIMD
             for (int i = 0; i < len.x+1; ++i){
+#pragma unroll
                 for(int n=0; n < NVAR; ++n){
                     if(n == UTEMP){
                         flx1(i,j,k,n) = 0; 
@@ -193,6 +182,7 @@ void PeleC_consup(amrex::Box const &bx, amrex::FArrayBox const& ufab, amrex::FAr
         for     (int j = 0; j < len.y+1; ++j){
             AMREX_PRAGMA_SIMD
             for (int i = 0; i < len.x; ++i){
+#pragma unroll 
                 for(int n=0; n < NVAR; ++n){
                     if(n == UTEMP){
                         flx2(i,j,k,n) = 0; 
@@ -287,34 +277,21 @@ void PeleC_consup(amrex::Box const &bx, amrex::FArrayBox const& ufab, amrex::FAr
 AMREX_GPU_DEVICE
 inline 
 void 
-PeleC_divu(amrex::Box const &bx, amrex::FArrayBox const &qfab, 
-           const amrex::Real *dx, amrex::FArrayBox &divufab)
+PeleC_divu(const int i, const int j, const int k, amrex::Array4<amrex::Real> const &q, 
+           const amrex::Real *dx, amrex::Array4<amrex::Real> &divu)
 {
-    const auto len    = length(bx);
-    const auto lo     = lbound(bx);
-    const auto q      = qfab.view(lo);
-    const auto divu   = divufab.view(lo);
-
-    amrex::Real ux, vy; 
-
-    for         (int k = 0; k < len.z; ++k){
-        for     (int j = 0; j < len.y; ++j){
-            AMREX_PRAGMA_SIMD
-            for (int i = 0; i < len.x; ++i){
-                ux = 0.5e0*(q(i,j,k,QU) - q(i-1,j,k,QU) + 
-                            q(i,j-1,k,QU) - q(i-1,j-1,k,QU))/dx[0]; 
-                vy = 0.5e0*(q(i,j,k,QV) - q(i,j-1,k,QV) + 
-                            q(i-1,j,k,QV) - q(i-1,j-1,k,QV))/dx[1]; 
-                divu(i,j,k) = ux + vy; 
-            }
-        }
-    }
+     amrex::Real ux = 0.5e0*(q(i,j,k,QU) - q(i-1,j,k,QU) + 
+                    q(i,j-1,k,QU) - q(i-1,j-1,k,QU))/dx[0]; 
+     amrex::Real vy = 0.5e0*(q(i,j,k,QV) - q(i,j-1,k,QV) + 
+                    q(i-1,j,k,QV) - q(i-1,j-1,k,QV))/dx[1]; 
+     divu(i,j,k) = ux + vy; 
 }
 
 
 void 
 PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const &bx, 
-            amrex::Real const *dom_lo, amrex::Real const *dom_hi, amrex::FArrayBox const &uin, 
+//            amrex::Real const *dom_lo, amrex::Real const *dom_hi, 
+            amrex::FArrayBox const &uin, 
             amrex::FArrayBox &uout, amrex::FArrayBox const &q, amrex::FArrayBox const &qaux,
             amrex::FArrayBox const &src_q, amrex::FArrayBox const &bcMask,
             const amrex::Real *dx, const amrex::Real dt, amrex::FArrayBox flux[], 
@@ -326,7 +303,7 @@ PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const
 #if (AMREX_SPACEDIM < 3)
             amrex::FArrayBox const &dloga, 
 #endif
-            amrex::FArrayBox const &vol, amrex::Real &cflLoc, const int verbose)
+            amrex::FArrayBox const &vol, amrex::Real cflLoc)
 //TODO assess if we want verbose           
 {
 
@@ -337,12 +314,15 @@ PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const
     //TODO Do Flattening when we go to PPM. 
     
     //Call the method!
-    amrex::FArrayBox q1(bx.surroundingNodes(),QVAR); 
+    const auto q1bx = surroundingNodes(bx,0); 
+    amrex::FArrayBox q1(q1bx,QVAR); 
 #if AMREX_SPACEDIM > 1
-    amrex::FArrayBox q2(bx.surroundingNodes(),QVAR); 
+    const auto q2bx = surroundingNodes(bx,1); 
+    amrex::FArrayBox q2(q2bx,QVAR); 
 #endif
-#if AMREX_SPACEDIME > 2 
-    amrex::FArrayBox q3(bx.surroudingNodes(),QVAR); 
+#if AMREX_SPACEDIM > 2 
+    const auto q3bx = surroundingNodes(bx,2); 
+    amrex::FArrayBox q3(q3bx,QVAR); 
 #endif
 
     amrex::FArrayBox divu(bx, 1); 
@@ -358,17 +338,33 @@ PeleC_umdrv(const int is_finest_llevel, const amrex::Real time, amrex::Box const
                   dloga, q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
 #endif
 
-//PeleC_divu will be a device function
     //divu 
-    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-    PeleC_divu(tbx, q.fab(), dx, div.fab()); 
+    amrex::Array4<amrex::Real> qfab = q.array(), divfab = divu.array(); 
+    AMREX_PARALLEL_FOR_3D (bx, i,j,k, {
+        PeleC_divu(i,j,k, qfab, dx, divfab); 
     });
+
     //consup 
-    AMREX_LAUNCH_DEVICE_LAMBDA(bx, tbx, {
-    PeleC_consup(tbx, uin.fab(), q.fab(), uout.fab(), q1.fab(), q2.fab(),
-                D_DECL(flux[0].fab(), flux[1].fab(), flux[2].fab()),
-                D_DECL(a1.fab(), a2.fab(), a3.fab()), 
-                vol.fab(), div.fab(), pdivu.fab(), dx, difmag); 
+    amrex::Array4<amrex::Real> D_DECL(flxx = flux[0].array(),
+                                      flxy = flux[1].array(), 
+                                      flxz = flux[2].array()); 
+    amrex::Array4<amrex::Real> D_DECL(a1fab = a1.array(), 
+                                      a2fab = a2.array(), 
+                                      a3fab = a3.array()); 
+    amrex::Array4<amrex::Real> D_DECL(q1fab = q1.array(), 
+                                      q2fab = q2.array(), 
+                                      q3fab = q3.array()); 
+    amrex::Array4<amrex::Real> uinfab = uin.array(), uoutfab = uout.array(); 
+    amrex::Array4<amrex::Real> volfab = vol.array(), pdivufab = pdivu.array();
+
+    //TODO have difmag be parm parsed
+    amrex::Real difmag = 0.0;  
+    AMREX_LAUNCH_DEVICE_LAMBDA (bx, tbx , {
+    PeleC_consup(tbx, uinfab, qfab, uoutfab,
+                D_DECL(q1fab, q2fab, q3fab), 
+                D_DECL(flxx, flxy, flxz),
+                D_DECL(a1fab, a2fab, a3fab), 
+                volfab, divfab, pdivufab, dx, difmag); 
     }); 
 
 }

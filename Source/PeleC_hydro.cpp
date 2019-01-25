@@ -178,21 +178,22 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
 
                 PeleC_umdrv
-                (&is_finest_level, &time,
-                 bx, domain_lo, domain_hi,
+                (is_finest_level, time,
+                 bx, 
+//                 domain_lo, domain_hi,
                  *statein, *stateout, q,
-                 qaux, src_q, *source_out,
-                 bcMask, dx, &dt,
+                 qaux, src_q,
+                 bcMask, dx, dt,
                  flux,
         #if (BL_SPACEDIM < 3)
-                 BL_TO_FORTRAN(pradial),
+                 pradial,
         #endif
                  D_DECL(area[0][mfi], area[1][mfi], area[2][mfi]),
         #if (BL_SPACEDIM < 3)
                  dLogArea[0][mfi],
         #endif
                  volume[mfi],
-                 &cflLoc, verbose); 
+                 cflLoc); 
 
 
 /*                pc_umdrv
@@ -227,7 +228,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                  E_added_flux,
                  mass_lost, xmom_lost, ymom_lost, zmom_lost,
                  eden_lost, xang_lost, yang_lost, zang_lost); */
-                courno = std::max(courno,cflLoc);
+
+                 courno = std::max(courno,cflLoc);
 
                     if (do_reflux  && sub_iteration == sub_ncycle-1 )
                     {
@@ -251,9 +253,11 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                         }
                       }
                     }
-            } // MFIter loop
-           } // end of OMP parallel region
+         } // MFIter loop
+    } // end of OMP parallel region
+
     hydro_source.FillBoundary(geom.periodicity());
+
     BL_PROFILE_VAR_STOP(PC_UMDRV);
 
     // Flush Fortran output
