@@ -38,6 +38,11 @@ ifeq ($(USE_PARTICLES), TRUE)
 CEXE_sources += PeleCParticles.cpp
 endif
 
+ifeq ($(DIM), 2)
+CEXE_sources += PeleC_method_2D.cpp
+endif
+
+CEXE_sources += PeleC_K.cpp
 CEXE_sources += PeleC_MOL.cpp
 
 ifeq ($(USE_MASA), TRUE)

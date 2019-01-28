@@ -445,17 +445,17 @@ end subroutine clear_method_params
 
 subroutine init_godunov_indices() bind(C, name="init_godunov_indices")
 #ifndef AMREX_USE_CUDA
-  use meth_params_module, only : GDRHO, GDU, GDV, GDW, GDPRES, GDGAME, NGDNV
+!  use meth_params_module, only : GDRHO, GDU, GDV, GDW, GDPRES, GDGAME, NGDNV
 
   implicit none
 
-  NGDNV = 6
-  GDRHO = 1
-  GDU = 2
-  GDV = 3
-  GDW = 4
-  GDPRES = 5
-  GDGAME = 6
+!  NGDNV = 6
+!  GDRHO = 1
+!  GDU = 2
+!  GDV = 3
+!  GDW = 4
+!  GDPRES = 5
+!  GDGAME = 6
 
   ! sanity check
   if ((QU /= GDU) .or. (QV /= GDV) .or. (QW /= GDW)) then

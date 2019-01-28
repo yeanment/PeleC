@@ -44,8 +44,7 @@ contains
                      dloga, dloga_l1, dloga_l2, dloga_h1, dloga_h2, &
                      domlo, domhi)
 
-    use meth_params_module, only : ppm_type, hybrid_riemann, &
-                                   GDU, GDV, GDPRES, NGDNV
+    use meth_params_module, only : ppm_type, hybrid_riemann
     use trace_module, only : trace
     use trace_ppm_module, only : trace_ppm
     use transverse_module, only : transx, transy
@@ -256,7 +255,7 @@ contains
                      eden_lost,xang_lost,yang_lost,zang_lost, &
                      verbose)
 
-    use meth_params_module, only : difmag, NGDNV, GDPRES, track_grid_losses, &
+    use meth_params_module, only : difmag, track_grid_losses, &
                                    limit_fluxes_on_small_dens
     use prob_params_module, only : coord_type, domlo_level, domhi_level, center
     use amrex_constants_module, only : ZERO, HALF

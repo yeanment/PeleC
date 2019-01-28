@@ -112,6 +112,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                               // First integer is bc_type, second integer about slip/no-slip wall 
         bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
+
         AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx, 
             {
                  PeleC_ctoprim(tbx, *statein_gp, q.fab(), qaux.fab());                  
@@ -177,22 +178,30 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
 
 
+                amrex::IArrayBox *bcMa = &bcMask; 
+#if (AMREX_SPACEDIM < 3)
+                amrex::FArrayBox *prad = &pradial; 
+#endif
+
+
                 PeleC_umdrv
                 (is_finest_level, time,
                  bx, 
 //                 domain_lo, domain_hi,
-                 *statein, *stateout, q,
-                 qaux, src_q,
-                 bcMask, dx, dt,
+                 *statein, *stateout, q.fab(),
+                 qaux.fab(), src_q.fab(),
+                 *bcMa, dx, dt,
                  flux,
         #if (BL_SPACEDIM < 3)
-                 pradial,
+//                 *prad,
         #endif
-                 D_DECL(area[0][mfi], area[1][mfi], area[2][mfi]),
+                 D_DECL(*(area[0].fabPtr(mfi)),
+                        *(area[1].fabPtr(mfi)),
+                        *(area[2].fabPtr(mfi))),
         #if (BL_SPACEDIM < 3)
-                 dLogArea[0][mfi],
+                 *(dLogArea[0].fabPtr(mfi)),
         #endif
-                 volume[mfi],
+                 *(volume.fabPtr(mfi)),
                  cflLoc); 
 
 

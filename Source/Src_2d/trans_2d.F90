@@ -3,7 +3,7 @@ module transverse_module
 
   use amrex_constants_module
   use chemistry_module, only : nspecies
-  use meth_params_module, only : NGDNV, GDGAME, GDPRES, GDU, GDV, small_pres, small_temp, &
+  use meth_params_module, only : small_pres, small_temp, &
                                  qpass_map, upass_map, &
                                  transverse_use_eos, ppm_type, ppm_trace_sources, &
                                  transverse_reset_density, transverse_reset_rhoe, &

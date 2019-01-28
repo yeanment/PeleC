@@ -5,8 +5,7 @@ module riemann_module
   use amrex_error_module
   use riemann_util_module
   use amrex_fort_module, only : amrex_real
-  use meth_params_module, only : GDPRES, GDGAME, &
-                                 NGDNV, small_dens, small_pres, small_temp, &
+  use meth_params_module, only : small_dens, small_pres, small_temp, &
                                  cg_maxiter, cg_tol, cg_blend, &
                                  upass_map, qpass_map, &
                                  riemann_solver, ppm_temp_fix, hybrid_riemann
