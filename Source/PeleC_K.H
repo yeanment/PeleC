@@ -138,10 +138,38 @@ void PeleC_srctoprim(amrex::Box const& bx, amrex::FArrayBox const& qfab, amrex::
     }
 }
 
-
-//TODO make consup a host function and split the interior up into device functions. 
 AMREX_GPU_DEVICE
 inline 
+void 
+PeleC_divu(const int i, const int j, const int k, amrex::Array4<amrex::Real> const &q, 
+           const amrex::Real *dx, amrex::Array4<amrex::Real> &divu)
+{
+     amrex::Real ux = 0.5e0*(q(i,j,k,QU) - q(i-1,j,k,QU) + 
+                    q(i,j-1,k,QU) - q(i-1,j-1,k,QU))/dx[0]; 
+     amrex::Real vy = 0.5e0*(q(i,j,k,QV) - q(i,j-1,k,QV) + 
+                    q(i-1,j,k,QV) - q(i-1,j-1,k,QV))/dx[1]; 
+     divu(i,j,k) = ux + vy; 
+}
+
+//======================================= Host functions ================================
+
+void 
+PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const &bx, 
+//            amrex::Real const *dom_lo, amrex::Real const *dom_hi, 
+            amrex::FArrayBox const &uin, 
+            amrex::FArrayBox &uout, amrex::FArrayBox const &q, amrex::FArrayBox const &qaux,
+            amrex::FArrayBox const &src_q, amrex::IArrayBox const &bcMask,
+            const amrex::Real *dx, const amrex::Real dt, amrex::FArrayBox flux[], 
+#if (AMREX_SPACEDIM < 3) 
+//            amrex::FArrayBox pradial, 
+#endif
+            D_DECL(amrex::FArrayBox const &a1, amrex::FArrayBox const &a2, 
+                   amrex::FArrayBox const &a3), 
+#if (AMREX_SPACEDIM < 3)
+            amrex::FArrayBox const &dloga, 
+#endif
+            amrex::FArrayBox const &vol, amrex::Real cflLoc);
+
 void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u, 
                   amrex::Array4<amrex::Real> const& q, amrex::Array4<amrex::Real> &update, 
                   amrex::Array4<amrex::Real> const &q1, amrex::Array4<amrex::Real> const &q2, 
@@ -149,7 +177,45 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u,
                   amrex::Array4<amrex::Real> const &a1   , amrex::Array4<amrex::Real> const &a2, 
                   amrex::Array4<amrex::Real> const &vol  , amrex::Array4<amrex::Real> const &div, 
                   amrex::Array4<amrex::Real> const &pdivu, amrex::Real const *dx,
-                  amrex::Real const difmag)
+                  amrex::Real const difmag);
+
+
+AMREX_GPU_DEVICE
+inline 
+void PeleC_artif_visc(const int i, const int j, const int k,
+                              amrex::Array4<amrex::Real> &flx, amrex::Array4<amrex::Real> const & div, 
+                              amrex::Array4<amrex::Real> const &u, const int cdir)
+{
+    if(cdir==0){
+#pragma unroll
+        for(int n=0; n < NVAR; ++n){
+            if(n == UTEMP){
+                flx1(i,j,k,n) = 0; 
+            }
+            else{
+                div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
+// Passing in difmag TODO not pass in. 
+                div1 = difmag*std::min(0.0, div1); 
+                flx1(i,j,k,n) = flx1(i,j,k,n) + dx[0]*div1*(u(i,j,k,n) - u(i-1,j,k,n));
+            }
+        }
+    }
+    else if(cdir==1){
+#pragma unroll 
+        for(int n=0; n < NVAR; ++n){
+            if(n == UTEMP){
+                flx2(i,j,k,n) = 0; 
+            }
+            else{
+                div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
+                div1 = difmag*std::min(0.0, div1); 
+                flx2(i,j,k,n) = flx2(i,j,k,n) + dx[1]*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
+            }
+        }
+    }
+}
+
+/*
 {
     const auto len    = length(bx); 
     const auto lo     = lbound(bx); 
@@ -196,7 +262,7 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u,
             }
         }
     }
-
+    amrex::Print() << "======================== Afer artificial viscosity! ==========================" << std::endl; 
 // ===========  Normalize Species Fluxes =============================
 // -------------------------- x-flux ---------------------------------
     for         (int k = 0; k < len.z; ++k){
@@ -234,7 +300,7 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u,
             }
         }
     }                                                 
-
+    amrex::Print() << "================================== After Normalize Species Fluxes ============================ " << std::endl; 
 // ============================ Extensive Fluxes =====================
 // -------------------------- x-flux ---------------------------------
     for         (int k = 0; k < len.z; ++k){
@@ -255,7 +321,7 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u,
             }
         }
     }                                                 
-
+    amrex::Print() << " =============================== After Extensive Fluxes ================================= " << std::endl; 
 // === Fill the update array (this is essenitally the sources fab) ===
 
     for         (int k = 0; k < len.z; ++k){
@@ -263,7 +329,7 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u,
             AMREX_PRAGMA_SIMD
             for (int i = 0; i < len.x; ++i){
 #pragma unroll
-                for(int n = 0; i < NVAR; ++n)
+                for(int n = 0; n < NVAR; ++n)
                     update(i,j,k,n) += (flx1(i,j,k,n) - flx1(i+1,j,k,n)
                                     +   flx2(i,j,k,n) - flx2(i,j+1,k,n))
                                     /   vol(i,j,k);
@@ -271,39 +337,8 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u,
             }
         }
     }   
-
+    amrex::Print() << "=============================== After Update! =============================== " << std::endl; 
 }
-
-AMREX_GPU_DEVICE
-inline 
-void 
-PeleC_divu(const int i, const int j, const int k, amrex::Array4<amrex::Real> const &q, 
-           const amrex::Real *dx, amrex::Array4<amrex::Real> &divu)
-{
-     amrex::Real ux = 0.5e0*(q(i,j,k,QU) - q(i-1,j,k,QU) + 
-                    q(i,j-1,k,QU) - q(i-1,j-1,k,QU))/dx[0]; 
-     amrex::Real vy = 0.5e0*(q(i,j,k,QV) - q(i,j-1,k,QV) + 
-                    q(i-1,j,k,QV) - q(i-1,j-1,k,QV))/dx[1]; 
-     divu(i,j,k) = ux + vy; 
-}
-
-
-void 
-PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const &bx, 
-//            amrex::Real const *dom_lo, amrex::Real const *dom_hi, 
-            amrex::FArrayBox const &uin, 
-            amrex::FArrayBox &uout, amrex::FArrayBox const &q, amrex::FArrayBox const &qaux,
-            amrex::FArrayBox const &src_q, amrex::IArrayBox const &bcMask,
-            const amrex::Real *dx, const amrex::Real dt, amrex::FArrayBox flux[], 
-#if (AMREX_SPACEDIM < 3) 
-//            amrex::FArrayBox pradial, 
-#endif
-            D_DECL(amrex::FArrayBox const &a1, amrex::FArrayBox const &a2, 
-                   amrex::FArrayBox const &a3), 
-#if (AMREX_SPACEDIM < 3)
-            amrex::FArrayBox const &dloga, 
-#endif
-            amrex::FArrayBox const &vol, amrex::Real cflLoc);
-
+*/
 
 #endif 

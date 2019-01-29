@@ -100,7 +100,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    const FArrayBox *statein  = &S[mfi];
 	    FArrayBox *stateout = &(S_new[mfi]);
 	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
-	    FArrayBox *source_out = &(hydro_source[mfi]);
+	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
 
         FArrayBox const* statein_gp = S.fabPtr(mfi);
             
@@ -188,7 +188,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 (is_finest_level, time,
                  bx, 
 //                 domain_lo, domain_hi,
-                 *statein, *stateout, q.fab(),
+                 *statein_gp, *source_out, q.fab(),
                  qaux.fab(), src_q.fab(),
                  *bcMa, dx, dt,
                  flux,

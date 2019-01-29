@@ -631,7 +631,7 @@ PeleC_plm_y(const int i, const int j, const int k,
             amrex::Real source = sourcp*enth; 
             
             qm(i,j+1,k,QRHO)   += sourcr; 
-            qm(i,j+1,k,QRHO)    = amrex::max(qm(i+1,j,k,QRHO), small_dens); 
+            qm(i,j+1,k,QRHO)    = amrex::max(qm(i,j+1,k,QRHO), small_dens); 
             qm(i,j+1,k,QPRES)  += sourcp; 
             qm(i,j+1,k,QREINT) += source; 
             
@@ -694,15 +694,14 @@ PeleC_transx(const int i, const int j, const int k,
             int nqp = EOS::qpass_map(ipass); 
             srcpass = srcQ(i,j,k,nqp); 
             compn = cdtdy*(flxx(i+1,j,k,n) - flxx(i,j,k,n)); 
-//TODO bounds                     
             rr = qyp(i,j,k,QRHO); 
             rrnew = rr - flxrho; 
             compo = rr*qyp(i,j,k,nqp) - compn; 
             qp(i,j,k,nqp) = compo/rrnew + hdt*srcpass;  
     
-            rr = qm(i,j+1,k,QRHO); 
+            rr = qym(i,j+1,k,QRHO); 
             rrnew = rr - flxrho; 
-            compo = rr*qm(i,j+1,k,nqp) - compn; 
+            compo = rr*qym(i,j+1,k,nqp) - compn; 
             qm(i,j+1,k,nqp) = compo/rrnew + hdt*srcpass;                     
         }                
 
@@ -724,8 +723,6 @@ PeleC_transx(const int i, const int j, const int k,
         dge  = gegp-gegm; 
     
 //========================= QP ===========================================
-
-//Again bounds... 
 
 //Convert to conservative 
         rrr = qyp(i,j,k,QRHO); 
@@ -823,7 +820,6 @@ PeleC_transy(const int i, const int j, const int k,
             int nqp = EOS::qpass_map(ipass); 
             srcpass = srcQ(i,j,k,nqp); 
             compn = cdtdy*(flxy(i,j+1,k,n) - flxy(i,j,k,n)); 
-//TODO bounds                     
             rr = qxp(i,j,k,QRHO); 
             rrnew = rr - flxrho; 
             compo = rr*qxp(i,j,k,nqp) - compn; 
@@ -852,8 +848,6 @@ PeleC_transy(const int i, const int j, const int k,
         dge  = gegp - gegm; 
 
 //========================= QP ===========================================
-
-//Again bounds... 
 
 //Convert to conservative 
         rrr = qxp(i,j,k,QRHO); 
