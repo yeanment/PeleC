@@ -267,8 +267,8 @@ PeleC::checkPoint(const std::string& dir,
 
    bool is_checkpoint = true;
 
-   Array<std::string> real_comp_names;
-   Array<std::string>  int_comp_names;
+   Vector<std::string> real_comp_names;
+   Vector<std::string>  int_comp_names;
    real_comp_names.push_back("xvel");
    real_comp_names.push_back("yvel");
 #if (BL_SPACEDIM > 2)
@@ -879,8 +879,8 @@ PeleC::writePlotFile (const std::string& dir,
 
     if (PeleC::theSprayPC())
     {
-       Array<std::string> real_comp_names;
-       Array<std::string>  int_comp_names;
+       Vector<std::string> real_comp_names;
+       Vector<std::string>  int_comp_names;
        real_comp_names.push_back("xvel");
        real_comp_names.push_back("yvel");
 #if (BL_SPACEDIM > 2)

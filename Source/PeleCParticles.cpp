@@ -4,11 +4,11 @@
 #include <string>
 #include "PeleC.H"
 #include "PeleC_F.H"
-#include "Spray_F.H"
+//HK #include "Spray_F.H"
 
 using namespace amrex;
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
 
 #define MAX_NUM_FUELS 1
 
@@ -276,7 +276,7 @@ PeleC::ParticleCheckPoint(const std::string& dir)
     {
       if (theSprayPC() && do_spray_particles==1) {
         theSprayPC()->Checkpoint(dir, chk_spray_particle_file);
-        theSprayPC()->WriteAsciiFile(fname);
+//HK        theSprayPC()->WriteAsciiFile(fname);
       }
     }
 }
@@ -416,8 +416,8 @@ PeleC::particle_redistribute (int lbase, bool init_part)
         //
         // These are usually the BoxArray and DMap from the last regridding.
         //
-        static Array<BoxArray>            ba;
-        static Array<DistributionMapping> dm;
+        static Vector<BoxArray>            ba;
+        static Vector<DistributionMapping> dm;
 
         bool changed = false;
 
