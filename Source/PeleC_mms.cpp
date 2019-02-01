@@ -84,7 +84,7 @@ PeleC::fill_mms_source (Real time, const MultiFab& S, MultiFab& mms_src, int ng)
       // FIXME: Reuse fillpatched data used for adv and diff...
       FillPatchIterator fpi(*this, mms_source, ng, time, State_Type, 0, NUM_STATE);
 
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)                      
 #pragma omp parallel
 #endif
       {

@@ -110,20 +110,46 @@ contains
     double precision :: Uface(3), dudx, dvdx, dwdx, dudy, dvdy, dwdy, dudz, dvdz, dwdz
     double precision :: pface, hface, Xface, Yface
     double precision :: dTdx, dTdy, dTdz, dXdx, dXdy, dXdz, Vd
-    double precision :: Vc(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
-    double precision :: dlnpi, gfaci(lo(1):hi(1)+1)
-    double precision :: dlnpj, gfacj(lo(2):hi(2)+1)
-    double precision :: dlnpk, gfack(lo(3):hi(3)+1)
-    double precision :: X(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec)
-    double precision :: hii(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec)
+    double precision :: Vc(Qlo(1):Qhi(1),Qlo(2):Qhi(2),Qlo(3):Qhi(3))
+    double precision :: dlnpi, gfaci(Qlo(1):Qhi(1))
+    double precision :: dlnpj, gfacj(Qlo(2):Qhi(2))
+    double precision :: dlnpk, gfack(Qlo(3):Qhi(3))
+!    double precision, allocatable, dimension(:,:,:,:) :: molefrac
+    double precision :: molefrac(Qlo(1):Qhi(1),Qlo(2):Qhi(2),Qlo(3):Qhi(3),1:nspec) 
+    double precision :: hii(Qlo(1):Qhi(1),Qlo(2):Qhi(2),Qlo(3):Qhi(3),1:nspec)
 
     double precision, parameter :: twoThirds = 2.d0/3.d0
     double precision :: dxinv(3)
 
+    integer, dimension(3) :: lom, hip
+
+    do k = 1, 3
+       lom(k) = lo(k)-1
+       hip(k) = hi(k)+1
+    enddo
+
+    do k = 1, 3
+       if( (hi(k) - lo(k) ) .le. 0) then
+          write(*,*) 'lo: ', lo, 'hi: ', hi
+       endif
+    enddo
+    
+!    molefrac = 0.0d0
+    !    molefrac(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec) = 0.0d0
+    molefrac(:,:,:,:) = 0.0d0
+    
     dxinv = 1.d0/deltax
 
-    call eos_ytx_vec(Q(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,QFS:QFS+nspec-1),lo,hi,X,lo,hi,lo,hi,nspec)
-    call eos_hi_vec(Q(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,QFS:QFS+nspec-1),lo,hi,Q(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,QTEMP),lo,hi,hii,lo,hi,lo,hi,nspec)
+    do k=Qlo(3),Qhi(3)
+       do j=Qlo(2),Qhi(2)
+          do i=Qlo(1),Qhi(1)+1
+             call eos_ytx2(Q(i,j,k,QFS:QFS+nspec-1), molefrac(i,j,k,1:nspec), nspec)
+          enddo
+       enddo
+    enddo
+             
+!    call eos_ytx_vec(Q(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,QFS:QFS+nspec-1),lo,hi,X,lo,hi,lo,hi,nspec)
+    call eos_hi_vec(Q(:,:,:,QFS:QFS+nspec-1),Qlo,Qhi,Q(:,:,:,QTEMP),Qlo,Qhi,hii,Qlo,Qhi,lo,hi,nspec)
 
     gfaci = dxinv(1)
     if (lo(1).le.dmnlo(1) .and. physbc_lo(1).eq.Inflow) gfaci(dmnlo(1)) = gfaci(dmnlo(1)) * TWO
@@ -173,10 +199,10 @@ contains
              do i=lo(1),hi(1)+1
                 pface = HALF*(Q(i,j,k,QPRES) + Q(i-1,j,k,QPRES))
                 dlnpi = gfaci(i) * (Q(i,j,k,QPRES) - Q(i-1,j,k,QPRES)) / pface
-                Xface = HALF*(X(i,j,k,n) + X(i-1,j,k,n))
+                Xface = HALF*(molefrac(i,j,k,n) + molefrac(i-1,j,k,n))
                 Yface = HALF*(Q(i,j,k,QFS+n-1) + Q(i-1,j,k,QFS+n-1))
                 hface = HALF*(hii(i,j,k,n) + hii(i-1,j,k,n))
-                dXdx = gfaci(i) * (X(i,j,k,n) - X(i-1,j,k,n))
+                dXdx = gfaci(i) * (molefrac(i,j,k,n) - molefrac(i-1,j,k,n))
                 Vd = -Dx(i,j,k,n)*(dXdx + (Xface - Yface) * dlnpi)
                 Vc(i,j,k) = Vc(i,j,k) + Vd
                 fx(i,j,k,UFS+n-1) = Vd
@@ -255,10 +281,10 @@ contains
              do i=lo(1),hi(1)
                 pface = HALF*(Q(i,j,k,QPRES) + Q(i,j-1,k,QPRES))
                 dlnpj = gfacj(j) * (Q(i,j,k,QPRES) - Q(i,j-1,k,QPRES)) / pface
-                Xface = HALF*(X(i,j,k,n) + X(i,j-1,k,n))
+                Xface = HALF*(molefrac(i,j,k,n) + molefrac(i,j-1,k,n))
                 Yface = HALF*(Q(i,j,k,QFS+n-1) + Q(i,j-1,k,QFS+n-1))
                 hface = HALF*(hii(i,j,k,n)   + hii(i,j-1,k,n))
-                dXdy = gfacj(j) * (X(i,j,k,n) - X(i,j-1,k,n))
+                dXdy = gfacj(j) * (molefrac(i,j,k,n) - molefrac(i,j-1,k,n))
                 Vd = -Dy(i,j,k,n)*(dXdy + (Xface - Yface) * dlnpj)
                 Vc(i,j,k) = Vc(i,j,k) + Vd
                 fy(i,j,k,UFS+n-1) = Vd
@@ -337,10 +363,10 @@ contains
              do i=lo(1),hi(1)
                 pface = HALF*(Q(i,j,k,QPRES) + Q(i,j,k-1,QPRES))
                 dlnpk = gfack(k) * (Q(i,j,k,QPRES) - Q(i,j,k-1,QPRES)) / pface
-                Xface = HALF*(X(i,j,k,n) + X(i,j,k-1,n))
+                Xface = HALF*(molefrac(i,j,k,n) + molefrac(i,j,k-1,n))
                 Yface = HALF*(Q(i,j,k,QFS+n-1) + Q(i,j,k-1,QFS+n-1))
                 hface = HALF*(hii(i,j,k,n) + hii(i,j,k-1,n))
-                dXdz = dxinv(3) * (X(i,j,k,n) - X(i,j,k-1,n))
+                dXdz = dxinv(3) * (molefrac(i,j,k,n) - molefrac(i,j,k-1,n))
                 Vd = -Dz(i,j,k,n)*(dXdz + (Xface - Yface) * dlnpk)
                 Vc(i,j,k) = Vc(i,j,k) + Vd
                 fz(i,j,k,UFS+n-1) = Vd
@@ -393,6 +419,8 @@ contains
        end do
     end do
 
+!   deallocate(molefrac)
   end subroutine pc_diffterm
 
 end module diffterm_module
+

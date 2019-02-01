@@ -28,7 +28,7 @@ extern "C" void FORT_GETPLANE(int* filename, int* len, Real* data, int* plane, i
 void
 FORT_GETPLANE (int* filename, int* len, Real* data, int* plane, int* ncomp, int* isswirltype)
 {
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)                        
     int nthreads = omp_get_max_threads();
     int tid = omp_get_thread_num();
 #else
@@ -41,7 +41,8 @@ FORT_GETPLANE (int* filename, int* len, Real* data, int* plane, int* ncomp, int*
     static PArray< Array<long> > offset(nthreads, PArrayManage);
     std::string        flctfile;
 
-#ifdef _OPENMP
+
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)                            
 #pragma omp threadprivate (kmax, first)
 #endif
 

@@ -108,6 +108,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
   int as_fine = (fr_as_fine != nullptr);
 #endif
 
+  // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -120,17 +121,26 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
     FArrayBox fab_drho_as_crse(Box::TheUnitBox(), NUM_STATE);
     IArrayBox fab_rrflag_as_crse(Box::TheUnitBox());
 
-    for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true));
+//     for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true));
+//          mfi.isValid(); ++mfi) {
+    for (MFIter mfi(S, hydro_tile_size); 
          mfi.isValid(); ++mfi) {
+
+
+      
 #ifdef PELE_USE_EB
       Real wt = ParallelDescriptor::second();
 #endif
 
       const Box  vbox = mfi.tilebox();
       int ng = S.nGrow();
+      amrex::Print() << "ng = " << ng << std::endl;
       const Box  gbox = amrex::grow(vbox,ng);
+      amrex::Print () << "vbox... " << vbox << std::endl;
+      amrex::Print () << "gbox... " << gbox << std::endl;      
       const Box  cbox = amrex::grow(vbox,ng-1);
       const Box& dbox = geom.Domain();
+
 
 #ifdef PELE_USE_EB
       const EBFArrayBox& Sfab = static_cast<const EBFArrayBox&>(S[mfi]);
@@ -256,6 +266,10 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       // Compute extensive diffusion fluxes, F.A and (1/Vol).Div(F.A)
       {
         BL_PROFILE("PeleC::pc_diffterm()");
+	if( !Qfab.box().contains(vbox) ){
+	  Print() << "Qfab box: " << Qfab.box() << " vbox: " << vbox << std::endl;
+	}
+      //      BL_ASSERT(Qfab.box().contains(vbox));
         pc_diffterm(cbox.loVect(),
                     cbox.hiVect(),
                     dbox.loVect(),
@@ -358,7 +372,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
           int nComp = BL_SPACEDIM;
           sv_eb_bcval[local_i].setVal(0, cQU, BL_SPACEDIM);
 
-          Box box_to_apply = mfi.growntilebox(2);
+          Box box_to_apply = mfi.growntilebox(2); // why 2?
           {
             BL_PROFILE("PeleC::pc_apply_eb_boundry_visc_flux_stencil call");
             pc_apply_eb_boundry_visc_flux_stencil(BL_TO_FORTRAN_BOX(box_to_apply),
@@ -582,13 +596,14 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 
   // Extrapolate to ghost cells
   if (MOLSrcTerm.nGrow() > 0) {
+    // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
     for (MFIter mfi(MOLSrcTerm, hydro_tile_size); mfi.isValid(); ++mfi) {
       BL_PROFILE("PeleC::diffextrap calls");
-
-      const Box& bx = mfi.validbox();
+      
+      const Box& bx = mfi.validbox(); // RG - This should be tilebox? - NO!. logic in deffextrap needs to know where edges of validbox are. Somewhat pointless as written though. Take hydro_tile_size out and use false instead...
       pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
                     BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], Xmom), &amrex::SpaceDim);
 

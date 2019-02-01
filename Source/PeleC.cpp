@@ -42,7 +42,6 @@ using std::string;
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
 using namespace amrex;
 
 #ifdef USE_MASA
@@ -700,6 +699,7 @@ PeleC::initData ()
     get_new_data(Work_Estimate_Type).setVal(1.0);
   }
 
+  // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -866,6 +866,8 @@ PeleC::estTimeStep (Real dt_old)
     auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
+
+    // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel reduction(min:estdt_hydro)
 #endif
@@ -1407,6 +1409,7 @@ void
 PeleC::enforce_consistent_e (MultiFab& S)
 {
 
+  // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1445,7 +1448,7 @@ PeleC::enforce_min_density (MultiFab& S_old, MultiFab& S_new)
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)            
 #pragma omp parallel reduction(min:dens_change)
 #endif
   for (MFIter mfi(S_new, true); mfi.isValid(); ++mfi) {
@@ -1579,6 +1582,7 @@ PeleC::errorEst (TagBoxArray& tags,
 
     BL_ASSERT(!(mf == 0));
 
+    // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1623,6 +1627,7 @@ PeleC::errorEst (TagBoxArray& tags,
   // Now we'll tag any user-specified zones using the full state array.
   MultiFab& S_new = get_new_data(State_Type);
 
+  // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1787,6 +1792,8 @@ PeleC::reset_internal_energy(MultiFab& S_new, int ng)
     }
 
     // Ensure (rho e) isn't too small or negative
+
+    // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1831,6 +1838,7 @@ PeleC::computeTemp(MultiFab& S, int ng)
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
+  // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1876,6 +1884,8 @@ Real
 PeleC::getCPUTime()
 {
   int numCores = ParallelDescriptor::NProcs();
+
+  // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
   numCores = numCores*omp_get_max_threads();
 #endif
@@ -1903,6 +1913,7 @@ PeleC::build_fine_mask()
   fine_mask.define(bac,dmc,1,0,MFInfo(),FArrayBoxFactory());
   fine_mask.setVal(1.0);
 
+  // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif

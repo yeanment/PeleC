@@ -26,7 +26,7 @@ PeleC::sumDerive (const std::string& name,
 	MultiFab::Multiply(*mf, mask, 0, 0, 1, 0);
     }
 
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)              
 #pragma omp parallel reduction(+:sum)
 #endif
     {
@@ -70,7 +70,7 @@ PeleC::volWgtSum (const std::string& name,
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)                
 #pragma omp parallel reduction(+:sum)
 #endif    
   for (MFIter mfi(*mf,true); mfi.isValid(); ++mfi)
@@ -127,7 +127,7 @@ PeleC::volWgtSumMF (MultiFab* mf, int comp, bool local)
     auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)                
 #pragma omp parallel reduction(+:sum)
 #endif    
     for (MFIter mfi(*mf,true); mfi.isValid(); ++mfi)
@@ -190,7 +190,7 @@ PeleC::volWgtSquaredSum (const std::string& name,
     auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)                    
 #pragma omp parallel reduction(+:sum)
 #endif    
     for (MFIter mfi(*mf,true); mfi.isValid(); ++mfi)

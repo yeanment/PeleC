@@ -53,7 +53,7 @@ PeleC::fill_ext_source (Real time, Real dt,
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)        
 #pragma omp parallel
 #endif
   for (MFIter mfi(ext_src,true); mfi.isValid(); ++mfi)

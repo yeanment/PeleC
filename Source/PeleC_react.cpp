@@ -79,6 +79,7 @@ PeleC::react_state(Real time, Real dt, bool react_init, MultiFab* A_aux)
 	amrex::Abort("Need to implement redistribution of chemistry work");
     }
 
+    // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif

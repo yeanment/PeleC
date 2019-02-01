@@ -94,12 +94,12 @@ PeleC::initialize_eb2_structs() {
 
   for (MFIter mfi(vfrac, false); mfi.isValid(); ++mfi) {
     BaseFab<int>& mfab = ebmask[mfi];
-    const Box tbox = mfi.growntilebox();
+    const Box tbox = mfi.growntilebox(); // TODO: replace with validbox.grow(). Confirm this is the same as mfi.validbox().grow() when no tiling
     const FArrayBox& vfab = vfrac[mfi];
     const EBCellFlagFab& flagfab = flags[mfi];
 
     FabType typ = flagfab.getType(tbox);
-    int iLocal = mfi.LocalIndex();
+    int iLocal = mfi.LocalIndex(); // Confirm this is fab index
 
     if (typ == FabType::regular) {
       mfab.setVal(1);
@@ -147,7 +147,7 @@ PeleC::initialize_eb2_structs() {
 
       sv_eb_bndry_grad_stencil[iLocal].resize(Ncut);
 
-      // Fill in boundary gradient for cut cells in this grown tile
+      // Fill in boundary gradient for cut cells in this grown tile - fab hopefully
       const Real dx = geom.CellSize()[0];
       auto& vec = sv_eb_bndry_geom[iLocal];
       std::sort(vec.begin(), vec.end());
@@ -180,7 +180,7 @@ PeleC::initialize_eb2_structs() {
     }
 
     for (MFIter  mfi(vfrac, false); mfi.isValid(); ++mfi) {
-      const Box tbox = mfi.growntilebox(nGrowTr);
+      const Box tbox = mfi.growntilebox(nGrowTr); // again, make sure this is validbox.grow(nGrowTr) - and assert that nGrowTr is same as NUM_GROW
       const FArrayBox& vfab = vfrac[mfi];
       const auto& flagfab = flags[mfi];
       FabType typ = flagfab.getType(tbox);
@@ -297,12 +297,12 @@ PeleC::set_body_state(MultiFab& S)
   int nc = S.nComp();
   int covered_val = -1;
 
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #pragma omp parallel
 #endif
   for (MFIter mfi(S,true); mfi.isValid(); ++mfi)
   {
-    const Box& vbox = mfi.validbox();
+    const Box& vbox = mfi.tilebox();
     pc_set_body_state(vbox.loVect(), vbox.hiVect(),
                       BL_TO_FORTRAN_ANYD(S[mfi]),
                       BL_TO_FORTRAN_ANYD(ebmask[mfi]),
@@ -321,12 +321,12 @@ PeleC::zero_in_body(MultiFab& S) const
   Vector<Real> zeros(nc,0);
   int covered_val = -1;
 
-#ifdef _OPENMP
+#if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #pragma omp parallel
 #endif
   for (MFIter mfi(S,true); mfi.isValid(); ++mfi)
   {
-    const Box& vbox = mfi.validbox();
+    const Box& vbox = mfi.tilebox();
     pc_set_body_state(vbox.loVect(), vbox.hiVect(),
                       BL_TO_FORTRAN_ANYD(S[mfi]),
                       BL_TO_FORTRAN_ANYD(ebmask[mfi]),
