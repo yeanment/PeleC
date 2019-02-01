@@ -252,6 +252,7 @@ void PeleC_update(const int i, const int j, const int k, amrex::Array4<amrex::Re
                        +   flx2(i,j,k,n) - flx2(i,j+1,k,n))
                        /   vol(i,j,k); 
 
+
     update(i,j,k,UEINT) -= pdivu(i,j,k);     
 }
 

@@ -47,7 +47,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
                   pdivu.fab(), vol, dx, dt); 
 #else
     PeleC_umeth_3D(bx, q,  qaux, src_q, bcMask, flux[0], flux[1], flux[2], 
-                  dloga, q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
+                   q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
 #endif
 
     //divu 
@@ -70,7 +70,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     amrex::Array4<amrex::Real> volfab = vol.array(), pdivufab = pdivu.array();
 
     //TODO have difmag be parm parsed
-    amrex::Real difmag = 0.0; 
+    amrex::Real difmag = 0.005e0; 
 
     PeleC_consup(bx, uinfab, qfab, uoutfab,
                  D_DECL(q1fab, q2fab, q3fab), 

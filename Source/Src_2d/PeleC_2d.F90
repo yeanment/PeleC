@@ -137,7 +137,6 @@ subroutine pc_umdrv(is_finest_level, time, &
      flatn = ZERO
 
   elseif (use_flattening == 1) then
-!Todo GPUize
      call uflaten([lo(1) - ngf, lo(2) - ngf, 0], [hi(1) + ngf, hi(2) + ngf, 0], &
                   q(:,:,QPRES), q(:,:,QU), q(:,:,QV), q(:,:,QW), &
                   flatn, [q_l1, q_l2, 0], [q_h1, q_h2, 0])
@@ -146,7 +145,6 @@ subroutine pc_umdrv(is_finest_level, time, &
   endif
 
   ! Compute hyperbolic fluxes using unsplit Godunov
-!TODO GPUize
   call umeth2d(q,flatn,q_l1,q_l2,q_h1,q_h2, &
                qaux,qa_l1,qa_l2,qa_h1,qa_h2, &
                srcQ,srQ_l1,srQ_l2,srQ_h1,srQ_h2, &
@@ -164,12 +162,10 @@ subroutine pc_umdrv(is_finest_level, time, &
                domlo, domhi)
   ! Compute divergence of velocity field (on surroundingNodes(lo,hi))
   ! this is used for the artifical viscosity
-!TODO GPUize
   call divu(lo,hi,q,q_l1,q_l2,q_h1,q_h2, &
             delta,div,lo(1),lo(2),hi(1)+1,hi(2)+1)
 
   ! Conservative update
-!TODO GPUize 
   call consup(uin,    uin_l1,  uin_l2,  uin_h1,  uin_h2, &
               q, q_l1, q_l2, q_h1, q_h2, &
               uout,  uout_l1, uout_l2, uout_h1, uout_h2, &
@@ -190,7 +186,6 @@ subroutine pc_umdrv(is_finest_level, time, &
      pradial(lo(1):hi(1)+1,lo(2):hi(2)) = q1(lo(1):hi(1)+1,lo(2):hi(2),GDPRES)
   end if
 
-!TODO Git rid of these! 
   deallocate(flatn,div,q1,q2,pdivu)
 
 end subroutine pc_umdrv

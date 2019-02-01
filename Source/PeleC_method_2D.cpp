@@ -16,8 +16,9 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     amrex::Real const hdt   = 0.5*dt; 
 
     const Box& bxg1 = grow(bx, 1); 
-    const Box& bxg2 = grow(bx, 2); 
-    AsyncFab slope(bxg2, QVAR);
+    const Box& bxg2 = grow(bx, 2);
+    const Box& bxg3 = grow(bx, 3);  
+    AsyncFab slope(bxg3, QVAR);
     Array4<Real> slfab = slope.array();
     Array4<Real> qfab  = q.array(); 
     Array4<Real> qauxfab = qaux.array();
@@ -30,8 +31,8 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
 //===================== X slopes ===================================
     int cdir = 0; 
-    const Box& xslpbx = grow(bxg1, cdir, 1);
-
+    const Box& xslpbx = grow(bxg2, cdir, 1);
+     
     AMREX_PARALLEL_FOR_3D (xslpbx,i,j,k, { 
         PeleC_slope_x(i,j,k, slfab, qfab);
     }); 
@@ -39,12 +40,12 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
 //==================== X interp ====================================
     const Box& xflxbx = surroundingNodes(bxg1,cdir); 
-    AsyncFab qxm(xflxbx, QVAR); 
-    AsyncFab qxp(xflxbx, QVAR);
+    AsyncFab qxm(xslpbx, QVAR); 
+    AsyncFab qxp(xslpbx, QVAR);
     amrex::Array4<amrex::Real> qxmfab = qxm.array(); 
     amrex::Array4<amrex::Real> qxpfab = qxp.array(); 
 
-    AMREX_PARALLEL_FOR_3D (bxg1, i,j,k, {
+    AMREX_PARALLEL_FOR_3D (bxg2, i,j,k, {
         PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
                     srcQfab, dlogafab, dx[0], dt); 
     });
@@ -63,9 +64,9 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 //==================== Y slopes ====================================
     cdir = 1; 
     const Box& yflxbx = surroundingNodes(bxg1,cdir); 
-    const Box& yslpbx = grow(bxg1, cdir, 1);
-    AsyncFab qym(yflxbx, QVAR);
-    AsyncFab qyp(yflxbx, QVAR);
+    const Box& yslpbx = grow(bxg2, cdir, 1);
+    AsyncFab qym(yslpbx, QVAR);
+    AsyncFab qyp(yslpbx, QVAR);
     amrex::Array4<amrex::Real> qymfab = qym.array(); 
     amrex::Array4<amrex::Real> qypfab = qyp.array();  
  
@@ -74,8 +75,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     });
 
 //==================== Y interp ====================================
-
-    AMREX_PARALLEL_FOR_3D (bxg1, i,j,k, {
+    AMREX_PARALLEL_FOR_3D (bxg2, i,j,k, {
         PeleC_plm_y(i,j,k, qymfab, qypfab, slfab, qfab, qauxfab, 
                 srcQfab, dlogafab, dx[1], dt); 
     });
@@ -90,12 +90,12 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
 //===================== X interface corrections ====================
     cdir = 0; 
-    AsyncFab qm(bxg1, QVAR); 
-    AsyncFab qp(bxg1, QVAR);
+    AsyncFab qm(bxg2, QVAR); 
+    AsyncFab qp(bxg2, QVAR);
     amrex::Array4<amrex::Real> qmfab = qm.array();
     amrex::Array4<amrex::Real> qpfab = qp.array();  
 
-    AMREX_PARALLEL_FOR_3D (bx, i,j,k, {
+    AMREX_PARALLEL_FOR_3D (bxg1, i,j,k, {
         PeleC_transy(i,j,k, qmfab, qpfab, qxmfab, qxpfab, fyfab,
                      srcQfab, qauxfab, q2fab, area2, volfab, hdt, hdtdy); 
     }); 
@@ -109,7 +109,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
 //===================== Y interface corrections ====================
     cdir = 1; 
-    AMREX_PARALLEL_FOR_3D (bx, i, j , k, {
+    AMREX_PARALLEL_FOR_3D (bxg1, i, j , k, {
     PeleC_transx(i,j,k, qmfab, qpfab, qymfab, qypfab, fxfab,
                  srcQfab, qauxfab, q1fab, area1, volfab, hdt, hdtdx); 
     });
