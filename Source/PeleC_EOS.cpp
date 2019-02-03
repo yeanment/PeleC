@@ -21,7 +21,7 @@ EOS::EOS()
 EOS::~EOS()
 {}
 
-AMREX_GPU_DEVICE 
+AMREX_GPU_HOST_DEVICE 
 void EOS::eos_bottom()
 {
     CKCVMS(&T, &iwrk, &rwrk, cvi);
@@ -43,7 +43,7 @@ void EOS::eos_bottom()
 }
 
 
-AMREX_GPU_DEVICE
+AMREX_GPU_HOST_DEVICE
 void EOS::eos_wb()
 {
     amrex::Real imw[NUM_SPECIES]; 
@@ -55,7 +55,7 @@ void EOS::eos_wb()
 }
 
 
-AMREX_GPU_DEVICE
+AMREX_GPU_HOST_DEVICE
 void EOS::eos_re()
 {
     int lierr=0; 
@@ -68,7 +68,7 @@ void EOS::eos_re()
     eos_bottom(); 
 }
 
-AMREX_GPU_DEVICE
+AMREX_GPU_HOST_DEVICE
 void EOS::eos_rp()
 {
     eos_wb(); 
@@ -81,7 +81,7 @@ void EOS::eos_rp()
 }
 
 /* THESE ASSUME THE ONLY PASSIVE VARS ARE THE SPECIES AND NON-USED VELOCITIES. TODO add additional passive vars*/
-AMREX_GPU_DEVICE
+AMREX_GPU_HOST_DEVICE
 int EOS::upass_map(const int i)
 {
 /*UMY and UMZ are passive*/
@@ -101,7 +101,7 @@ int EOS::upass_map(const int i)
 #endif
 }
 
-AMREX_GPU_DEVICE 
+AMREX_GPU_HOST_DEVICE 
 int EOS::qpass_map(const int i)
 {
 /*V and W are passive*/
