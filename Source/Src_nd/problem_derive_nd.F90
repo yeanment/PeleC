@@ -16,7 +16,7 @@ contains
     ! solution and the MMS solution
     !
 
-    use bl_constants_module
+    use amrex_constants_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -55,7 +55,7 @@ contains
     end do
 
 #else
-    call bl_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
+    call amrex_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
 #endif
 
   end subroutine pc_derrhommserror
@@ -70,7 +70,7 @@ contains
     ! solution and the MMS solution
     !
 
-    use bl_constants_module
+    use amrex_constants_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -109,7 +109,7 @@ contains
        end do
     end do
 #else
-    call bl_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
+    call amrex_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
 #endif
 
   end subroutine pc_derummserror
@@ -123,7 +123,7 @@ contains
     ! solution and the MMS solution
     !
 
-    use bl_constants_module
+    use amrex_constants_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -162,7 +162,7 @@ contains
        end do
     end do
 #else
-    call bl_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
+    call amrex_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
 #endif
 
   end subroutine pc_dervmmserror
@@ -176,7 +176,7 @@ contains
     ! solution and the MMS solution
     !
 
-    use bl_constants_module
+    use amrex_constants_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -215,7 +215,7 @@ contains
        end do
     end do
 #else
-    call bl_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
+    call amrex_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
 #endif
 
   end subroutine pc_derwmmserror
@@ -229,7 +229,7 @@ contains
     ! solution and the MMS solution
     !
 
-    use bl_constants_module
+    use amrex_constants_module
     use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
     use eos_module
 #ifdef USE_MASA
@@ -279,7 +279,7 @@ contains
        end do
     end do
 #else
-    call bl_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
+    call amrex_error('MASA is not turned on. Turn on with USE_MASA=TRUE.')
 #endif
 
     call destroy(eos_state)

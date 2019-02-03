@@ -251,7 +251,7 @@ contains
        bind(C, name="pc_move_transport_coeffs_to_ec")
 
     use prob_params_module, only : physbc_lo, physbc_hi, Inflow
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 

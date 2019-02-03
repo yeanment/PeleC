@@ -346,7 +346,7 @@ subroutine swap_outflow_data() bind(C, name="swap_outflow_data")
 
   if (size(outflow_data_old,dim=2) .ne. size(outflow_data_new,dim=2)) then
      print *,'size of old and new dont match in swap_outflow_data '
-     call bl_error("Error:: PeleC_nd.f90 :: swap_outflow_data")
+     call amrex_error("Error:: PeleC_nd.f90 :: swap_outflow_data")
   end if
 
   outflow_data_old(1:nc,1:np) = outflow_data_new(1:nc,1:np)
@@ -370,10 +370,10 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
 
   use meth_params_module
   use network, only : nspec, naux
-  use parallel, only : parallel_initialize
+!HK  use parallel, only : parallel_initialize
   use eos_module, only : eos_init, eos_get_small_dens, eos_get_small_temp
   use transport_module, only : transport_init
-  use bl_constants_module, only : ZERO, ONE
+  use amrex_constants_module, only : ZERO, ONE
 
   implicit none
 
@@ -607,7 +607,7 @@ subroutine init_godunov_indices() bind(C, name="init_godunov_indices")
 
   ! sanity check
   if ((QU /= GDU) .or. (QV /= GDV) .or. (QW /= GDW)) then
-     call bl_error("ERROR: velocity components for godunov and primitive state are not aligned")
+     call amrex_error("ERROR: velocity components for godunov and primitive state are not aligned")
   endif
 
 end subroutine init_godunov_indices
@@ -625,7 +625,7 @@ subroutine set_problem_params(dm,physbc_lo_in,physbc_hi_in,&
 
   ! Passing data from C++ into f90
 
-  use bl_constants_module, only: ZERO
+  use amrex_constants_module, only: ZERO
   use prob_params_module
   implicit none
 
@@ -819,7 +819,7 @@ subroutine get_tagging_params(name, namlen) &
 
   ! create the filename
   if (namlen > maxlen) then
-     call bl_error('probin file name too long')
+     call amrex_error('probin file name too long')
   endif
 
   do i = 1, namlen
@@ -837,7 +837,7 @@ subroutine get_tagging_params(name, namlen) &
 
   else if (status > 0) then
      ! some problem in the namelist
-     call bl_error('ERROR: problem in the tagging namelist')
+     call amrex_error('ERROR: problem in the tagging namelist')
   endif
 
   close (unit=un)

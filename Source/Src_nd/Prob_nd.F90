@@ -34,7 +34,7 @@ subroutine pc_initdata(level,time,lo,hi,nvar, &
                        state,state_lo,state_hi, &
                        dx,xlo,xhi)
 
-  use bl_error_module
+  use amrex_error_module
 
   implicit none
 
@@ -49,7 +49,7 @@ subroutine pc_initdata(level,time,lo,hi,nvar, &
   ! Remove this call if you're defining your own problem; it is here to 
   ! ensure that you cannot run PeleC if you haven't got your own copy of this function.
 
-  call bl_error("pc_initdata has not been defined for this problem!")
+  call amrex_error("pc_initdata has not been defined for this problem!")
 
 end subroutine pc_initdata
 

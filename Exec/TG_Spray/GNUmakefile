@@ -10,6 +10,8 @@ COMP	   = gcc
 USE_MPI    = FALSE
 USE_OMP    = FALSE
 
+USE_CUDA   = TRUE
+
 # Include particles (currently spray) capability/sources
 USE_PARTICLES = TRUE
 

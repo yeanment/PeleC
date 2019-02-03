@@ -12,7 +12,7 @@ contains
     use amrinfo_module, only: amr_level
     use prob_params_module, only: problo, probhi, physbc_lo, physbc_hi, dx_level, &
                                   domlo_level, domhi_level, Interior
-    use bl_constants_module, only: ZERO, HALF
+    use amrex_constants_module, only: ZERO, HALF
 
     ! Input arguments
     integer :: i, j, k
@@ -81,7 +81,7 @@ contains
        bind(C, name="pc_enforce_consistent_e")
 
     use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -125,7 +125,7 @@ contains
     use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UFS, UFX, &
          UTEMP, small_temp, allow_negative_energy, allow_small_energy, &
          dual_energy_eta2, dual_energy_update_E_from_e
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -336,7 +336,7 @@ contains
     use eos_module
     use meth_params_module, only : NVAR, URHO, UEDEN, UEINT, UTEMP, &
          UFS, UFX, allow_negative_energy, dual_energy_update_E_from_e
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -362,7 +362,7 @@ contains
                 print *,'>>> Error: PeleC_util.F90::compute_temp ',i,j,k
                 print *,'>>> ... density out of bounds',state(i,j,k,URHO)
                 print *,'    '
-                call bl_error("Error:: compute_temp_nd.f90")
+                call amrex_error("Error:: compute_temp_nd.f90")
              end if
 
              if (allow_negative_energy .eq. 0 .and. state(i,j,k,UEINT) <= state(i,j,k,URHO)*mine) then
@@ -370,7 +370,7 @@ contains
                 print *,'>>> Warning: PeleC_util.F90::compute_temp ',i,j,k
                 print *,'>>> ... (rho e) out of bounds',state(i,j,k,UEINT)
                 print *,'   '
-                call bl_error("Error:: compute_temp_nd.f90")
+                call amrex_error("Error:: compute_temp_nd.f90")
              end if
 
           enddo
@@ -407,7 +407,7 @@ contains
 
     use network           , only : nspec
     use meth_params_module, only : NVAR, URHO, UFS
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -428,7 +428,7 @@ contains
              if (abs(state(i,j,k,URHO)-spec_sum) .gt. 1.d-8 * state(i,j,k,URHO)) then
 
                 print *,'Sum of (rho X)_i vs rho at (i,j,k): ',i,j,k,spec_sum,state(i,j,k,URHO)
-                call bl_error("Error:: Failed check of initial species summing to 1")
+                call amrex_error("Error:: Failed check of initial species summing to 1")
 
              end if
 
@@ -469,7 +469,7 @@ contains
   function area(i, j, k, dir)
 
     use amrinfo_module, only: amr_level
-    use bl_constants_module, only: ZERO, ONE, TWO, M_PI, FOUR
+    use amrex_constants_module, only: ZERO, ONE, TWO, M_PI, FOUR
     use prob_params_module, only: dim, coord_type, dx_level
 
     implicit none
@@ -555,7 +555,7 @@ contains
 
        else
 
-          call bl_error("Cylindrical coordinates only supported in 2D.")
+          call amrex_error("Cylindrical coordinates only supported in 2D.")
 
        endif
 
@@ -580,7 +580,7 @@ contains
 
        else
 
-          call bl_error("Spherical coordinates only supported in 1D.")
+          call amrex_error("Spherical coordinates only supported in 1D.")
 
        endif
 
@@ -598,7 +598,7 @@ contains
   function volume(i, j, k)
 
     use amrinfo_module, only: amr_level
-    use bl_constants_module, only: ZERO, HALF, FOUR3RD, TWO, M_PI
+    use amrex_constants_module, only: ZERO, HALF, FOUR3RD, TWO, M_PI
     use prob_params_module, only: dim, coord_type, dx_level
 
     implicit none
@@ -644,7 +644,7 @@ contains
 
        else
 
-          call bl_error("Cylindrical coordinates only supported in 2D.")
+          call amrex_error("Cylindrical coordinates only supported in 2D.")
 
        endif
 
@@ -663,7 +663,7 @@ contains
 
        else
 
-          call bl_error("Spherical coordinates only supported in 1D.")
+          call amrex_error("Spherical coordinates only supported in 1D.")
 
        endif
 
@@ -681,7 +681,7 @@ contains
 
     use meth_params_module, only : URHO, UMX, UMY, UMZ
     use prob_params_module, only : center, dim
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -702,7 +702,7 @@ contains
     double precision :: x,y,z,r
     double precision :: x_mom,y_mom,z_mom,radial_mom
 
-    if (dim .eq. 1) call bl_error("Error: cannot do pc_compute_avgstate in 1D.")
+    if (dim .eq. 1) call amrex_error("Error: cannot do pc_compute_avgstate in 1D.")
 
     !
     ! Do not OMP this.
@@ -719,7 +719,7 @@ contains
                 print *,'COMPUTE_AVGSTATE: INDEX TOO BIG ',index,' > ',numpts_1d-1
                 print *,'AT (i,j,k) ',i,j,k
                 print *,'R / DR ',r,dr
-                call bl_error("Error:: PeleC_util.F90 :: pc_compute_avgstate")
+                call amrex_error("Error:: PeleC_util.F90 :: pc_compute_avgstate")
              end if
              radial_state(URHO,index) = radial_state(URHO,index) &
                                       + vol(i,j,k)*state(i,j,k,URHO)

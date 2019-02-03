@@ -1,6 +1,6 @@
 module grad_utils_module
 
-  use amrex_fort_module, only : amrex_real, dim=>bl_spacedim
+  use amrex_fort_module, only : amrex_real, dim=>amrex_spacedim
 
 #ifdef PELEC_USE_EB
   use amrex_ebcellflag_module, only : get_neighbor_cells
@@ -26,7 +26,7 @@ contains
 
     use prob_params_module, only : physbc_lo, physbc_hi, Inflow
     use meth_params_module, only : QVAR, QU, QV
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -87,7 +87,7 @@ contains
 
     use prob_params_module, only : physbc_lo, physbc_hi, Inflow
     use meth_params_module, only : QVAR, QU, QV
-    use bl_constants_module
+    use amrex_constants_module
     use amrex_ebcellflag_module, only : get_neighbor_cells
 
     implicit none

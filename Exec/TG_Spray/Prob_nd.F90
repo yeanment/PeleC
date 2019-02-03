@@ -11,7 +11,7 @@ contains
   subroutine amrex_probinit (init,name,namlen,problo,probhi) bind(C, name = "amrex_probinit")
 
     use probdata_module
-    use bl_error_module
+    use amrex_error_module
     implicit none
 
     integer :: init, namlen
@@ -27,7 +27,7 @@ contains
     character probin*(maxlen)
 
     if (namlen .gt. maxlen) then
-       call bl_error('probin file name too long')
+       call amrex_error('probin file name too long')
     end if
 
     do i = 1, namlen
@@ -82,13 +82,13 @@ contains
        state,state_lo,state_hi, &
        delta,xlo,xhi) bind(C, name="pc_initdata")
 
-    use parallel
+!HK    use parallel
     use probdata_module
     use network, only: nspec, naux, molec_wt
     use eos_type_module
     use meth_params_module, only : URHO, UMX, UMY, UMZ, &
          UEDEN, UEINT, UFS, UTEMP, small_temp
-    use bl_constants_module, only: ZERO, HALF, M_PI
+    use amrex_constants_module, only: ZERO, HALF, M_PI
     use extern_probin_module, only: const_viscosity, const_bulk_viscosity, const_conductivity, const_diffusivity
     use eos_module
 

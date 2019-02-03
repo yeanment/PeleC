@@ -1,7 +1,7 @@
 module flatten_module
 
-  use amrex_mempool_module, only : bl_allocate, bl_deallocate
-  use bl_constants_module, only : ZERO
+  use amrex_mempool_module, only : amrex_allocate, amrex_deallocate
+  use amrex_constants_module, only : ZERO
 
   implicit none
 
@@ -18,7 +18,7 @@ contains
 
     use meth_params_module, only : small_pres
     use prob_params_module, only : dg
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -41,9 +41,9 @@ contains
     ! Knobs for detection of strong shock
     double precision, parameter :: shktst = 0.33d0, zcut1 = 0.75d0, zcut2 = 0.85d0, dzcut = ONE/(zcut2-zcut1)
 
-    call bl_allocate(dp ,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
-    call bl_allocate(z  ,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
-    call bl_allocate(chi,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+    call amrex_allocate(dp ,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+    call amrex_allocate(z  ,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+    call amrex_allocate(chi,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
 
     ! x-direction flattening coef
     do k = lo(3),hi(3)
@@ -152,9 +152,9 @@ contains
        enddo
     enddo
 
-    call bl_deallocate(dp )
-    call bl_deallocate(z  )
-    call bl_deallocate(chi)
+    call amrex_deallocate(dp )
+    call amrex_deallocate(z  )
+    call amrex_deallocate(chi)
 
   end subroutine uflaten
 

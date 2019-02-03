@@ -13,7 +13,7 @@ contains
        bind(c,name='update_particles')
 
     use iso_c_binding
-    use bl_error_module
+    use amrex_error_module
     use network
     use amrex_fort_module, only : amrex_real
     use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, UFS
@@ -93,7 +93,7 @@ contains
           print *,'PARTICLE ID ', particles(n)%id,' REACHING OUT OF BOUNDS AT (I,J) = ',i,j
           print *,'Array bounds are ', state_lo(:), state_hi(:)
           print *,'(x,y) are ', particles(n)%pos(1), particles(n)%pos(2)
-          call bl_error('Aborting in update_particles')
+          call amrex_error('Aborting in update_particles')
        !else
        !   print *,'PARTICLE ID ', particles(n)%id,' at grid point: ',i,j
        !   print *,'Array bounds are ', state_lo(:), state_hi(:)

@@ -17,7 +17,7 @@ contains
                                      bind(C, name="enforce_minimum_density")
 
     use meth_params_module, only : NVAR, URHO, UEINT, UEDEN, small_dens, density_reset_method
-    use bl_constants_module, only : ZERO
+    use amrex_constants_module, only : ZERO
 
     implicit none
 
@@ -69,7 +69,7 @@ contains
 
                 print *,'DENSITY EXACTLY ZERO AT CELL ',i,j,k
                 print *,'  in grid ',lo(1),lo(2),lo(3),hi(1),hi(2),hi(3)
-                call bl_error("Error:: advection_util_nd.f90 :: enforce_minimum_density")
+                call amrex_error("Error:: advection_util_nd.f90 :: enforce_minimum_density")
 
              else if (uout(i,j,k,URHO) < small_dens) then
 
@@ -175,7 +175,7 @@ contains
 
                 else
 
-                   call bl_error("Unknown density_reset_method in subroutine enforce_minimum_density.")
+                   call amrex_error("Unknown density_reset_method in subroutine enforce_minimum_density.")
 
                 endif
 
@@ -201,7 +201,7 @@ contains
 
   subroutine reset_to_small_state(old_state, new_state, idx, lo, hi, verbose)
 
-    use bl_constants_module, only: ZERO
+    use amrex_constants_module, only: ZERO
     use network, only: nspec, naux
     use meth_params_module, only: NVAR, URHO, UMX, UMY, UMZ, UTEMP, UEINT, UEDEN, UFS, small_temp, small_dens, npassive, upass_map
     use eos_type_module
@@ -265,7 +265,7 @@ contains
 
   subroutine reset_to_zone_state(old_state, new_state, input_state, idx, lo, hi, verbose)
 
-    use bl_constants_module, only: ZERO
+    use amrex_constants_module, only: ZERO
     use meth_params_module, only: NVAR, URHO
 
     implicit none
@@ -302,7 +302,7 @@ contains
                          lo, hi, dt, dx, courno) &
                          bind(C, name = "compute_cfl")
 
-    use bl_constants_module, only: ZERO, ONE
+    use amrex_constants_module, only: ZERO, ONE
     use meth_params_module, only: QVAR, QRHO, QU, QV, QW, QC, NQAUX
     use prob_params_module, only: dim
 
@@ -353,7 +353,7 @@ contains
 
              if (courx .gt. ONE) then
                 print *,'   '
-                call bl_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
+                call amrex_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
                 print *,'>>> ... (u+c) * dt / dx > 1 ', courx
                 print *,'>>> ... at cell (i,j,k)   : ', i, j, k
                 print *,'>>> ... u, c                ', q(i,j,k,QU), qaux(i,j,k,QC)
@@ -362,7 +362,7 @@ contains
 
              if (coury .gt. ONE) then
                 print *,'   '
-                call bl_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
+                call amrex_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
                 print *,'>>> ... (v+c) * dt / dx > 1 ', coury
                 print *,'>>> ... at cell (i,j,k)   : ', i,j,k
                 print *,'>>> ... v, c                ', q(i,j,k,QV), qaux(i,j,k,QC)
@@ -371,7 +371,7 @@ contains
 
              if (courz .gt. ONE) then
                 print *,'   '
-                call bl_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
+                call amrex_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
                 print *,'>>> ... (w+c) * dt / dx > 1 ', courz
                 print *,'>>> ... at cell (i,j,k)   : ', i, j, k
                 print *,'>>> ... w, c                ', q(i,j,k,QW), qaux(i,j,k,QC)
@@ -401,7 +401,7 @@ contains
                                    QREINT, QPRES, QTEMP, QGAME, QFS, QFX, &
                                    QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, &
                                    npassive, upass_map, qpass_map
-    use bl_constants_module, only: ZERO, HALF, ONE
+    use amrex_constants_module, only: ZERO, HALF, ONE
     use pelec_util_module, only: position
     implicit none
 
@@ -504,7 +504,7 @@ contains
                                    QVAR, QRHO, QU, QV, QW, &
                                    QREINT, QPRES, QDPDR, QDPDE, NQAUX, &
                                    npassive, upass_map, qpass_map
-    use bl_constants_module, only: ZERO, HALF, ONE
+    use amrex_constants_module, only: ZERO, HALF, ONE
     use pelec_util_module, only: position
 
     implicit none
@@ -573,7 +573,7 @@ contains
 
   function dflux(u, q, dir, idx, include_pressure) result(flux)
 
-    use bl_constants_module, only: ZERO
+    use amrex_constants_module, only: ZERO
     use meth_params_module, only: NVAR, URHO, UMX, UMZ, UEDEN, UEINT, &
                                   QVAR, QU, QPRES, &
                                   npassive, upass_map
@@ -641,12 +641,12 @@ contains
 #endif
                                               lo,hi,dt,dx)
 
-    use bl_constants_module, only: ZERO, HALF, ONE, TWO
+    use amrex_constants_module, only: ZERO, HALF, ONE, TWO
     use meth_params_module, only: NVAR, QVAR, URHO, UEINT, UFS, UFX, &
                                   small_dens, small_temp, cfl, &
                                   allow_small_energy, allow_negative_energy
     use prob_params_module, only: dim, coord_type, dg
-    use amrex_mempool_module, only: bl_allocate, bl_deallocate
+    use amrex_mempool_module, only: amrex_allocate, amrex_deallocate
     use network, only: nspec, naux
     use eos_type_module
     use eos_module, only: eos_rt
@@ -715,7 +715,7 @@ contains
 
     call build(eos_state)
 
-    call bl_allocate(small_rhoe,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+    call amrex_allocate(small_rhoe,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
 
     do k = lo(3) - 1 * dg(3), hi(3) + 1 * dg(3)
        do j = lo(2) - 1 * dg(2), hi(2) + 1 * dg(2)
@@ -753,10 +753,10 @@ contains
 
     ! We implement the flux limiter on a dimension-by-dimension basis, starting with the x-direction.
 
-    call bl_allocate(thetap_dens,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
-    call bl_allocate(thetam_dens,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
-    call bl_allocate(thetap_rhoe,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
-    call bl_allocate(thetam_rhoe,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+    call amrex_allocate(thetap_dens,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+    call amrex_allocate(thetam_dens,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+    call amrex_allocate(thetap_rhoe,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
+    call amrex_allocate(thetam_rhoe,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,lo(3)-1,hi(3)+1)
 
     thetap_dens(:,:,:) = ONE
     thetam_dens(:,:,:) = ONE
@@ -1326,12 +1326,12 @@ contains
 
 #endif
 
-    call bl_deallocate(thetap_dens)
-    call bl_deallocate(thetam_dens)
-    call bl_deallocate(thetap_rhoe)
-    call bl_deallocate(thetam_rhoe)
+    call amrex_deallocate(thetap_dens)
+    call amrex_deallocate(thetam_dens)
+    call amrex_deallocate(thetap_rhoe)
+    call amrex_deallocate(thetam_rhoe)
 
-    call bl_deallocate(small_rhoe)
+    call amrex_deallocate(small_rhoe)
 
   end subroutine limit_hydro_fluxes_on_small_dens
 

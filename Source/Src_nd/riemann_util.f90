@@ -1,7 +1,7 @@
 module riemann_util_module
 
-  use bl_types
-  use bl_constants_module
+!  use amrex_types
+  use amrex_constants_module
 
   implicit none
 
@@ -1209,7 +1209,7 @@ contains
           print *, 'left state  (r,u,p,re,gc): ', rl, ul, pl, rel, gamcl
           print *, 'right state (r,u,p,re,gc): ', rr, ur, pr, rer, gamcr
           print *, 'cav, smallc:',  cav, csmall
-          call bl_error("ERROR: non-convergence in the Riemann solver")
+          call amrex_error("ERROR: non-convergence in the Riemann solver")
 
        else if (cg_blend .eq. 1) then
 
@@ -1242,13 +1242,13 @@ contains
              print *, 'left state  (r,u,p,re,gc): ', rl, ul, pl, rel, gamcl
              print *, 'right state (r,u,p,re,gc): ', rr, ur, pr, rer, gamcr
              print *, 'cav, smallc:',  cav, csmall
-             call bl_error("ERROR: non-convergence in the Riemann solver")
+             call amrex_error("ERROR: non-convergence in the Riemann solver")
 
           endif
 
        else
 
-          call bl_error("ERROR: unrecognized cg_blend option.")
+          call amrex_error("ERROR: unrecognized cg_blend option.")
 
        endif
 

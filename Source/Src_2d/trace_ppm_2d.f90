@@ -21,7 +21,7 @@ contains
     use network, only : nspec
     use eos_type_module
     use eos_module
-    use bl_constants_module
+    use amrex_constants_module
     use meth_params_module, only : QVAR, QRHO, QU, QV, QREINT, QPRES, &
          QTEMP, QFS, QFX, QGAME, &
          small_dens, small_pres, &
@@ -113,7 +113,7 @@ contains
 
     if (ppm_type == 0) then
        print *,'Oops -- shouldnt be in trace_ppm with ppm_type = 0'
-       call bl_error("Error:: ppm_2d.f90 :: trace_ppm")
+       call amrex_error("Error:: ppm_2d.f90 :: trace_ppm")
     end if
 
     dtdx = dt/dx

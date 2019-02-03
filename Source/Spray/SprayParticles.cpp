@@ -41,12 +41,12 @@ SprayParticleContainer::SetAll (Real val, int pstate_idx, int lev)
     {
         AoS& particles = kv.second.GetArrayOfStructs();
 
-	for (auto& p : particles)
+	for (auto p : particles)
         {
-            if (p.id() > 0)
-            {
-                p.rdata(pstate_idx) = val;
-            }
+        //HK    if (p.id() > 0)
+        //HK    {
+        //HK        p.rdata(pstate_idx) = val;
+        //HK    }
         }
     }
 
