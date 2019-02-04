@@ -141,8 +141,8 @@ void PeleC_srctoprim(amrex::Box const& bx, amrex::FArrayBox const& qfab, amrex::
 AMREX_GPU_DEVICE
 inline 
 void 
-PeleC_divu(const int i, const int j, const int k, amrex::Array4<amrex::Real> const &q, 
-           const amrex::Real *dx, amrex::Array4<amrex::Real> &divu)
+PeleC_divu(const int i, const int j, const int k, amrex::Array4<const amrex::Real> const &q, 
+           const amrex::Real *dx, amrex::Array4<amrex::Real> const& divu)
 {
      amrex::Real ux = 0.5e0*(q(i,j,k,QU) - q(i-1,j,k,QU) + 
                     q(i,j-1,k,QU) - q(i-1,j-1,k,QU))/dx[0]; 
@@ -170,22 +170,25 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 #endif
             amrex::FArrayBox const &vol, amrex::Real cflLoc);
 
-void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u, 
-                  amrex::Array4<amrex::Real> const& q, amrex::Array4<amrex::Real> &update, 
-                  amrex::Array4<amrex::Real> const &q1, amrex::Array4<amrex::Real> const &q2, 
-                  amrex::Array4<amrex::Real> &flx1 , amrex::Array4<amrex::Real> &flx2,
-                  amrex::Array4<amrex::Real> const &a1   , amrex::Array4<amrex::Real> const &a2, 
-                  amrex::Array4<amrex::Real> const &vol  , amrex::Array4<amrex::Real> const &div, 
-                  amrex::Array4<amrex::Real> const &pdivu, amrex::Real const *dx,
-                  amrex::Real const difmag);
+void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& u, 
+                  amrex::Array4<amrex::Real> const& update, 
+                  amrex::Array4<amrex::Real> const& flx1,
+                  amrex::Array4<amrex::Real> const& flx2,
+                  amrex::Array4<const amrex::Real> const &a1,
+                  amrex::Array4<const amrex::Real> const &a2, 
+                  amrex::Array4<const amrex::Real> const &vol,
+                  amrex::Array4<const amrex::Real> const &div, 
+                  amrex::Array4<const amrex::Real> const &pdivu,
+                  amrex::Real const *dx, amrex::Real const difmag);
 
 // ====================================== Consup Support Functions =======================================
 // Designed for CPU or GPU 
 AMREX_GPU_DEVICE
 inline 
 void PeleC_artif_visc(const int i, const int j, const int k,
-                      amrex::Array4<amrex::Real> &flx, amrex::Array4<amrex::Real> const & div, 
-                      amrex::Array4<amrex::Real> const &u,
+                      amrex::Array4<amrex::Real> const& flx,
+                      amrex::Array4<const amrex::Real> const& div, 
+                      amrex::Array4<const amrex::Real> const &u,
                       amrex::Real const dx, amrex::Real const difmag,  const int cdir)
 {
     amrex::Real div1; 
@@ -220,7 +223,8 @@ void PeleC_artif_visc(const int i, const int j, const int k,
 
 AMREX_GPU_DEVICE
 inline
-void PeleC_norm_spec_flx(const int i, const int j, const int k, amrex::Array4<amrex::Real> &flx) 
+void PeleC_norm_spec_flx(const int i, const int j, const int k,
+                         amrex::Array4<amrex::Real> const& flx) 
 {
     amrex::Real summ,fac; 
 #pragma unroll 
@@ -233,8 +237,9 @@ void PeleC_norm_spec_flx(const int i, const int j, const int k, amrex::Array4<am
 
 AMREX_GPU_DEVICE
 inline
-void PeleC_ext_flx(const int i, const int j, const int k, amrex::Array4<amrex::Real> &flx,
-                   amrex::Array4<amrex::Real> const &a) 
+void PeleC_ext_flx(const int i, const int j, const int k,
+                   amrex::Array4<amrex::Real> const& flx,
+                   amrex::Array4<const amrex::Real> const& a) 
 {
 #pragma unroll 
     for(int n = 0; n < NVAR; ++n) flx(i,j,k,n) *= a(i,j,k); 
@@ -242,9 +247,12 @@ void PeleC_ext_flx(const int i, const int j, const int k, amrex::Array4<amrex::R
 
 AMREX_GPU_DEVICE
 inline 
-void PeleC_update(const int i, const int j, const int k, amrex::Array4<amrex::Real> &update, 
-                  amrex::Array4<amrex::Real> const &flx1, amrex::Array4<amrex::Real> const &flx2, 
-                  amrex::Array4<amrex::Real> const &vol, amrex::Array4<amrex::Real> const &pdivu)
+void PeleC_update(const int i, const int j, const int k,
+                  amrex::Array4<amrex::Real> const& update, 
+                  amrex::Array4<const amrex::Real> const &flx1,
+                  amrex::Array4<const amrex::Real> const& flx2, 
+                  amrex::Array4<const amrex::Real> const &vol,
+                  amrex::Array4<const amrex::Real> const& pdivu)
 {
 #pragma unroll 
     for(int n = 0; n < NVAR; ++n) 

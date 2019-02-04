@@ -51,29 +51,35 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 #endif
 
     //divu 
-    amrex::Array4<amrex::Real> qfab = q.array(), divfab = divu.array(); 
+    auto const& qfab = q.array();
+    auto const&  divfab = divu.array(); 
     AMREX_PARALLEL_FOR_3D (bx, i,j,k, {
         PeleC_divu(i,j,k, qfab, dx, divfab); 
     });
 
     //consup 
-    amrex::Array4<amrex::Real> D_DECL(flxx = flux[0].array(),
-                                      flxy = flux[1].array(), 
-                                      flxz = flux[2].array()); 
-    amrex::Array4<amrex::Real> D_DECL(a1fab = a1.array(), 
-                                      a2fab = a2.array(), 
-                                      a3fab = a3.array()); 
-    amrex::Array4<amrex::Real> D_DECL(q1fab = q1.array(), 
-                                      q2fab = q2.array(), 
-                                      q3fab = q3.array()); 
-    amrex::Array4<amrex::Real> uinfab = uin.array(), uoutfab = uout.array(); 
-    amrex::Array4<amrex::Real> volfab = vol.array(), pdivufab = pdivu.array();
+    auto const& D_DECL(flxx = flux[0].array(),
+                       flxy = flux[1].array(), 
+                       flxz = flux[2].array()); 
+
+    auto const& D_DECL(a1fab = a1.array(), 
+                       a2fab = a2.array(), 
+                       a3fab = a3.array()); 
+
+/* Only used for cylindrical coords "at this point" 
+    auto const& D_DECL(q1fab = q1.array(), 
+                       q2fab = q2.array(), 
+                       q3fab = q3.array()); */ 
+
+    auto const& uinfab = uin.array();
+    auto const& uoutfab = uout.array(); 
+    auto const& volfab = vol.array();
+    auto const& pdivufab = pdivu.array();
 
     //TODO have difmag be parm parsed
     amrex::Real difmag = 0.005e0; 
 
-    PeleC_consup(bx, uinfab, qfab, uoutfab,
-                 D_DECL(q1fab, q2fab, q3fab), 
+    PeleC_consup(bx, uinfab, uoutfab,
                  D_DECL(flxx, flxy, flxz),
                  D_DECL(a1fab, a2fab, a3fab), 
                  volfab, divfab, pdivufab, dx, difmag); 
@@ -82,14 +88,16 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 
 
 //NOTE THIS IS ONLY FOR 2D! 
-void PeleC_consup(amrex::Box const &bx, amrex::Array4<amrex::Real> const& u, 
-                  amrex::Array4<amrex::Real> const& q, amrex::Array4<amrex::Real> &update, 
-                  amrex::Array4<amrex::Real> const &q1, amrex::Array4<amrex::Real> const &q2, 
-                  amrex::Array4<amrex::Real> &flx1 , amrex::Array4<amrex::Real> &flx2,
-                  amrex::Array4<amrex::Real> const &a1   , amrex::Array4<amrex::Real> const &a2, 
-                  amrex::Array4<amrex::Real> const &vol  , amrex::Array4<amrex::Real> const &div, 
-                  amrex::Array4<amrex::Real> const &pdivu, amrex::Real const *dx,
-                  amrex::Real const difmag)
+void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& u, 
+                  amrex::Array4<amrex::Real> const& update, 
+                  amrex::Array4<amrex::Real> const& flx1,
+                  amrex::Array4<amrex::Real> const& flx2,
+                  amrex::Array4<const amrex::Real> const &a1,
+                  amrex::Array4<const amrex::Real> const &a2, 
+                  amrex::Array4<const amrex::Real> const &vol,
+                  amrex::Array4<const amrex::Real> const &div, 
+                  amrex::Array4<const amrex::Real> const &pdivu,
+                  amrex::Real const *dx, amrex::Real const difmag)
 {
     
 //============== Flux alterations ========================

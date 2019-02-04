@@ -19,15 +19,15 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     const Box& bxg2 = grow(bx, 2);
     const Box& bxg3 = grow(bx, 3);  
     AsyncFab slope(bxg3, QVAR);
-    Array4<Real> slfab = slope.array();
-    Array4<Real> qfab  = q.array(); 
-    Array4<Real> qauxfab = qaux.array();
-    Array4<Real> srcQfab = srcQ.array(); 
-    Array4<Real> dlogafab = dloga.array();
-    Array4<Real> area1 = a1.array();
-    Array4<Real> area2 = a2.array(); 
-    Array4<int> bcMaskfab = bcMask.array();
-    Array4<Real> volfab = vol.array();  
+    auto const& slfab = slope.array();
+    auto const& qfab  = q.array(); 
+    auto const& qauxfab = qaux.array();
+    auto const& srcQfab = srcQ.array(); 
+    auto const& dlogafab = dloga.array();
+    auto const& area1 = a1.array();
+    auto const& area2 = a2.array(); 
+    auto const& bcMaskfab = bcMask.array();
+    auto const& volfab = vol.array();  
 
 //===================== X slopes ===================================
     int cdir = 0; 
@@ -42,8 +42,8 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     const Box& xflxbx = surroundingNodes(bxg1,cdir); 
     AsyncFab qxm(xslpbx, QVAR); 
     AsyncFab qxp(xslpbx, QVAR);
-    amrex::Array4<amrex::Real> qxmfab = qxm.array(); 
-    amrex::Array4<amrex::Real> qxpfab = qxp.array(); 
+    auto const& qxmfab = qxm.array(); 
+    auto const& qxpfab = qxp.array(); 
 
     AMREX_PARALLEL_FOR_3D (bxg2, i,j,k, {
         PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
@@ -52,8 +52,8 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
 //===================== X initial fluxes ===========================
     AsyncFab fx(xflxbx, NVAR);
-    amrex::Array4<amrex::Real> fxfab = fx.array(); 
-    amrex::Array4<amrex::Real> q1fab = q1.array();  
+    auto const& fxfab = fx.array(); 
+    auto const& q1fab = q1.array();  
 
     //bcMask at this point does nothing.  
     AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
@@ -67,8 +67,8 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     const Box& yslpbx = grow(bxg2, cdir, 1);
     AsyncFab qym(yslpbx, QVAR);
     AsyncFab qyp(yslpbx, QVAR);
-    amrex::Array4<amrex::Real> qymfab = qym.array(); 
-    amrex::Array4<amrex::Real> qypfab = qyp.array();  
+    auto const& qymfab = qym.array(); 
+    auto const& qypfab = qyp.array();  
  
     AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k,{
         PeleC_slope_y(i,j,k, slfab, qfab); 
@@ -82,7 +82,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
 //===================== Y initial fluxes ===========================
     AsyncFab fy(yflxbx, NVAR); 
-    amrex::Array4<amrex::Real> fyfab = fy.array(), q2fab = q2.array(); 
+    auto const& fyfab = fy.array(), q2fab = q2.array(); 
 
     AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k, qymfab, qypfab, fyfab, q2fab, qauxfab, bcMaskfab, 1); 
@@ -92,8 +92,8 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     cdir = 0; 
     AsyncFab qm(bxg2, QVAR); 
     AsyncFab qp(bxg2, QVAR);
-    amrex::Array4<amrex::Real> qmfab = qm.array();
-    amrex::Array4<amrex::Real> qpfab = qp.array();  
+    auto const& qmfab = qm.array();
+    auto const& qpfab = qp.array();  
 
     AMREX_PARALLEL_FOR_3D (bxg1, i,j,k, {
         PeleC_transy(i,j,k, qmfab, qpfab, qxmfab, qxpfab, fyfab,
@@ -102,7 +102,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
 //===================== Final Riemann problem X ====================
     const Box& xfxbx = surroundingNodes(bx, cdir); 
-    amrex::Array4<amrex::Real> flx1fab = flx1.array(); 
+    auto const& flx1fab = flx1.array(); 
     AMREX_PARALLEL_FOR_3D (xfxbx, i,j,k, {
         PeleC_cmpflx(i,j,k, qmfab, qpfab, flx1fab,q1fab, qauxfab, bcMaskfab, 0);
     }); 
@@ -116,13 +116,13 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
 //===================== Final Riemann problem Y ====================
     const Box& yfxbx = surroundingNodes(bx, cdir);
-    amrex::Array4<amrex::Real> flx2fab = flx2.array();  
+    auto const& flx2fab = flx2.array();  
     AMREX_PARALLEL_FOR_3D (yfxbx, i, j, k, {
         PeleC_cmpflx(i,j,k, qmfab, qpfab, flx2fab, q2fab, qauxfab, bcMaskfab, 1); 
     });
 
 //===================== Construct p div{U} =========================
-    amrex::Array4<amrex::Real> pdivufab = pdivu.array(); 
+    auto const& pdivufab = pdivu.array(); 
     AMREX_PARALLEL_FOR_3D (bx, i, j, k, {
         PeleC_pdivu(i,j,k, pdivufab, q1fab, q2fab, area1, area2, volfab); 
     });

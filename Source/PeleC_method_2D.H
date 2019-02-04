@@ -12,7 +12,7 @@ AMREX_GPU_DEVICE
 inline
 void
 PeleC_slope_x(const int i, const int j, const int k, 
-      amrex::Array4<amrex::Real> &dq, amrex::Array4<amrex::Real> const& q)
+      amrex::Array4< amrex::Real> const& dq, amrex::Array4<const amrex::Real> const& q)
 {
     amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn;
     amrex::Real qm, qp, qi;
@@ -50,7 +50,7 @@ AMREX_GPU_DEVICE
 inline
 void
 PeleC_slope_y (const int i, const int j, const int k,
-               amrex::Array4<amrex::Real>& dq, amrex::Array4<amrex::Real> const& q)
+               amrex::Array4<amrex::Real> const& dq, amrex::Array4<const amrex::Real> const& q)
 {
     amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn;
     amrex::Real qm, qp, qj;
@@ -91,7 +91,7 @@ AMREX_GPU_DEVICE
 inline 
 void 
 PeleC_shock(const int i, const int j, const int k,
-         amrex::Array4<amrex::Real> const &q, amrex::Array4<amrex::Real> &shk, 
+         amrex::Array4<const amrex::Real> const &q, amrex::Array4<amrex::Real> const& shk, 
          amrex::Real dx, amrex::Real dy)
 {
         amrex::Real eps = 0.33e0; 
@@ -326,10 +326,10 @@ AMREX_GPU_DEVICE
 inline
 void
 PeleC_cmpflx(const int i, const int j, const int k,
-     amrex::Array4<amrex::Real> const& ql, 
-     amrex::Array4<amrex::Real> const & qr, amrex::Array4<amrex::Real>& flx,
-     amrex::Array4<amrex::Real>& q, amrex::Array4<amrex::Real> const& qa,
-     amrex::Array4<int> const& bcMask, int idir)
+     amrex::Array4<const amrex::Real> const& ql, 
+     amrex::Array4<const amrex::Real> const & qr, amrex::Array4<amrex::Real> const& flx,
+     amrex::Array4<amrex::Real> const& q, amrex::Array4<const amrex::Real> const& qa,
+     amrex::Array4<const int> const& bcMask, int idir)
 {
     EOS state, gdnv_state; 
     amrex::Real cav, ustar;
@@ -421,10 +421,10 @@ AMREX_GPU_DEVICE
 inline 
 void 
 PeleC_plm_x(const int i, const int j, const int k,
-    amrex::Array4<amrex::Real> &qm, amrex::Array4<amrex::Real> &qp,
-    amrex::Array4<amrex::Real> const& slope,  amrex::Array4<amrex::Real> const& q,
-    amrex::Array4<amrex::Real> const& qa,   amrex::Array4<amrex::Real> const& srcQ, 
-    amrex::Array4<amrex::Real> const& dloga, amrex::Real const dx, amrex::Real const dt)
+    amrex::Array4<amrex::Real> const& qm, amrex::Array4<amrex::Real> const& qp,
+    amrex::Array4<const amrex::Real> const& slope,  amrex::Array4<const amrex::Real> const& q,
+    amrex::Array4<const amrex::Real> const& qa,   amrex::Array4<const amrex::Real> const& srcQ, 
+    amrex::Array4<const amrex::Real> const& dloga, amrex::Real const dx, amrex::Real const dt)
 {
 
         amrex::Real e[3]; 
@@ -550,10 +550,10 @@ AMREX_GPU_DEVICE
 inline 
 void 
 PeleC_plm_y(const int i, const int j, const int k, 
-    amrex::Array4<amrex::Real> &qm,  amrex::Array4<amrex::Real> &qp,
-    amrex::Array4<amrex::Real> const& slope,  amrex::Array4<amrex::Real> const& q,
-    amrex::Array4<amrex::Real> const& qa,   amrex::Array4<amrex::Real> const& srcQ, 
-    amrex::Array4<amrex::Real> const& dloga,  amrex::Real const dy, amrex::Real const dt)
+    amrex::Array4<amrex::Real> const& qm         , amrex::Array4<amrex::Real> const& qp,
+    amrex::Array4<const amrex::Real> const& slope, amrex::Array4<const amrex::Real> const& q,
+    amrex::Array4<const amrex::Real> const& qa   , amrex::Array4<const amrex::Real> const& srcQ, 
+    amrex::Array4<const amrex::Real> const& dloga, amrex::Real const dy, amrex::Real const dt)
 {
 
         amrex::Real e[3]; 
@@ -676,11 +676,11 @@ AMREX_GPU_DEVICE
 inline 
 void 
 PeleC_transx(const int i, const int j, const int k,
-     amrex::Array4<amrex::Real> &qm, amrex::Array4<amrex::Real> &qp, 
-     amrex::Array4<amrex::Real> const& qym, amrex::Array4<amrex::Real> const& qyp, 
-     amrex::Array4<amrex::Real> const& flxx, amrex::Array4<amrex::Real> const& srcQ,
-     amrex::Array4<amrex::Real> const& qa, amrex::Array4<amrex::Real> const& qint,
-     amrex::Array4<amrex::Real> const& a1, amrex::Array4<amrex::Real> const& vol,
+     amrex::Array4<amrex::Real> const& qm        , amrex::Array4<amrex::Real> const& qp, 
+     amrex::Array4<const amrex::Real> const& qym , amrex::Array4<const amrex::Real> const& qyp, 
+     amrex::Array4<const amrex::Real> const& flxx, amrex::Array4<const amrex::Real> const& srcQ,
+     amrex::Array4<const amrex::Real> const& qa  , amrex::Array4<const amrex::Real> const& qint,
+     amrex::Array4<const amrex::Real> const& a1  , amrex::Array4<const amrex::Real> const& vol,
      const amrex::Real hdt, const amrex::Real cdtdx) 
 {
 
@@ -763,7 +763,8 @@ PeleC_transx(const int i, const int j, const int k,
         amrex::Real pnewr = qyp(i,j,k,QPRES) 
                           - hdt*(dAup + pav*dAu*(qa(i,j,k,QGAMC) - 1.e0))/vol(i,j,k); 
         qp(i,j,k,QPRES) = amrex::max(pnewr + hdt*srcp , small_pres); 
-        qp(i,j,k,QREINT) = renewr - rhoekinr + hdt*srce; 
+        qp(i,j,k,QREINT) = renewr - rhoekinr + hdt*srce;
+        qp(i,j,k,QGAME)  = qyp(i,j,k,QGAME);  
 //======================= QM ================================================
 
 //Conversion to Conservative 
@@ -793,6 +794,7 @@ PeleC_transx(const int i, const int j, const int k,
         amrex::Real pnewl = qym(i,j+1,k,QPRES) 
                           - hdt*(dAup + pav*dAu*(qa(i,j,k,QGAMC) - 1.e0))/vol(i,j,k); 
         qm(i,j+1,k,QPRES) = amrex::max(pnewl + hdt*srcp , small_pres); 
+        qm(i,j+1,k,QGAME) = qym(i,j+1,k,QGAME); 
 }
 
 
@@ -802,12 +804,12 @@ AMREX_GPU_DEVICE
 inline 
 void 
 PeleC_transy(const int i, const int j, const int k,
-     amrex::Array4<amrex::Real> &qm, amrex::Array4<amrex::Real> &qp, 
-     amrex::Array4<amrex::Real> const& qxm, amrex::Array4<amrex::Real> const& qxp, 
-     amrex::Array4<amrex::Real> const& flxy, amrex::Array4<amrex::Real> const& srcQ, 
-     amrex::Array4<amrex::Real> const& qa,  amrex::Array4<amrex::Real> const& qint,
-     amrex::Array4<amrex::Real> const& a1, amrex::Array4<amrex::Real> const& vol,
-     amrex::Real hdt, amrex::Real cdtdy) 
+     amrex::Array4<amrex::Real> const& qm, amrex::Array4<amrex::Real> const& qp, 
+     amrex::Array4<const amrex::Real> const& qxm, amrex::Array4<const amrex::Real> const& qxp, 
+     amrex::Array4<const amrex::Real> const& flxy, amrex::Array4<const amrex::Real> const& srcQ, 
+     amrex::Array4<const amrex::Real> const& qa,  amrex::Array4<const amrex::Real> const& qint,
+     amrex::Array4<const amrex::Real> const& a1, amrex::Array4<const amrex::Real> const& vol,
+     const amrex::Real hdt, const amrex::Real cdtdy) 
 {
 
         EOS state; 
@@ -890,7 +892,7 @@ PeleC_transy(const int i, const int j, const int k,
         pnewr = qxp(i,j,k,QPRES) - cdtdy*(dup + pav*du*(qa(i,j,k,QGAMC) - 1.e0)); 
         qp(i,j,k,QPRES) = amrex::max(pnewr + hdt*srcp, small_pres); 
         qp(i,j,k,QREINT) = renewr - rhoekinr + hdt*srce; 
-
+        qp(i,j,k,QGAME)  = qxp(i,j,k,QGAME); 
 
 //======================= QM ================================================
 
@@ -919,8 +921,9 @@ PeleC_transy(const int i, const int j, const int k,
         rhoekinl = 0.5e0*(runewl*runewl + rvnewl*rvnewl + rwl*rwl)/rrnewl; 
 
         pnewl = qxm(i+1,j,k,QPRES) - cdtdy*(dup + pav*du*(qa(i,j,k,QGAMC) - 1.e0)); 
-        qm(i+1,j,k,QPRES) = amrex::max(pnewr + hdt*srcp , small_pres); 
-        qm(i+1,j,k,QREINT) = renewr - rhoekinr + hdt*srce; 
+        qm(i+1,j,k,QPRES) = amrex::max(pnewl + hdt*srcp , small_pres); 
+        qm(i+1,j,k,QREINT) = renewl - rhoekinl + hdt*srce; 
+        qm(i+1,j,k,QGAME)  = qxp(i+1,j,k,QGAME); 
 }
 
 
@@ -929,9 +932,9 @@ AMREX_GPU_DEVICE
 inline
 void 
 PeleC_pdivu(const int i, const int j, const int k, 
-    amrex::Array4<amrex::Real> &pdivu, amrex::Array4<amrex::Real> const &q1, 
-    amrex::Array4<amrex::Real> const& q2, amrex::Array4<amrex::Real> const& a1, 
-    amrex::Array4<amrex::Real> const& a2,  amrex::Array4<amrex::Real> const& vol)
+    amrex::Array4<amrex::Real> const& pdivu, amrex::Array4<const amrex::Real> const& q1, 
+    amrex::Array4<const amrex::Real> const& q2, amrex::Array4<const amrex::Real> const& a1, 
+    amrex::Array4<const amrex::Real> const& a2,  amrex::Array4<const amrex::Real> const& vol)
 {
         pdivu(i,j,k) = 0.5e0*((q1(i+1,j,k,GDPRES) + q1(i,j,k,GDPRES))
                      * (q1(i+1,j,k,GDU)*a1(i+1,j,k) - q1(i,j,k,GDU)*a1(i,j,k))
