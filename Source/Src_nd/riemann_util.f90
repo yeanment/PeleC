@@ -1,6 +1,5 @@
 module riemann_util_module
 
-!  use amrex_types
   use amrex_constants_module
 
   implicit none
@@ -428,8 +427,10 @@ contains
          NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, &
          npassive, upass_map, qpass_map
 
-    real (kind=dp_t), intent(in)  :: q(QVAR)
-    real (kind=dp_t), intent(out) :: U(NVAR)
+    use amrex_fort_module, only : rt => amrex_real
+
+    real (kind=rt), intent(in)  :: q(QVAR)
+    real (kind=rt), intent(out) :: U(NVAR)
 
     integer :: ipassive, n, nq
 
@@ -463,12 +464,14 @@ contains
          NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, &
          npassive, upass_map, qpass_map
 
-    integer, intent(in) :: idir
-    real (kind=dp_t), intent(in)  :: S_k, S_c
-    real (kind=dp_t), intent(in)  :: q(QVAR)
-    real (kind=dp_t), intent(out) :: U(NVAR)
+    use amrex_fort_module, only : rt => amrex_real
 
-    real (kind=dp_t) :: hllc_factor, u_k
+    integer, intent(in) :: idir
+    real (kind=rt), intent(in)  :: S_k, S_c
+    real (kind=rt), intent(in)  :: q(QVAR)
+    real (kind=rt), intent(out) :: U(NVAR)
+
+    real (kind=rt) :: hllc_factor, u_k
     integer :: ipassive, n, nq
 
     if (idir == 1) then
@@ -517,13 +520,15 @@ contains
          npassive, upass_map
     use prob_params_module, only : coord_type
 
+    use amrex_fort_module, only : rt => amrex_real
+
     integer, intent(in) :: idir, ndim, bnd_fac
-    real (kind=dp_t), intent(in) :: U(NVAR)
-    real (kind=dp_t), intent(in) :: p
-    real (kind=dp_t), intent(out) :: F(NVAR)
+    real (kind=rt), intent(in) :: U(NVAR)
+    real (kind=rt), intent(in) :: p
+    real (kind=rt), intent(out) :: F(NVAR)
 
     integer :: ipassive, n
-    real (kind=dp_t) :: u_flx
+    real (kind=rt) :: u_flx
 
     if (idir == 1) then
        u_flx = U(UMX)/U(URHO)
@@ -572,6 +577,7 @@ contains
     use eos_module
     use meth_params_module, only : small_dens, small_pres
 
+    use amrex_fort_module, only : rt => amrex_real
 
     implicit none
 
@@ -604,7 +610,7 @@ contains
 
     ! Yuck.
     double precision, parameter:: small = 1.d-8
-    real (kind=dp_t), parameter :: smallu = 1.e-12_dp_t
+    real (kind=rt), parameter :: smallu = 1.e-12
 
 
     ! Double yuck.
@@ -806,7 +812,7 @@ contains
 
     use eos_module
     use meth_params_module, only : small_dens, small_pres
-
+    use amrex_fort_module, only : rt => amrex_real
 
     implicit none
 
@@ -843,8 +849,8 @@ contains
 
     ! Yuck.
     double precision, parameter:: small = 1.d-8
-    real (kind=dp_t), parameter :: smallu = 1.e-12_dp_t
-    real (kind=dp_t), parameter :: Hsmallu = 0.5e-12_dp_t
+    real (kind=rt), parameter :: smallu = 1.e-12
+    real (kind=rt), parameter :: Hsmallu = 0.5e-12
 
 
     ! Double yuck.
@@ -1028,6 +1034,7 @@ contains
        idir, coord_type, bc_test_val, csmall, cav)
 
     use meth_params_module, only : small_dens, small_pres, cg_maxiter, cg_tol, cg_blend
+    use amrex_error_module
 
     implicit none
 

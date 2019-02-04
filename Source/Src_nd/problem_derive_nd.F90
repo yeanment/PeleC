@@ -17,6 +17,7 @@ contains
     !
 
     use amrex_constants_module
+    use amrex_error_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -71,6 +72,7 @@ contains
     !
 
     use amrex_constants_module
+    use amrex_error_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -124,6 +126,7 @@ contains
     !
 
     use amrex_constants_module
+    use amrex_error_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -177,6 +180,7 @@ contains
     !
 
     use amrex_constants_module
+    use amrex_error_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -230,6 +234,7 @@ contains
     !
 
     use amrex_constants_module
+    use amrex_error_module
     use meth_params_module, only : URHO, UEINT, UTEMP, UFS, UFX
     use eos_module
 #ifdef USE_MASA

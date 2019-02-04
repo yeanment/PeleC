@@ -15,7 +15,7 @@ contains
     use iso_c_binding
     use amrex_error_module
     use network
-    use amrex_fort_module, only : amrex_real
+    use amrex_fort_module, only : rt => amrex_real
     use meth_params_module, only : NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, UFS
     use particle_mod      , only: particle_t
 
@@ -48,7 +48,7 @@ contains
     integer :: lo(3), hi(3)
 
 
-    real(kind=dp_t), dimension(np) :: inv_tau
+    real(kind=rt), dimension(np) :: inv_tau
 
 
     real*8, parameter :: pi = 3.1415926535897932d0

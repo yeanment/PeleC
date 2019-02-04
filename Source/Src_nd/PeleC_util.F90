@@ -337,7 +337,7 @@ contains
     use meth_params_module, only : NVAR, URHO, UEDEN, UEINT, UTEMP, &
          UFS, UFX, allow_negative_energy, dual_energy_update_E_from_e
     use amrex_constants_module
-
+    use amrex_error_module
     implicit none
 
     integer         , intent(in   ) :: lo(3),hi(3)
@@ -408,7 +408,7 @@ contains
     use network           , only : nspec
     use meth_params_module, only : NVAR, URHO, UFS
     use amrex_constants_module
-
+    use amrex_error_module
     implicit none
 
     integer          :: lo(3), hi(3)
@@ -471,7 +471,7 @@ contains
     use amrinfo_module, only: amr_level
     use amrex_constants_module, only: ZERO, ONE, TWO, M_PI, FOUR
     use prob_params_module, only: dim, coord_type, dx_level
-
+    use amrex_error_module
     implicit none
 
     integer, intent(in) :: i, j, k, dir
@@ -600,7 +600,7 @@ contains
     use amrinfo_module, only: amr_level
     use amrex_constants_module, only: ZERO, HALF, FOUR3RD, TWO, M_PI
     use prob_params_module, only: dim, coord_type, dx_level
-
+    use amrex_error_module
     implicit none
 
     integer, intent(in) :: i, j, k
@@ -682,7 +682,7 @@ contains
     use meth_params_module, only : URHO, UMX, UMY, UMZ
     use prob_params_module, only : center, dim
     use amrex_constants_module
-
+    use amrex_error_module
     implicit none
 
     integer          :: lo(3),hi(3),nc

@@ -330,6 +330,7 @@ subroutine swap_outflow_data() bind(C, name="swap_outflow_data")
 
   use meth_params_module, only: outflow_data_new, outflow_data_new_time, &
        outflow_data_old, outflow_data_old_time
+   use amrex_error_module
 
   implicit none
 
@@ -391,7 +392,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
 
   integer :: ioproc
 
-  call parallel_initialize()
+!HK  call parallel_initialize()
 
   !---------------------------------------------------------------------
   ! conserved state components
@@ -594,6 +595,7 @@ subroutine init_godunov_indices() bind(C, name="init_godunov_indices")
 
   use meth_params_module, only : GDRHO, GDU, GDV, GDW, GDPRES, GDGAME, NGDNV, &
        QU, QV, QW
+  use amrex_error_module
 
   implicit none
 
@@ -753,7 +755,7 @@ subroutine get_tagging_params(name, namlen) &
      bind(C, name="get_tagging_params")
 
   use tagging_module
-
+  use amrex_error_module
   ! Initialize the tagging parameters
 
   integer :: namlen

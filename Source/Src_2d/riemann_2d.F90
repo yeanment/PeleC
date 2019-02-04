@@ -20,7 +20,7 @@ module riemann_module
 
   public cmpflx, shock, riemanncg
 
-  real (amrex_real), parameter :: smallu = 1.e-12_dp_t
+  real (amrex_real), parameter :: smallu = 1.e-12
 
 contains
 
@@ -38,6 +38,7 @@ contains
 
     use eos_type_module
     use eos_module, only: eos_re, eos_rt, mine
+    use amrex_error_module
 
     integer, intent(in) :: qpd_l1,qpd_l2,qpd_h1,qpd_h2
     integer, intent(in) :: flx_l1,flx_l2,flx_h1,flx_h2
@@ -266,6 +267,7 @@ contains
                    ilo1,ilo2,ihi1,ihi2,dx,dy)
 
     use prob_params_module, only : coord_type
+    use amrex_error_module
 
     integer, intent(in) :: qd_l1, qd_l2, qd_h1, qd_h2
     integer, intent(in) :: s_l1, s_l2, s_h1, s_h2

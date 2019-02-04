@@ -18,7 +18,7 @@ contains
 
     use meth_params_module, only : NVAR, URHO, UEINT, UEDEN, small_dens, density_reset_method
     use amrex_constants_module, only : ZERO
-
+    use amrex_error_module
     implicit none
 
     integer, intent(in) :: lo(3), hi(3), verbose
@@ -353,7 +353,7 @@ contains
 
              if (courx .gt. ONE) then
                 print *,'   '
-                call amrex_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
+                call bl_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
                 print *,'>>> ... (u+c) * dt / dx > 1 ', courx
                 print *,'>>> ... at cell (i,j,k)   : ', i, j, k
                 print *,'>>> ... u, c                ', q(i,j,k,QU), qaux(i,j,k,QC)
@@ -362,7 +362,7 @@ contains
 
              if (coury .gt. ONE) then
                 print *,'   '
-                call amrex_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
+                call bl_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
                 print *,'>>> ... (v+c) * dt / dx > 1 ', coury
                 print *,'>>> ... at cell (i,j,k)   : ', i,j,k
                 print *,'>>> ... v, c                ', q(i,j,k,QV), qaux(i,j,k,QC)
@@ -371,7 +371,7 @@ contains
 
              if (courz .gt. ONE) then
                 print *,'   '
-                call amrex_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
+                call bl_warning("Warning:: advection_util_nd.F90 :: CFL violation in compute_cfl")
                 print *,'>>> ... (w+c) * dt / dx > 1 ', courz
                 print *,'>>> ... at cell (i,j,k)   : ', i, j, k
                 print *,'>>> ... w, c                ', q(i,j,k,QW), qaux(i,j,k,QC)

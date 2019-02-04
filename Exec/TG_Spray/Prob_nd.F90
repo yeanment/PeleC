@@ -35,13 +35,13 @@ contains
     end do
 
     ! set namelist defaults here
-    reynolds = 1600.0_dp_t
-    mach = 0.1_dp_t
-    prandtl = 0.71_dp_t
+    reynolds = 1600.0 
+    mach = 0.1 
+    prandtl = 0.71 
     convecting = .false.
-    omega_x = 1.0_dp_t
-    omega_y = 1.0_dp_t
-    omega_z = 1.0_dp_t
+    omega_x = 1.0 
+    omega_y = 1.0 
+    omega_z = 1.0 
 
     ! Read namelists
     untin = 9
@@ -82,7 +82,7 @@ contains
        state,state_lo,state_hi, &
        delta,xlo,xhi) bind(C, name="pc_initdata")
 
-!HK    use parallel
+    use amrex_paralleldescriptor_module
     use probdata_module
     use network, only: nspec, naux, molec_wt
     use eos_type_module
@@ -138,7 +138,7 @@ contains
     state(:,:,:,UTEMP) = T0
 
     ! Write this out to file (might be useful for postprocessing)
-    if ( parallel_ioprocessor() ) then
+    if ( amrex_pd_ioprocessor() ) then
        open(unit=out_unit,file="ic.txt",action="write",status="replace")
        write(out_unit,*)"L, rho0, v0, p0, T0, gamma, mu, k, c_s0, Reynolds, Mach, Prandtl, omega_x, omega_y, omega_z"
        write(out_unit,*) L, "," , eos_state % rho, "," , v0, "," , eos_state % p, "," , &
