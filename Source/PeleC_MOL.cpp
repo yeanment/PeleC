@@ -112,20 +112,19 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 #pragma omp parallel
 #endif
   {
-    FArrayBox Qfab, Qaux, coeff_cc, Dterm;
-    FArrayBox coeff_ec[BL_SPACEDIM], flux_ec[BL_SPACEDIM],
-      tander_ec[BL_SPACEDIM], flatn;
-    IArrayBox bcMask;
-    FArrayBox dm_as_fine(Box::TheUnitBox(), NUM_STATE);
-    FArrayBox fab_drho_as_crse(Box::TheUnitBox(), NUM_STATE);
-    IArrayBox fab_rrflag_as_crse(Box::TheUnitBox());
 
-//     for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true));
-    for (MFIter mfi(S, hydro_tile_size); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(S, false); mfi.isValid(); ++mfi) {
 
-#pragma omp single
+#pragma omp critical
       { 
-      
+
+	 FArrayBox Qfab, Qaux, coeff_cc, Dterm;
+	 FArrayBox coeff_ec[BL_SPACEDIM], flux_ec[BL_SPACEDIM],
+	   tander_ec[BL_SPACEDIM], flatn;
+	 IArrayBox bcMask;
+	 FArrayBox dm_as_fine(Box::TheUnitBox(), NUM_STATE);
+	 FArrayBox fab_drho_as_crse(Box::TheUnitBox(), NUM_STATE);
+	 IArrayBox fab_rrflag_as_crse(Box::TheUnitBox());
 #ifdef PELE_USE_EB
       Real wt = ParallelDescriptor::second();
 #endif
@@ -271,6 +270,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 	  Print() << "Qfab box: " << Qfab.box() << " vbox: " << vbox << std::endl;
 	}
       //      BL_ASSERT(Qfab.box().contains(vbox));
+	Print() << "Q ncomp = " << Qfab.nComp() << " numspec: " << NumSpec << " Dterm ncomp: " << Dterm.nComp() << std::endl;
         pc_diffterm(cbox.loVect(),
                     cbox.hiVect(),
                     dbox.loVect(),
@@ -306,8 +306,9 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                     BL_TO_FORTRAN_ANYD(volume[mfi]),
                     BL_TO_FORTRAN_ANYD(Dterm),
                     geom.CellSize());
-      }
 
+      }
+	
       // Shut off unwanted diffusion after the fact
       //    ick! Under normal conditions, you either have diffusion on all or
       //      none, so this shouldn't be done this way.  However, the regression
@@ -592,7 +593,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
         (*cost)[mfi].plus(wt, vbox);
       }
 #endif
-      } // end of #pragma omp [critical/single/etc]
+            } // end of #pragma omp [critical/single/etc]
 
     } // end of if not covered
     }  // End of MFIter scope
