@@ -31,24 +31,22 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 //===================== X slopes ===================================
     int cdir = 0; 
     const Box& xslpbx = grow(bxg1, cdir, 1);
-     
+    const Box& xflxbx = surroundingNodes(bxg1,cdir);
+    
     AMREX_PARALLEL_FOR_3D (xslpbx,i,j,k, { 
         PeleC_slope_x(i,j,k, slfab, qfab);
     }); 
 
-
 //==================== X interp ====================================
-    const Box& xflxbx = surroundingNodes(bxg1,cdir); 
     AsyncFab qxm(xslpbx, QVAR); 
     AsyncFab qxp(xslpbx, QVAR);
     auto const& qxmfab = qxm.array(); 
     auto const& qxpfab = qxp.array(); 
 
-    AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
+    AMREX_PARALLEL_FOR_3D (xslpbx, i,j,k, {
         PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
                     srcQfab, dlogafab, dx[0], dt); 
     });
-
 //===================== X initial fluxes ===========================
     AsyncFab fx(xflxbx, NVAR);
     auto const& fxfab = fx.array(); 
@@ -74,7 +72,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     });
 
 //==================== Y interp ====================================
-    AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
+    AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k, {
         PeleC_plm_y(i,j,k, qymfab, qypfab, slfab, qfab, qauxfab, 
                 srcQfab, dlogafab, dx[1], dt); 
    });

@@ -161,29 +161,28 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
 {        
         amrex::Real wsmall = small_dens*csmall; 
         state.rho = rl; 
-        state.p   = pl; 
-        #pragma unroll 
+        state.p   = pl;
+
         for(int i = 0; i < NUM_SPECIES; ++i)
         {
           state.massfrac[i] = spl[i];
         }
-          
         
         state.eos_rp(); 
         amrex::Real csl = state.cs; 
 
         state.rho = rr; 
         state.p   = pr; 
-        #pragma unroll 
-        for(int i = 0; i < NUM_SPECIES; ++i) state.massfrac[i] = spr[i]; 
+        for(int i = 0; i < NUM_SPECIES; ++i){
+             state.massfrac[i] = spr[i]; 
+        }
         state.eos_rp(); 
-        amrex::Real csr = state.cs; 
-
+        amrex::Real csr = state.cs;
         //    amrex::Real wl = max(wsmall, sqrt(abs(gamcl*pl*rl))); 
         //    amrex::Real wr = max(wsmall, sqrt(abs(gamcr*pr*rr))); 
 
         amrex::Real wl = amrex::max(wsmall, rl*csl); 
-        amrex::Real wr = amrex::max(wsmall, rr*csr); 
+        amrex::Real wr = amrex::max(wsmall, rr*csr);
 
         amrex::Real pstar = ((wr*pl + wl*pr) + wl*wr*(ul - ur))/(wl + wr); 
         ustar = ((wl*ul + wr*ur) + (pl - pr))/(wl + wr); 
@@ -192,32 +191,34 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
         if (abs(ustar) < smallu*0.5e0*(abs(ul) + abs(ur))) ustar = 0.e0; 
         amrex::Real ro, uo, po; 
         if(ustar > 0.e0){
-        ro = rl; 
-        uo = ul; 
-        po = pl; 
+            ro = rl; 
+            uo = ul; 
+            po = pl; 
         #pragma unroll    
-        for(int i = 0; i < NUM_SPECIES; ++i) 
-            gdnv_state.massfrac[i] = spl[i];
+            for(int i = 0; i < NUM_SPECIES; ++i) 
+                gdnv_state.massfrac[i] = spl[i];
         }
         else if(ustar < 0.e0){
-        ro = rr; 
-        uo = ur; 
-        po = pr; 
+            ro = rr; 
+            uo = ur; 
+            po = pr; 
         #pragma unroll    
-        for(int i = 0; i < NUM_SPECIES; ++i) 
-            gdnv_state.massfrac[i] = spr[i];
+            for(int i = 0; i < NUM_SPECIES; ++i) 
+                gdnv_state.massfrac[i] = spr[i];
         }
         else{
-        ro = 0.5e0*(rr+rl); 
-        uo = 0.5e0*(ur+ul); 
-        po = 0.5e0*(pr+pl); 
+            ro = 0.5e0*(rr+rl); 
+            uo = 0.5e0*(ur+ul); 
+            po = 0.5e0*(pr+pl); 
         #pragma unroll    
-        for(int i = 0; i < NUM_SPECIES; ++i) 
-            gdnv_state.massfrac[i] = 0.5e0*(spr[i] + spl[i]);
+            for(int i = 0; i < NUM_SPECIES; ++i) 
+                gdnv_state.massfrac[i] = 0.5e0*(spr[i] + spl[i]);
         }  
+
         gdnv_state.rho = ro; 
         gdnv_state.p   = po; 
         gdnv_state.eos_rp(); 
+
         amrex::Real reo = gdnv_state.rho*gdnv_state.e;
         amrex::Real co  = gdnv_state.cs; 
 
@@ -235,12 +236,14 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
         amrex::Real sgnm = ustar > 0 ? 1.0 : -1.0; 
         amrex::Real spout = co - sgnm*uo; 
         amrex::Real spin  = cstar - sgnm*ustar; 
+
         amrex::Real ushock = 0.5e0*(spin + spout); 
 
         if(pstar - po >= 0.e0){
                 spin = ushock; 
                 spout = ushock; 
         }
+
         amrex::Real scr; 
         if(spout-spin == 0.e0) scr = small*cav; 
         else scr = spout-spin; 
@@ -298,14 +301,14 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
 
         uflx_rho    = rgd*qint_iu; 
 
-        if( idir == 1){
+        if( idir == 0){
                 uflx_u = uflx_rho*qint_iu; 
                 uflx_v = uflx_rho*qint_iv1; 
                 uflx_w = uflx_rho*qint_iv2; 
 //                if(coord_type ==0) 
                 uflx_u += qint_gdpres; 
         }
-        else if(idir == 2){
+        else if(idir == 1){
                 uflx_u = uflx_rho*qint_iv1; 
                 uflx_v = uflx_rho*qint_iu + qint_gdpres; 
                 uflx_w = uflx_rho*qint_iv2; 
@@ -335,7 +338,7 @@ PeleC_cmpflx(const int i, const int j, const int k,
     amrex::Real cav, ustar;
     amrex::Real spl[NUM_SPECIES];
     amrex::Real spr[NUM_SPECIES]; 
-//    amrex::Real ul, ur, vl, vr, v2l, v2r, rel, rer; 
+    amrex::Real ul, ur, vl, vr, v2l, v2r, rel, rer; 
     int idx, IU, IV, IV2; 
     if(idir == 0){
          IU = QU; 
@@ -361,8 +364,6 @@ PeleC_cmpflx(const int i, const int j, const int k,
             spl[sp] = ql(i,j,k,QFS+sp); 
             spr[sp] = qr(i,j,k,QFS+sp);
     }               
-/* TODO assess if we need this. 
-//Outflow Hack --> 
            ul = ql(i,j,k,IU); 
            vl = ql(i,j,k,IV); 
           v2l = ql(i,j,k,IV2); 
@@ -372,7 +373,10 @@ PeleC_cmpflx(const int i, const int j, const int k,
            vr = qr(i,j,k,IV); 
           v2r = qr(i,j,k,IV2); 
           rer = qr(i,j,k,QREINT); 
-         idx = idir == 1 ? i : j; 
+
+// TODO assess if we need this. 
+//Outflow Hack --> 
+/*         idx = idir == 1 ? i : j; 
          if(bclo[idir] == Outflow && idx == domlo[idir])
          {
             ul = ur; 
@@ -386,15 +390,18 @@ PeleC_cmpflx(const int i, const int j, const int k,
             vr  = vl; 
             v2r = v2l; 
             rer = rel;         
-         } 
+         }  */
+
           riemann(ql(i,j,k,QRHO), ul, vl, v2l, 
                  ql(i,j,k,QPRES), rel, spl,   
                  qr(i,j,k,QRHO), ur, vr, v2r, 
                  qr(i,j,k,QPRES), rer, spr,
                  state, gdnv_state, flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
-                 flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT), idir, csmall, cav); 
+                 flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT),
+                 q(i,j,k,IU), q(i,j,k,IV), q(i,j,k,IV2), q(i,j,k,GDPRES),
+                 q(i,j,k,GDGAME), ustar, idir, qa(i,j,k,QCSML), cav); 
         
-*/                 
+/* /                
          riemann(ql(i,j,k,QRHO), ql(i,j,k,QU), ql(i,j,k,QV), ql(i,j,k,QW), 
                  ql(i,j,k,QPRES), ql(i,j,k,QREINT), spl,   
                  qr(i,j,k,QRHO), qr(i,j,k,QU), qr(i,j,k,QV), qr(i,j,k,QW), 
@@ -403,7 +410,7 @@ PeleC_cmpflx(const int i, const int j, const int k,
                  flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT),
                  q(i,j,k,IU), q(i,j,k,IV), q(i,j,k,IV2), q(i,j,k,GDPRES),
                  q(i,j,k,GDGAME), ustar, idir, qa(i,j,k,QCSML), cav); 
-
+// */
         amrex::Real flxrho = flx(i,j,k,URHO); 
         for(int ipass = 0; ipass < npassive; ++ipass){
             int n = EOS::upass_map(ipass); 
@@ -497,7 +504,7 @@ PeleC_plm_x(const int i, const int j, const int k,
         amrex::Real azeleft = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0e;
         amrex::Real azv1left = 0.25e0*dtdx*(e[2] - e[1])*(1.e0 + std::copysign(1.e0,e[1]))*alpha0v;
 
-        qm(i+1,j,k,QRHO) = rho_ref + apleft + amleft + azrleft;
+        qm(i+1,j,k,QRHO) = rho_ref + apleft + amleft + azrleft;        
         qm(i+1,j,k,QRHO) = amrex::max(qm(i+1,j,k,QRHO),small_dens);
         qm(i+1,j,k,QU) = u_ref + (apleft - amleft)*cc/rho;
         qm(i+1,j,k,QV) = v_ref + azv1left;
@@ -539,10 +546,10 @@ PeleC_plm_x(const int i, const int j, const int k,
             // ilo1 to ihi+1 for qp and ilo1-1 to ihi for qm, 
             // so to keep it in the same loop we shift the qm indicies left 
             // by one.  
-            u = q(i-1,j,k,QU); 
-            spzero = u > 0 ? u*dtdx : -1.e0; 
-            amrex::Real acmpleft = 0.5e0*(1.e0 - spzero)*slope(i-1,j,k,n);  
-            qm(i, j, k, n) = q(i-1,j,k,n) + acmpleft; 
+            u = q(i,j,k,QU); 
+            spzero = u > 0 ? u*dtdx : 1.e0; 
+            amrex::Real acmpleft = 0.5e0*(1.e0 - spzero)*slope(i,j,k,n);  
+            qm(i+1, j, k, n) = q(i,j,k,n) + acmpleft; 
         }                            
 } 
 
@@ -664,10 +671,10 @@ PeleC_plm_y(const int i, const int j, const int k,
             amrex::Real acmptop = 0.5e0*(-1.e0 - spzero)*slope(i,j,k,n); 
             qp(i,j,k,n) = q(i,j,k,n) + acmptop;
 
-            v = q(i,j-1,k,QV); 
-            spzero = v > 0 ? v*dtdy : -1.e0; 
-            amrex::Real acmpbot = 0.5e0*(1.e0 - spzero)*slope(i,j-1,k,n);  
-            qm(i,j,k,n) = q(i,j-1,k,n) + acmpbot; 
+            v = q(i,j,k,QV); 
+            spzero = v > 0 ? v*dtdy : 1.e0; 
+            amrex::Real acmpbot = 0.5e0*(1.e0 - spzero)*slope(i,j,k,n);  
+            qm(i+1,j,k,n) = q(i,j,k,n) + acmpbot; 
         }                                           
 }
 
