@@ -114,29 +114,12 @@ contains
     double precision :: dlnpi, gfaci(Qlo(1):Qhi(1))
     double precision :: dlnpj, gfacj(Qlo(2):Qhi(2))
     double precision :: dlnpk, gfack(Qlo(3):Qhi(3))
-!    double precision, allocatable, dimension(:,:,:,:) :: molefrac
     double precision :: molefrac(Qlo(1):Qhi(1),Qlo(2):Qhi(2),Qlo(3):Qhi(3),1:nspec) 
     double precision :: hii(Qlo(1):Qhi(1),Qlo(2):Qhi(2),Qlo(3):Qhi(3),1:nspec)
 
     double precision, parameter :: twoThirds = 2.d0/3.d0
     double precision :: dxinv(3)
 
-    integer, dimension(3) :: lom, hip
-
-    do k = 1, 3
-       lom(k) = lo(k)-1
-       hip(k) = hi(k)+1
-    enddo
-
-    do k = 1, 3
-       if( (hi(k) - lo(k) ) .le. 0) then
-          write(*,*) 'lo: ', lo, 'hi: ', hi
-       endif
-    enddo
-    
-!    molefrac = 0.0d0
-    !    molefrac(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec) = 0.0d0
-    molefrac(:,:,:,:) = 0.0d0
     
     dxinv = 1.d0/deltax
 
