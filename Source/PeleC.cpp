@@ -1831,20 +1831,27 @@ PeleC::reset_internal_energy(MultiFab& S_new, int ng)
 void
 PeleC::computeTemp(MultiFab& S, int ng)
 {
-  reset_internal_energy(S, ng);
+  if (ng > 0) {
+  amrex::Print() << "Compute temp with ng = " << ng << std::endl;
+  amrex::Abort("ComputeTemp only operates on valid region");
+  }
+  //  BL_ASSERT(ng == 0);
+  //  reset_internal_energy(S, ng);
 
 #ifdef PELE_USE_EB
   auto const& fact = dynamic_cast<EBFArrayBoxFactory const&>(S.Factory());
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
+  
   // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-  for (MFIter mfi(S,true); mfi.isValid(); ++mfi)
+  for (MFIter mfi(S,false); mfi.isValid(); ++mfi)
   {
-    const Box& bx = mfi.growntilebox(ng);
+    //    const Box& bx = mfi.growntilebox(ng);
+    const Box& bx = mfi.validbox();
 
 #ifdef PELE_USE_EB
     const auto& flag_fab = flags[mfi];
