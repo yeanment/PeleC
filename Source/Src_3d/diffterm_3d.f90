@@ -133,9 +133,8 @@ contains
        enddo
     enddo
 
-!    call eos_ytx_vec(Q(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,QFS:QFS+nspec-1),lo,hi,X,lo,hi,lo,hi,nspec)
-!    call eos_hi_vec(Q(:,:,:,QTEMP),Qlo,Qhi,hii,Qlo,Qhi,lo,hi,nspec) 
-   return  
+    call eos_ytx_vec(Q(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,QFS:QFS+nspec-1),lo,hi,X,lo,hi,lo,hi,nspec)
+    call eos_hi_vec(Q(:,:,:,QTEMP),Qlo,Qhi,hii,Qlo,Qhi,lo,hi,nspec) 
     gfaci = dxinv(1)
     if (lo(1).le.dmnlo(1) .and. physbc_lo(1).eq.Inflow) gfaci(dmnlo(1)) = gfaci(dmnlo(1)) * TWO
     if (hi(1).gt.dmnhi(1) .and. physbc_hi(1).eq.Inflow) gfaci(dmnhi(1)+1) = gfaci(dmnhi(1)+1) * TWO
