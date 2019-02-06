@@ -108,7 +108,6 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
   int as_fine = (fr_as_fine != nullptr);
 #endif
 
-  // #if defined (_OPENMP) && defined (PELEC_USE_OMP)
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -122,11 +121,10 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
     IArrayBox fab_rrflag_as_crse(Box::TheUnitBox());
 
 //     for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true));
-//          mfi.isValid(); ++mfi) {
-    for (MFIter mfi(S, hydro_tile_size); 
-         mfi.isValid(); ++mfi) {
+    for (MFIter mfi(S, hydro_tile_size); mfi.isValid(); ++mfi) {
 
-
+#pragma omp single
+      { 
       
 #ifdef PELE_USE_EB
       Real wt = ParallelDescriptor::second();
@@ -136,8 +134,10 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       int ng = S.nGrow();
       amrex::Print() << "ng = " << ng << std::endl;
       const Box  gbox = amrex::grow(vbox,ng);
-      amrex::Print () << "vbox... " << vbox << std::endl;
-      amrex::Print () << "gbox... " << gbox << std::endl;      
+      int tid = omp_get_thread_num();
+      int nthreads = omp_get_max_threads();
+      
+      amrex::Print () << "thread " << tid << " of " << nthreads << "vbox... " << vbox << std::endl;
       const Box  cbox = amrex::grow(vbox,ng-1);
       const Box& dbox = geom.Domain();
 
@@ -155,8 +155,9 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 
           (*cost)[mfi].plus(wt, vbox);
         }
-        continue;
       }
+      else {
+
 
       int local_i = mfi.LocalIndex();
       int Ncut = no_eb_in_domain ? 0 : sv_eb_bndry_grad_stencil[local_i].size();
@@ -591,6 +592,9 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
         (*cost)[mfi].plus(wt, vbox);
       }
 #endif
+      } // end of #pragma omp [critical/single/etc]
+
+    } // end of if not covered
     }  // End of MFIter scope
   }  // End of OMP scope
 
