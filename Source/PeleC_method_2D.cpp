@@ -44,9 +44,9 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     auto const& qxpfab = qxp.array(); 
 
     AMREX_PARALLEL_FOR_3D (xslpbx, i,j,k, {
-        PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
+       PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
                     srcQfab, dlogafab, dx[0], dt); 
-    });
+   });
 //===================== X initial fluxes ===========================
     AsyncFab fx(xflxbx, NVAR);
     auto const& fxfab = fx.array(); 
@@ -55,7 +55,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     //bcMask at this point does nothing.  
     AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k, qxmfab, qxpfab, fxfab, q1fab, qauxfab,
-                 bcMaskfab, 0);
+                 bcMaskfab, 0);  
     });
 
 //==================== Y slopes ====================================
@@ -95,9 +95,13 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
     AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
         PeleC_transy(i,j,k, qmfab, qpfab, qxmfab, qxpfab, fyfab,
-                     srcQfab, qauxfab, q2fab, area2, volfab, hdt, hdtdy); 
-    }); 
+                     srcQfab, qauxfab, q2fab, area2, volfab, hdt, hdtdy);// */
+/*           for(int n = 0; n < QVAR; n++){
+             qmfab(i+1,j,k,n) = qxmfab(i+1,j,k,n); 
+             qpfab(i,j,k,n) = qxpfab(i,j,k,n); 
+          } // */
 
+    }); 
 //===================== Final Riemann problem X ====================
     const Box& xfxbx = surroundingNodes(bx, cdir); 
     auto const& flx1fab = flx1.array();
@@ -111,7 +115,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     AMREX_PARALLEL_FOR_3D (txbx, i, j , k, {
     PeleC_transx(i,j,k, qmfab, qpfab, qymfab, qypfab, fxfab,
                  srcQfab, qauxfab, q1fab, area1, volfab, hdt, hdtdx); 
-    });
+   });
 
 //===================== Final Riemann problem Y ====================
 

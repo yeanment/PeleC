@@ -930,7 +930,7 @@ PeleC_transy(const int i, const int j, const int k,
         pnewl = qxm(i+1,j,k,QPRES) - cdtdy*(dup + pav*du*(qa(i,j,k,QGAMC) - 1.e0)); 
         qm(i+1,j,k,QPRES) = amrex::max(pnewl + hdt*srcp , small_pres); 
         qm(i+1,j,k,QREINT) = renewl - rhoekinl + hdt*srce; 
-        qm(i+1,j,k,QGAME)  = qxp(i+1,j,k,QGAME); 
+        qm(i+1,j,k,QGAME)  = qxm(i+1,j,k,QGAME); 
 }
 
 
