@@ -548,4 +548,77 @@ SprayParticleContainer::injectParticles (Real time, int nstep, int lev)
   }
 
   Redistribute();
-} 
+}
+
+void 
+SprayParticleContainer::
+InitParticles(const int&  num_ppc)
+{
+    BL_PROFILE("SprayParticleContainer::InitParticles");
+
+    const int lev = 0;   
+    const Real* dx = Geom(lev).CellSize();
+    const Real* plo = Geom(lev).ProbLo();
+    
+    for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
+    {   
+        const Box& tile_box  = mfi.tilebox();
+
+        Cuda::HostVector<ParticleType> host_particles;
+    
+        for (IntVect iv = tile_box.smallEnd(); iv <= tile_box.bigEnd(); tile_box.next(iv)) {
+            for (int i_part=0; i_part<num_ppc;i_part++) {
+
+                Real r = (rand()%100)/99.;
+                Real x = plo[0] + (iv[0] + r)*dx[0];
+
+                r = (rand()%100)/99.;
+                Real y = plo[1] + (iv[1] + r)*dx[1];
+
+                r = (rand()%100)/99.;
+                Real z = plo[2] + (iv[2] + r)*dx[2];
+
+                ParticleType p;
+                p.id()  = ParticleType::NextID();
+                p.cpu() = ParallelDescriptor::MyProc();
+                p.pos(0) = x;
+                p.pos(1) = y;
+                p.pos(2) = z;
+
+                //Now assign the real data carried by each particle
+                p.rdata(0) = 0.;//u-vel
+                p.rdata(1) = 0.;//v-vel
+                if (AMREX_SPACEDIM>2) {
+                   p.rdata(2) = 0.;//w-vel
+                }                 
+                p.rdata(AMREX_SPACEDIM) = 293.; // temperature
+                p.rdata(AMREX_SPACEDIM+1) = 0.0200; // diameter
+                p.rdata(AMREX_SPACEDIM+2) = 0.68141; // fuel density
+
+                host_particles.push_back(p);
+
+            }
+        }
+
+        auto& particles = GetParticles(lev);
+        auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+        auto old_size = particle_tile.GetArrayOfStructs().size();
+        auto new_size = old_size + host_particles.size();
+        particle_tile.resize(new_size);
+
+        Cuda::thrust_copy(host_particles.begin(),
+                          host_particles.end(),
+                          particle_tile.GetArrayOfStructs().begin() + old_size);
+   
+        //The below seems to be how p.realdata seems to be copied over to GPU container
+        //Might need to implement as below
+        //HKfor (int kk = 0; kk < PIdx::nattribs; ++kk)
+        //HK{
+        //HK    Cuda::thrust_copy(host_attribs[kk].begin(),
+        //HK                      host_attribs[kk].end(),
+        //HK                      particle_tile.GetStructOfArrays().GetRealData(kk).begin() + old_size);
+        //HK}
+    }
+}
+
+  

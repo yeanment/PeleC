@@ -241,17 +241,16 @@ PeleC::init_particles ()
 	} 
         else if (particle_init_uniform > 0) 
         {
-#if 0
+
             // Initialize uniform particle distribution
-            MultiFab temp_mf(grids,dmap,1,0);
-            theSprayPC()->InitOnePerCell(Real(0.2),Real(0.1),Real(0.7),Real(1.0),temp_mf);
+            //MultiFab temp_mf(grids,dmap,1,0);
+            theSprayPC()->InitParticles(1); //insert one particle per cell
           
-            if (!particle_output_file.empty())
-            {
-                long cnt = SprayPC->TotalNumberOfParticles();// (bool only_valid=true, bool only_local=false) const;
-                std::cout << "Writing " << cnt << "to " << particle_output_file.c_str() << std::endl;
-            }
-#endif
+            //if (!particle_output_file.empty())
+            //{
+            //    long cnt = SprayPC->TotalNumberOfParticles();// (bool only_valid=true, bool only_local=false) const;
+            //    std::cout << "Writing " << cnt << "to " << particle_output_file.c_str() << std::endl;
+            //}
         }
         else
         {
