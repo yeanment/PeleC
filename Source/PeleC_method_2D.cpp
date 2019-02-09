@@ -31,21 +31,29 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 //===================== X slopes ===================================
     int cdir = 0; 
     const Box& xslpbx = grow(bxg1, cdir, 1);
+
+    IntVect lox(AMREX_D_DECL(xslpbx.loVect()[0], xslpbx.loVect()[1], xslpbx.loVect()[2])); 
+    IntVect hix(AMREX_D_DECL(xslpbx.hiVect()[0]+1, xslpbx.hiVect()[1], xslpbx.hiVect()[2])); 
+    const Box xmbx(lox, hix);
     const Box& xflxbx = surroundingNodes(bxg1,cdir);
-    
     AMREX_PARALLEL_FOR_3D (xslpbx,i,j,k, { 
         PeleC_slope_x(i,j,k, slfab, qfab);
     }); 
 
 //==================== X interp ====================================
-    AsyncFab qxm(xslpbx, QVAR); 
+    AsyncFab qxm(xmbx, QVAR); 
     AsyncFab qxp(xslpbx, QVAR);
     auto const& qxmfab = qxm.array(); 
     auto const& qxpfab = qxp.array(); 
 
     AMREX_PARALLEL_FOR_3D (xslpbx, i,j,k, {
        PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
-                    srcQfab, dlogafab, dx[0], dt); 
+                    srcQfab, dlogafab, dx[0], dt);
+/*
+       for(int n = 0; n < QVAR; ++n) {
+           qxmfab(i+1,j,k,n) = qfab(i,j,k,n); 
+           qxpfab(i,j,k,n) = qfab(i,j,k,n);  
+       } */
    });
 //===================== X initial fluxes ===========================
     AsyncFab fx(xflxbx, NVAR);
@@ -62,7 +70,11 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     cdir = 1; 
     const Box& yflxbx = surroundingNodes(bxg1,cdir); 
     const Box& yslpbx = grow(bxg1, cdir, 1);
-    AsyncFab qym(yslpbx, QVAR);
+    IntVect loy(AMREX_D_DECL(yslpbx.loVect()[0], yslpbx.loVect()[1], yslpbx.loVect()[2])); 
+    IntVect hiy(AMREX_D_DECL(yslpbx.hiVect()[0], yslpbx.hiVect()[1]+1, yslpbx.hiVect()[2])); 
+
+    const Box ymbx(loy,hiy); 
+    AsyncFab qym(ymbx, QVAR);
     AsyncFab qyp(yslpbx, QVAR);
     auto const& qymfab = qym.array(); 
     auto const& qypfab = qyp.array();  
@@ -75,14 +87,18 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k, {
         PeleC_plm_y(i,j,k, qymfab, qypfab, slfab, qfab, qauxfab, 
                 srcQfab, dlogafab, dx[1], dt); 
-   });
+/*        for(int n = 0; n < QVAR; ++n) {
+           qymfab(i,j+1,k,n) = qfab(i,j,k,n); 
+           qypfab(i,j,k,n) = qfab(i,j,k,n);  
+       }*/
+  });
 
 //===================== Y initial fluxes ===========================
     AsyncFab fy(yflxbx, NVAR); 
-    auto const& fyfab = fy.array(), q2fab = q2.array(); 
-
+    auto const& fyfab = fy.array();
+    auto const& q2fab = q2.array();
     AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k, qymfab, qypfab, fyfab, q2fab, qauxfab, bcMaskfab, 1); 
+        PeleC_cmpflx(i,j,k, qymfab, qypfab, fyfab, q2fab, qauxfab, bcMaskfab, 1);
     }); 
 
 //===================== X interface corrections ====================
@@ -92,15 +108,9 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     const Box& tybx = grow(bx, cdir, 1); 
     auto const& qmfab = qm.array();
     auto const& qpfab = qp.array();  
-
     AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
         PeleC_transy(i,j,k, qmfab, qpfab, qxmfab, qxpfab, fyfab,
                      srcQfab, qauxfab, q2fab, area2, volfab, hdt, hdtdy);// */
-/*           for(int n = 0; n < QVAR; n++){
-             qmfab(i+1,j,k,n) = qxmfab(i+1,j,k,n); 
-             qpfab(i,j,k,n) = qxpfab(i,j,k,n); 
-          } // */
-
     }); 
 //===================== Final Riemann problem X ====================
     const Box& xfxbx = surroundingNodes(bx, cdir); 
@@ -113,7 +123,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     cdir = 1; 
     const Box& txbx = grow(bx, cdir, 1); 
     AMREX_PARALLEL_FOR_3D (txbx, i, j , k, {
-    PeleC_transx(i,j,k, qmfab, qpfab, qymfab, qypfab, fxfab,
+        PeleC_transx(i,j,k, qmfab, qpfab, qymfab, qypfab, fxfab,
                  srcQfab, qauxfab, q1fab, area1, volfab, hdt, hdtdx); 
    });
 

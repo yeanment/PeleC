@@ -14,7 +14,7 @@ void
 PeleC_slope_x(const int i, const int j, const int k, 
       amrex::Array4< amrex::Real> const& dq, amrex::Array4<const amrex::Real> const& q)
 {
-    amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn;
+    amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn, dtemp;
     amrex::Real qm, qp, qi;
 #pragma unroll 
     for(int n = 0; n < QVAR; ++n){
@@ -24,25 +24,28 @@ PeleC_slope_x(const int i, const int j, const int k,
 
         dlft = qm - q(i-2,j,k,n); 
         drgt = qi - qm; 
-        dcen = 0.5*(dlft+drgt);         
-        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
+        dcen = 0.5*(dlft+drgt);        
+        dsgn = std::copysign(1.e0, dcen);  
         dlim = (dlft*drgt > 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
         dfm = dsgn*amrex::min(dlim, fabs(dcen));
 
         dlft = qp - qi; 
         drgt = q(i+2,j,k,n) - qp; 
         dcen = 0.5*(dlft+drgt);         
-        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
-        dlim = (dlft*drgt > 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
+        dsgn = std::copysign(1.e0, dcen);  
+        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
         dfp = dsgn*amrex::min(dlim, fabs(dcen)); 
 
         dlft = qi - qm; 
         drgt = qp - qi; 
         dcen = 0.5*(dlft+drgt);         
-        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
-        dlim = (dlft*drgt > 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
+        dsgn = std::copysign(1.e0, dcen);  
+        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
         
-        dq(i,j,k,n) = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
+        dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
+
+//flattening can go here. 
+        dq(i,j,k,n) = dsgn*amrex::min(dlim, fabs(dtemp)); 
     }
 }
 
@@ -52,7 +55,7 @@ void
 PeleC_slope_y (const int i, const int j, const int k,
                amrex::Array4<amrex::Real> const& dq, amrex::Array4<const amrex::Real> const& q)
 {
-    amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn;
+    amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn, dtemp;
     amrex::Real qm, qp, qj;
 #pragma unroll 
     for(int n = 0; n < QVAR; ++n){
@@ -63,24 +66,26 @@ PeleC_slope_y (const int i, const int j, const int k,
         dlft = qm - q(i,j-2,k,n); 
         drgt = qj - qm; 
         dcen = 0.5*(dlft+drgt);         
-        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
-        dlim = (dlft*drgt > 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
+        dsgn = std::copysign(1.e0, dcen);  
+        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
         dfm = dsgn*amrex::min(dlim, fabs(dcen));
 
         dlft = qp - qj; 
         drgt = q(i,j+2,k,n) - qp; 
         dcen = 0.5*(dlft+drgt);         
-        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
-        dlim = (dlft*drgt > 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
+        dsgn = std::copysign(1.e0, dcen); 
+        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
         dfp = dsgn*amrex::min(dlim, fabs(dcen)); 
 
         dlft = qj - qm; 
         drgt = qp - qj; 
         dcen = 0.5*(dlft+drgt);         
-        dsgn = (dcen > 0.0) ? 1.0 : -1.0; 
-        dlim = (dlft*drgt > 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
+        dsgn = std::copysign(1.e0, dcen);  
+        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(fabs(dlft), fabs(drgt)) : 0.0; 
         
-        dq(i,j,k,n) = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
+        dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
+//flattening can go here. 
+        dq(i,j,k,n) = dsgn*amrex::min(dlim, fabs(dtemp)); 
     }
 }
 
@@ -339,22 +344,24 @@ PeleC_cmpflx(const int i, const int j, const int k,
     amrex::Real spl[NUM_SPECIES];
     amrex::Real spr[NUM_SPECIES]; 
     amrex::Real ul, ur, vl, vr, v2l, v2r, rel, rer; 
-    int idx, IU, IV, IV2; 
+    int idx, IU, IV, IV2;
+    int GU, GV, GV2;  
     if(idir == 0){
          IU = QU; 
          IV = QV; 
-        IV2 = QW; 
+        IV2 = QW;
+         GU = GDU; 
+         GV = GDV; 
+        GV2 = GDW;  
     }
     else if( idir == 1){
-        IU = QV; 
-        IV = QU; 
+         IU = QV; 
+         IV = QU; 
         IV2 = QW; 
-    }
-    else{
-        IU = QW; 
-        IV = QU; 
-        IV2 = QV; 
-    }
+         GU = GDV; 
+         GV = GDU; 
+        GV2 = GDW;  
+   }
 
 
     if(idir == 0) cav = 0.5e0*(qa(i,j,k,QC) + qa(i-1,j,k,QC)); 
@@ -398,19 +405,18 @@ PeleC_cmpflx(const int i, const int j, const int k,
                  qr(i,j,k,QPRES), rer, spr,
                  state, gdnv_state, flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
                  flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT),
-                 q(i,j,k,IU), q(i,j,k,IV), q(i,j,k,IV2), q(i,j,k,GDPRES),
-                 q(i,j,k,GDGAME), ustar, idir, qa(i,j,k,QCSML), cav); 
+                 q(i,j,k,GU), q(i,j,k,GV), q(i,j,k,GV2), q(i,j,k,GDPRES),
+                 q(i,j,k,GDGAME), ustar, idir, qa(i,j,k,QCSML), cav);
+/*         if(idir==1){
+            amrex::Print()<< "i j = "<< i << '\t' << j << '\t'; 
+            for(int n = 0; n < NGDNV; n++){
+                amrex::Print()<< q(i,j,k,n) << '\t'; 
+            }
+            amrex::Print()<< "ustar = " << ustar << std::endl;
+            std::cin.get(); 
+         } 
         
-/* /                
-         riemann(ql(i,j,k,QRHO), ql(i,j,k,QU), ql(i,j,k,QV), ql(i,j,k,QW), 
-                 ql(i,j,k,QPRES), ql(i,j,k,QREINT), spl,   
-                 qr(i,j,k,QRHO), qr(i,j,k,QU), qr(i,j,k,QV), qr(i,j,k,QW), 
-                 qr(i,j,k,QPRES), qr(i,j,k,QREINT), spr,
-                 state, gdnv_state, flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
-                 flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT),
-                 q(i,j,k,IU), q(i,j,k,IV), q(i,j,k,IV2), q(i,j,k,GDPRES),
-                 q(i,j,k,GDGAME), ustar, idir, qa(i,j,k,QCSML), cav); 
-// */
+*/                
         amrex::Real flxrho = flx(i,j,k,URHO); 
         for(int ipass = 0; ipass < npassive; ++ipass){
             int n = EOS::upass_map(ipass); 
@@ -864,7 +870,7 @@ PeleC_transy(const int i, const int j, const int k,
         gegm = qint(i,j,k,GDGAME); 
     
         dup  = pggp*ugp - pggm*ugm; 
-        pav  = 0.5e0*(pggp+pggm); 
+        pav  = 0.5e0*(pggp + pggm); 
         uav  = 0.5e0*(ugp + ugm); 
         du   = ugp - ugm; 
         geav = 0.5e0*(gegp+gegm); 
@@ -899,6 +905,7 @@ PeleC_transy(const int i, const int j, const int k,
         pnewr = qxp(i,j,k,QPRES) - cdtdy*(dup + pav*du*(qa(i,j,k,QGAMC) - 1.e0)); 
         qp(i,j,k,QPRES) = amrex::max(pnewr + hdt*srcp, small_pres); 
         qp(i,j,k,QREINT) = renewr - rhoekinr + hdt*srce; 
+        qp(i,j,k,QPRES)  = qxp(i,j,k,QPRES); 
         qp(i,j,k,QGAME)  = qxp(i,j,k,QGAME); 
 
 //======================= QM ================================================
@@ -921,8 +928,8 @@ PeleC_transy(const int i, const int j, const int k,
         rwl *= rrnewl; 
         
         
-        state.rho = rrnewl + hdt*srcr; 
-        qm(i+1,j,k,QRHO) = state.rho;  
+        
+        qm(i+1,j,k,QRHO) = rrnewl + hdt*srcr; 
         qm(i+1,j,k,QU  ) = runewl/rrnewl + hdt*srcQ(i,j,k,QU); 
         qm(i+1,j,k,QV  ) = rvnewl/rrnewl + hdt*srcQ(i,j,k,QV); 
         rhoekinl = 0.5e0*(runewl*runewl + rvnewl*rvnewl + rwl*rwl)/rrnewl; 
@@ -930,6 +937,7 @@ PeleC_transy(const int i, const int j, const int k,
         pnewl = qxm(i+1,j,k,QPRES) - cdtdy*(dup + pav*du*(qa(i,j,k,QGAMC) - 1.e0)); 
         qm(i+1,j,k,QPRES) = amrex::max(pnewl + hdt*srcp , small_pres); 
         qm(i+1,j,k,QREINT) = renewl - rhoekinl + hdt*srce; 
+        qm(i+1,j,k,QPRES)  = qxm(i+1,j,k,QPRES); 
         qm(i+1,j,k,QGAME)  = qxm(i+1,j,k,QGAME); 
 }
 

@@ -191,32 +191,23 @@ void PeleC_artif_visc(const int i, const int j, const int k,
                       amrex::Array4<const amrex::Real> const &u,
                       amrex::Real const dx, amrex::Real const difmag,  const int cdir)
 {
-    amrex::Real div1; 
+    amrex::Real div1;
+            flx(i,j,k,UTEMP) = 0.e0;  
     if(cdir==0){
 #pragma unroll
         for(int n=0; n < NVAR; ++n){
-            if(n == UTEMP){
-                flx(i,j,k,n) = 0; 
-            }
-            else{
-                div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
+             div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
 // Passing in difmag TODO not pass in. 
-                div1 = difmag*std::min(0.0, div1); 
-                flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i-1,j,k,n));
-            }
+             div1 = difmag*std::min(0.0, div1); 
+             flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i-1,j,k,n));
         }
     }
     else if(cdir==1){
 #pragma unroll 
         for(int n=0; n < NVAR; ++n){
-            if(n == UTEMP){
-                flx(i,j,k,n) = 0; 
-            }
-            else{
-                div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
-                div1 = difmag*std::min(0.0, div1); 
-                flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
-            }
+            div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
+            div1 = difmag*std::min(0.0, div1); 
+            flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
         }
     }
 }
@@ -227,8 +218,8 @@ void PeleC_norm_spec_flx(const int i, const int j, const int k,
                          amrex::Array4<amrex::Real> const& flx) 
 {
     amrex::Real summ,fac; 
-#pragma unroll 
-    for(int n = UFS; n < NVAR; ++n) summ += flx(i,j,k,n); 
+    for(int n = UFS; n < NVAR; ++n) summ += flx(i,j,k,n);
+ 
     fac = (summ != 0) ? flx(i,j,k,URHO)/summ : 1.e0; 
 #pragma unroll 
     for(int n = UFS; n < NVAR; ++n) flx(i,j,k,n) *= fac; 
@@ -255,11 +246,12 @@ void PeleC_update(const int i, const int j, const int k,
                   amrex::Array4<const amrex::Real> const& pdivu)
 {
 #pragma unroll 
-    for(int n = 0; n < NVAR; ++n) 
+    for(int n = 0; n < NVAR; ++n)
+    { 
        update(i,j,k,n) += (flx1(i,j,k,n) - flx1(i+1,j,k,n)
                        +   flx2(i,j,k,n) - flx2(i,j+1,k,n))
                        /   vol(i,j,k); 
-
+    }
 
     update(i,j,k,UEINT) -= pdivu(i,j,k);     
 }

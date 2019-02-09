@@ -25,15 +25,16 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     //TODO Do Flattening when we go to PPM. 
     
     //Call the method!
-    const auto q1bx = surroundingNodes(bx,0); 
-    Gpu::AsyncFab q1(q1bx,QVAR); 
+    const auto& bxg2 = grow(bx, 2); 
+    const auto q1bx = surroundingNodes(bxg2,0); 
+    Gpu::AsyncFab q1(q1bx, NGDNV); 
 #if AMREX_SPACEDIM > 1
-    const auto q2bx = surroundingNodes(bx,1); 
-    Gpu::AsyncFab q2(q2bx,QVAR); 
+    const auto q2bx = surroundingNodes(bxg2,1); 
+    Gpu::AsyncFab q2(q2bx, NGDNV); 
 #endif
 #if AMREX_SPACEDIM > 2 
-    const auto q3bx = surroundingNodes(bx,2); 
-    Gpu::AsyncFab q3(q3bx,QVAR); 
+    const auto q3bx = surroundingNodes(bxg2,2); 
+    Gpu::AsyncFab q3(q3bx, NGDNV); 
 #endif
 
     Gpu::AsyncFab divu(bx, 1); 
@@ -77,7 +78,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     auto const& pdivufab = pdivu.array();
 
     //TODO have difmag be parm parsed
-    amrex::Real difmag = 0.005e0; 
+    amrex::Real difmag = 0.1e0; //0.005e0; 
 
     PeleC_consup(bx, uinfab, uoutfab,
                  D_DECL(flxx, flxy, flxz),
