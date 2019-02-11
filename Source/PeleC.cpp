@@ -1824,7 +1824,8 @@ PeleC::reset_internal_energy(MultiFab& S_new, int ng)
 void
 PeleC::computeTemp(MultiFab& S, int ng)
 {
-  reset_internal_energy(S, ng);
+  // reset_internal_energy(S, ng);
+  set_body_state(S);
 
 #ifdef PELE_USE_EB
   auto const& fact = dynamic_cast<EBFArrayBoxFactory const&>(S.Factory());
