@@ -78,7 +78,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     auto const& pdivufab = pdivu.array();
 
     //TODO have difmag be parm parsed
-    amrex::Real difmag = 0.1e0; //0.005e0; 
+    amrex::Real difmag = 0.e0; //0.005e0; 
 
     PeleC_consup(bx, uinfab, uoutfab,
                  D_DECL(flxx, flxy, flxz),

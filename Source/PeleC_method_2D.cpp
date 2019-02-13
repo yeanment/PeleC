@@ -38,7 +38,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     const Box& xflxbx = surroundingNodes(bxg1,cdir);
     AMREX_PARALLEL_FOR_3D (xslpbx,i,j,k, { 
         PeleC_slope_x(i,j,k, slfab, qfab);
-    }); 
+    }); // */
 
 //==================== X interp ====================================
     AsyncFab qxm(xmbx, QVAR); 
@@ -49,11 +49,16 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     AMREX_PARALLEL_FOR_3D (xslpbx, i,j,k, {
        PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
                     srcQfab, dlogafab, dx[0], dt);
-/*
-       for(int n = 0; n < QVAR; ++n) {
-           qxmfab(i+1,j,k,n) = qfab(i,j,k,n); 
-           qxpfab(i,j,k,n) = qfab(i,j,k,n);  
-       } */
+                 if(i==25 && j==204){
+                    amrex::Print()<<"plm_x" << std::endl;
+                    for(int n = 0; n < QVAR; ++n){
+                        amrex::Print() << n << std::endl; 
+                        amrex::Print() << "qm " << qxmfab(i+1,j,k,n) << '\t' << 
+                                      "qp " << qxpfab(i,j,k,n) << '\t' <<
+                                      "slope " << slfab(i,j,k,n) << std::endl;  
+                    }
+                    std::cin.get();
+                 } // */
    });
 //===================== X initial fluxes ===========================
     AsyncFab fx(xflxbx, NVAR);
@@ -81,16 +86,22 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
  
     AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k,{
         PeleC_slope_y(i,j,k, slfab, qfab); 
-    });
+    }); // */
 
 //==================== Y interp ====================================
     AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k, {
         PeleC_plm_y(i,j,k, qymfab, qypfab, slfab, qfab, qauxfab, 
-                srcQfab, dlogafab, dx[1], dt); 
-/*        for(int n = 0; n < QVAR; ++n) {
-           qymfab(i,j+1,k,n) = qfab(i,j,k,n); 
-           qypfab(i,j,k,n) = qfab(i,j,k,n);  
-       }*/
+                srcQfab, dlogafab, dx[1], dt);
+                 if(i==25 && j==204){
+                    amrex::Print()<<"plm_y" << std::endl;
+                    for(int n = 0; n < QVAR; ++n){
+                        amrex::Print() << n << std::endl; 
+                        amrex::Print() << "qm " << qymfab(i,j+1,k,n) << '\t' << 
+                                      "qp " << qypfab(i,j,k,n) << '\t' <<
+                                      "slope " << slfab(i,j,k,n) << std::endl;  
+                    }
+                    std::cin.get();
+                 } // */
   });
 
 //===================== Y initial fluxes ===========================
@@ -110,8 +121,27 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     auto const& qpfab = qp.array();  
     AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
         PeleC_transy(i,j,k, qmfab, qpfab, qxmfab, qxpfab, fyfab,
-                     srcQfab, qauxfab, q2fab, area2, volfab, hdt, hdtdy);// */
-    }); 
+                     srcQfab, qauxfab, q2fab, area2, volfab, hdt, hdtdy);
+                if(i==25 && j==204){
+                    amrex::Print()<<"transy" << std::endl;
+                    for(int n = 0; n < QVAR; ++n){
+                        amrex::Print() << n << std::endl; 
+                        amrex::Print() << "qm " << qmfab(i+1,j,k,n) << '\t' << 
+                                      "qp " << qpfab(i,j,k,n) << '\t' << 
+                                       "fx " << fyfab(i, j+1, k, n) << '\t' 
+                                       << fyfab(i,j,k,n) << '\n' 
+                                       << "qym " << qxmfab(i+1,j,k,n) << '\t' << 
+                                          "qyp " << qxpfab(i,j,k,n) << std::endl;
+                    }
+                    std::cin.get();
+                 } // */
+
+/*/
+         for(int n = 0; n < QVAR; ++n){
+            qmfab(i+1,j,k,n) = qxmfab(i+1,j,k,n); 
+            qpfab(i,j,k,n) = qxpfab(i,j,k,n); 
+        } // */ 
+   }); 
 //===================== Final Riemann problem X ====================
     const Box& xfxbx = surroundingNodes(bx, cdir); 
     auto const& flx1fab = flx1.array();
@@ -121,11 +151,28 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
 
 //===================== Y interface corrections ====================
     cdir = 1; 
-    const Box& txbx = grow(bx, cdir, 1); 
+    const Box& txbx = grow(bx, cdir, 1);
     AMREX_PARALLEL_FOR_3D (txbx, i, j , k, {
         PeleC_transx(i,j,k, qmfab, qpfab, qymfab, qypfab, fxfab,
-                 srcQfab, qauxfab, q1fab, area1, volfab, hdt, hdtdx); 
-   });
+                 srcQfab, qauxfab, q1fab, area1, volfab, hdt, hdtdx);                
+                if(i==25 && j==204){
+                    amrex::Print() << "transx" << std::endl; 
+                    for(int n = 0; n < QVAR; ++n){
+                        amrex::Print() << n << std::endl; 
+                        amrex::Print() << "qm " << qmfab(i,j+1,k,n) << '\t' << 
+                                      "qp " << qpfab(i,j,k,n) << '\t' << 
+                                       "fx " << fxfab(i+1, j, k, n) << '\t' 
+                                       << fxfab(i,j,k,n) << '\n' 
+                                       << "qym " << qymfab(i,j+1,k,n) << '\t' << 
+                                          "qyp " << qypfab(i,j,k,n) << std::endl;
+                    }
+                    std::cin.get();
+                 } // */
+/*        for(int n = 0; n < QVAR; ++n){
+            qmfab(i,j+1,k,n) = qymfab(i,j+1,k,n); 
+            qpfab(i,j,k,n) = qypfab(i,j,k,n); 
+        } // */
+  });
 
 //===================== Final Riemann problem Y ====================
 

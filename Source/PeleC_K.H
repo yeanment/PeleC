@@ -192,24 +192,28 @@ void PeleC_artif_visc(const int i, const int j, const int k,
                       amrex::Real const dx, amrex::Real const difmag,  const int cdir)
 {
     amrex::Real div1;
-            flx(i,j,k,UTEMP) = 0.e0;  
     if(cdir==0){
 #pragma unroll
         for(int n=0; n < NVAR; ++n){
-             div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
+            if(n != UTEMP){
+                div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
 // Passing in difmag TODO not pass in. 
-             div1 = difmag*std::min(0.0, div1); 
-             flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i-1,j,k,n));
+                div1 = difmag*std::min(0.0, div1); 
+                flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i-1,j,k,n));
+            }
         }
     }
     else if(cdir==1){
 #pragma unroll 
         for(int n=0; n < NVAR; ++n){
-            div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
-            div1 = difmag*std::min(0.0, div1); 
-            flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
+            if(n  != UTEMP){
+                div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
+                div1 = difmag*std::min(0.0, div1); 
+                flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
+            }
         }
     }
+    flx(i,j,k,UTEMP) = 0.e0;  
 }
 
 AMREX_GPU_DEVICE
@@ -217,9 +221,9 @@ inline
 void PeleC_norm_spec_flx(const int i, const int j, const int k,
                          amrex::Array4<amrex::Real> const& flx) 
 {
-    amrex::Real summ,fac; 
+    amrex::Real summ,fac;
+    summ = 0.0;  
     for(int n = UFS; n < NVAR; ++n) summ += flx(i,j,k,n);
- 
     fac = (summ != 0) ? flx(i,j,k,URHO)/summ : 1.e0; 
 #pragma unroll 
     for(int n = UFS; n < NVAR; ++n) flx(i,j,k,n) *= fac; 
