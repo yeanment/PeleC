@@ -385,7 +385,7 @@ contains
 
   end subroutine compute_cfl
 
-AMREX_DEVICE subroutine ctoprim(lo, hi, &
+subroutine ctoprim(lo, hi, &
                      uin, uin_lo, uin_hi, &
                      q,     q_lo,   q_hi, &
                      qaux, qa_lo,  qa_hi) bind(C, name = "ctoprim")
@@ -394,11 +394,7 @@ AMREX_DEVICE subroutine ctoprim(lo, hi, &
     use amrex_fort_module, only: amrex_real 
     use chemistry_module, only : nspecies, naux
     use eos_type_module
-#ifdef AMREX_USE_CUDA
-    use eos_module, only : eos_re_d
-#else
     use eos_module, only: eos_re
-#endif
     use meth_params_module , only : upass_map, qpass_map
 
     use amrex_constants_module, only: ZERO, HALF, ONE
@@ -470,11 +466,7 @@ AMREX_DEVICE subroutine ctoprim(lo, hi, &
              eos_state % e        = q(i,j,k,QREINT)
              eos_state % massfrac = q(i,j,k,QFS:QFS+nspecies-1)
              eos_state % aux      = q(i,j,k,QFX:QFX+naux-1)
-#ifdef AMREX_USE_CUDA
-             call eos_re_d(eos_state)
-#else
              call eos_re(eos_state) 
-#endif
 
 ! fills the eos_state struct for use 
 
@@ -497,7 +489,7 @@ AMREX_DEVICE subroutine ctoprim(lo, hi, &
 !   call destroy(eos_state)
   end subroutine 
 
-AMREX_DEVICE  subroutine srctoprim(lo, hi, &
+subroutine srctoprim(lo, hi, &
                        q,     q_lo,   q_hi, &
                        qaux, qa_lo,  qa_hi, &
                        src, src_lo, src_hi, &
@@ -622,7 +614,7 @@ AMREX_DEVICE  subroutine srctoprim(lo, hi, &
 
 
 
-AMREX_DEVICE  subroutine limit_hydro_fluxes_on_small_dens(u,u_lo,u_hi, &
+subroutine limit_hydro_fluxes_on_small_dens(u,u_lo,u_hi, &
                                               q,q_lo,q_hi, &
                                               vol,vol_lo,vol_hi, &
                                               flux1,flux1_lo,flux1_hi, &

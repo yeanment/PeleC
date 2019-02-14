@@ -243,7 +243,7 @@ contains
   end subroutine cmpflx
 
 
-AMREX_DEVICE  subroutine shock(q,qd_l1,qd_l2,qd_h1,qd_h2, &
+subroutine shock(q,qd_l1,qd_l2,qd_h1,qd_h2, &
                    shk,s_l1,s_l2,s_h1,s_h2, &
                    ilo1,ilo2,ihi1,ihi2,dx,dy)
 

@@ -91,7 +91,7 @@ PeleC_slope_y (const int i, const int j, const int k,
 
 
 
-
+/*
 AMREX_GPU_DEVICE
 inline 
 void 
@@ -104,15 +104,15 @@ PeleC_shock(const int i, const int j, const int k,
 //        if(coord_type == 0)
          divU = 0.5*(q(i+1,j,k,QU) - q(i-1,j,k,QU))/dx + 
                             0.5*(q(i,j+1,k,QV) - q(i,j-1,k,QV))/dy; 
-/*        else if(coord_type == 1){
-            amrex::Real rc, rm, rp; 
-            rc = double(i + 0.5e0)*dx;
-            rm = double(i - 1.e0)*dx; 
-            rp = double(i + 1.e0)*dx; 
+//         else if(coord_type == 1){
+//            amrex::Real rc, rm, rp; 
+//            rc = double(i + 0.5e0)*dx;
+//            rm = double(i - 1.e0)*dx; 
+//            rp = double(i + 1.e0)*dx; 
 
-            divU = 0.5e0*(rp*q(i+1,j,k,QU) - rm*q(i-1,j,k,QU))/(rc*dx) + 
-                   0.5e0*(q(i,j+1,k,QV) - q(i,j-1,k,QV))/dy; 
-        } */ 
+//            divU = 0.5e0*(rp*q(i+1,j,k,QU) - rm*q(i-1,j,k,QU))/(rc*dx) + 
+//                   0.5e0*(q(i,j+1,k,QV) - q(i,j-1,k,QV))/dy; 
+//        }  
         amrex::Real px_pre, px_post, py_pre, py_post; 
         if (q(i+1,j,k,QPRES) - q(i-1,j,k,QPRES) < 0.0e0){ 
              px_pre  = q(i+1,j,k,QPRES);
@@ -143,7 +143,7 @@ PeleC_shock(const int i, const int j, const int k,
         
         if(pjump < 0.0e0 && divU < 0.0e0) shk(i,j,k) = 1.0e0; 
         else shk(i,j,k) = 0.0e0; 
-}
+} */ 
 
 //Riemann_md 
 AMREX_GPU_DEVICE
@@ -175,7 +175,6 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
         }
         
         gdnv_state.eos_rp(); 
-        amrex::Real csl = gdnv_state.cs; 
 
         gdnv_state.rho = rr; 
         gdnv_state.p   = pr; 
@@ -183,12 +182,8 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
              gdnv_state.massfrac[i] = spr[i]; 
         }
         gdnv_state.eos_rp(); 
-        amrex::Real csr = gdnv_state.cs;
         amrex::Real wl = amrex::max(wsmall, std::sqrt(abs(gamcl*pl*rl))); 
         amrex::Real wr = amrex::max(wsmall, std::sqrt(abs(gamcr*pr*rr))); 
-
-//        amrex::Real wl = amrex::max(wsmall, rl*csl); 
-//        amrex::Real wr = amrex::max(wsmall, rr*csr);
 
         amrex::Real pstar = ((wr*pl + wl*pr) + wl*wr*(ul - ur))/(wl + wr); 
         ustar = ((wl*ul + wr*ur) + (pl - pr))/(wl + wr); 
@@ -336,14 +331,15 @@ PeleC_cmpflx(const int i, const int j, const int k,
      amrex::Array4<const amrex::Real> const& ql, 
      amrex::Array4<const amrex::Real> const & qr, amrex::Array4<amrex::Real> const& flx,
      amrex::Array4<amrex::Real> const& q, amrex::Array4<const amrex::Real> const& qa,
-     amrex::Array4<const int> const& bcMask, int idir)
+//     amrex::Array4<const int> const& bcMask,
+     int idir)
 {
     EOS gdnv_state; 
     amrex::Real cav, ustar;
     amrex::Real spl[NUM_SPECIES];
     amrex::Real spr[NUM_SPECIES]; 
     amrex::Real ul, ur, vl, vr, v2l, v2r, rel, rer, gamcl, gamcr; 
-    int idx, IU, IV, IV2;
+    int IU, IV, IV2;
     int GU, GV, GV2;  
     if(idir == 0){
          IU = QU; 
@@ -440,14 +436,15 @@ void
 PeleC_plm_x(const int i, const int j, const int k,
     amrex::Array4<amrex::Real> const& qm, amrex::Array4<amrex::Real> const& qp,
     amrex::Array4<const amrex::Real> const& slope,  amrex::Array4<const amrex::Real> const& q,
-    amrex::Array4<const amrex::Real> const& qa,   amrex::Array4<const amrex::Real> const& srcQ, 
-    amrex::Array4<const amrex::Real> const& dloga, amrex::Real const dx, amrex::Real const dt)
+    amrex::Real const cc,   amrex::Array4<const amrex::Real> const& srcQ, 
+//    amrex::Array4<const amrex::Real> const& dloga,
+    amrex::Real const dx, amrex::Real const dt)
 {
 
         amrex::Real e[3]; 
         amrex::Real dtdx = dt/dx; 
 
-        amrex::Real cc    = qa(i,j,k,QC); 
+//        amrex::Real cc    = qa(i,j,k,QC); 
         amrex::Real cs    = cc*cc; 
         amrex::Real rho   = q(i,j,k,QRHO); 
         amrex::Real u     = q(i,j,k,QU); 
@@ -522,7 +519,7 @@ PeleC_plm_x(const int i, const int j, const int k,
         qm(i+1,j,k,QPRES) = amrex::max(qm(i+1,j,k,QPRES), small_pres);
         qm(i+1,j,k,QREINT) = rhoe_ref + (apleft + amleft)*enth*cs + azeleft;
                         
-        if(dloga(i,j,k)!=0){
+/*        if(dloga(i,j,k)!=0){
             amrex::Real courn = dtdx*(cc+std::abs(u)); 
             amrex::Real eta = (1.e0-courn)/(cc*dt*std::abs(dloga(i,j,k))); 
             amrex::Real dlogatmp = amrex::min(eta, 1.e0)*dloga(i,j,k);
@@ -539,7 +536,7 @@ PeleC_plm_x(const int i, const int j, const int k,
             qp(i,j,k,QRHO) = amrex::max(qp(i,j,k,QRHO), small_dens); 
             qp(i,j,k,QPRES) += sourcp; 
             qp(i,j,k,QREINT) += source; 
-        }
+        } */
 //--------------- Upwind the passive variables --------------------------------
 #pragma unroll
         for(int ipassive = 0; ipassive < npassive; ++ipassive){
@@ -564,14 +561,15 @@ void
 PeleC_plm_y(const int i, const int j, const int k, 
     amrex::Array4<amrex::Real> const& qm         , amrex::Array4<amrex::Real> const& qp,
     amrex::Array4<const amrex::Real> const& slope, amrex::Array4<const amrex::Real> const& q,
-    amrex::Array4<const amrex::Real> const& qa   , amrex::Array4<const amrex::Real> const& srcQ, 
-    amrex::Array4<const amrex::Real> const& dloga, amrex::Real const dy, amrex::Real const dt)
+    amrex::Real const cc   , amrex::Array4<const amrex::Real> const& srcQ, 
+//    amrex::Array4<const amrex::Real> const& dloga, 
+    amrex::Real const dy, amrex::Real const dt)
 {
 
         amrex::Real e[3]; 
         amrex::Real dtdy = dt/dy; 
 
-        amrex::Real cc    = qa(i,j,k,QC); 
+//        amrex::Real cc    = qa(i,j,k,QC); 
         amrex::Real cs    = cc*cc; 
         amrex::Real rho   = q(i,j,k,QRHO); 
         amrex::Real u     = q(i,j,k,QU); 
@@ -702,8 +700,8 @@ PeleC_transx(const int i, const int j, const int k,
         amrex::Real runewr, rvnewr, renewr, rhoekinr ; 
         amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, renewl; 
         amrex::Real rhoekinl, rwl, srcr, srce, srcp, srcpass;
-        amrex::Real pggp, pggm, ugp, ugm, gegp, gegm;
-        amrex::Real dAup, pav, uav, dAu, geav, dge; 
+        amrex::Real pggp, pggm, ugp, ugm;// gegp, gegm;
+        amrex::Real dAup, pav,dAu; //  uav, geav, dge; 
         //  Local variables to avoid reading from global memory too much 
         amrex::Real flxrho, flxu, flxv, flxe; 
 
@@ -737,15 +735,15 @@ PeleC_transx(const int i, const int j, const int k,
         pggm = qint(i,j,k,GDPRES); 
         ugp  = qint(i+1,j,k,GDU); 
         ugm  = qint(i,j,k,GDU); 
-        gegp = qint(i+1,j,k,GDGAME); 
-        gegm = qint(i,j,k,GDGAME); 
+//        gegp = qint(i+1,j,k,GDGAME); 
+//        gegm = qint(i,j,k,GDGAME); 
     
         dAup = a1(i+1,j,k)*pggp*ugp - a1(i,j,k)*pggm*ugm; //
         pav  = 0.5e0*(pggp + pggm); 
-        uav  = 0.5e0*(ugp + ugm); 
+//        uav  = 0.5e0*(ugp + ugm); 
         dAu  = a1(i+1,j,k)*ugp - a1(i,j,k)*ugm; //
-        geav = 0.5e0*(gegp+gegm); 
-        dge  = gegp-gegm; 
+//        geav = 0.5e0*(gegp+gegm); 
+//        dge  = gegp-gegm; 
     
 //========================= QP ===========================================
 
@@ -829,9 +827,9 @@ PeleC_transy(const int i, const int j, const int k,
         amrex::Real runewr, rvnewr, renewr, rhoekinr; 
         amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, renewl; 
         amrex::Real rhoekinl, rwl, srcr, srce,srcp, srcpass;
-        amrex::Real pggp, pggm, ugp, ugm, gegp, gegm; 
+        amrex::Real pggp, pggm, ugp, ugm;// gegp, gegm; 
         //  Local variables to avoid reading from global memory too much 
-        amrex::Real dup, pav, uav, du, pnewr, pnewl, geav, dge;  
+        amrex::Real dup, pav, du, pnewr, pnewl;// geav, dge, uav;  
         amrex::Real flxrho, flxu, flxv, flxe; 
 
         flxrho = cdtdy*(flxy(i,j+1,k,URHO)  - flxy(i,j,k,URHO));
@@ -864,15 +862,15 @@ PeleC_transy(const int i, const int j, const int k,
         pggm = qint(i,j,k,GDPRES); 
         ugp  = qint(i,j+1,k,GDV); 
         ugm  = qint(i,j,k,GDV);
-        gegp = qint(i,j+1,k,GDGAME); 
-        gegm = qint(i,j,k,GDGAME); 
+//        gegp = qint(i,j+1,k,GDGAME); 
+//        gegm = qint(i,j,k,GDGAME); 
     
         dup  = pggp*ugp - pggm*ugm; 
         pav  = 0.5e0*(pggp + pggm); 
-        uav  = 0.5e0*(ugp + ugm); 
+//        uav  = 0.5e0*(ugp + ugm); 
         du   = ugp - ugm; 
-        geav = 0.5e0*(gegp+gegm); 
-        dge  = gegp - gegm; 
+//        geav = 0.5e0*(gegp+gegm); 
+//        dge  = gegp - gegm; 
 
 //========================= QP ===========================================
 

@@ -6,7 +6,9 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
             amrex::FArrayBox const &uin, 
             amrex::FArrayBox &uout, amrex::FArrayBox const &q, amrex::FArrayBox const &qaux,
             amrex::FArrayBox const &src_q, amrex::IArrayBox const &bcMask,
-            const amrex::Real *dx, const amrex::Real dt, amrex::FArrayBox flux[], 
+            const amrex::Real *dx, const amrex::Real dt, 
+            D_DECL(amrex::FArrayBox &flux1, amrex::FArrayBox &flux2, 
+                   amrex::FArrayBox &flux3), 
 #if (AMREX_SPACEDIM < 3) 
 //            amrex::FArrayBox pradial, 
 #endif
@@ -42,12 +44,12 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 
     amrex::Print() << " Calling umeth! " << std::endl; 
 #if AMREX_SPACEDIM == 1
-    PeleC_umeth_1D(bx, q,  qaux, src_q, bcMask, flux[0], q1, pdivu, dx, dt);  
+    PeleC_umeth_1D(bx, q,  qaux, src_q, bcMask, flux1, q1, pdivu, dx, dt);  
 #elif AMREX_SPACEDIM==2 
-    PeleC_umeth_2D(bx, q,  qaux, src_q, bcMask, flux[0], flux[1], dloga, q1.fab(), q2.fab(), a1, a2, 
+    PeleC_umeth_2D(bx, q,  qaux, src_q, bcMask, flux1, flux2, dloga, q1.fab(), q2.fab(), a1, a2, 
                   pdivu.fab(), vol, dx, dt); 
 #else
-    PeleC_umeth_3D(bx, q,  qaux, src_q, bcMask, flux[0], flux[1], flux[2], 
+    PeleC_umeth_3D(bx, q,  qaux, src_q, bcMask, flux1, flux2, flux3, 
                    q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
 #endif
 
@@ -61,9 +63,9 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     });
 
     //consup 
-    auto const& D_DECL(flxx = flux[0].array(),
-                       flxy = flux[1].array(), 
-                       flxz = flux[2].array()); 
+    auto const& D_DECL(flxx = flux1.array(),
+                       flxy = flux2.array(), 
+                       flxz = flux3.array()); 
 
     auto const& D_DECL(a1fab = a1.array(), 
                        a2fab = a2.array(), 

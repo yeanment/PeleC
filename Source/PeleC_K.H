@@ -158,7 +158,9 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
             amrex::FArrayBox const &uin, 
             amrex::FArrayBox &uout, amrex::FArrayBox const &q, amrex::FArrayBox const &qaux,
             amrex::FArrayBox const &src_q, amrex::IArrayBox const &bcMask,
-            const amrex::Real *dx, const amrex::Real dt, amrex::FArrayBox flux[], 
+            const amrex::Real *dx, const amrex::Real dt, 
+            D_DECL(amrex::FArrayBox &flux1, amrex::FArrayBox &flux2, 
+                   amrex::FArrayBox &flux3),  
 #if (AMREX_SPACEDIM < 3) 
 //            amrex::FArrayBox pradial, 
 #endif

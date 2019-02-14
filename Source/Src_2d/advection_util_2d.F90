@@ -9,7 +9,6 @@ module advection_util_2d_module
 
 contains
 
-!AMREX_CUDA_FORT_DEVICE 
  subroutine normalize_species_fluxes(  &
                     flux1,flux1_l1,flux1_l2,flux1_h1,flux1_h2, &
                     flux2,flux2_l1,flux2_l2,flux2_h1,flux2_h2, &
@@ -107,7 +106,6 @@ contains
 ! ::: ------------------------------------------------------------------
 ! ::: 
 
-!AMREX_CUDA_FORT_DEVICE 
  subroutine divu(lo,hi,q,q_l1,q_l2,q_h1,q_h2,dx, &
                               div,div_l1,div_l2,div_h1,div_h2)
 
