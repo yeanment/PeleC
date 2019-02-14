@@ -2,7 +2,6 @@
 #define PeleC_K_H_
 
 #include <AMReX_FArrayBox.H>
-#include "PeleC_Parameters.H" 
 #include "PeleC_index_macros.H" 
 #include "PeleC_EOS.H"
 
@@ -198,7 +197,7 @@ void PeleC_artif_visc(const int i, const int j, const int k,
             if(n != UTEMP){
                 div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
 // Passing in difmag TODO not pass in. 
-                div1 = difmag*std::min(0.0, div1); 
+                div1 = difmag*amrex::min(0.0, div1); 
                 flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i-1,j,k,n));
             }
         }
@@ -208,7 +207,7 @@ void PeleC_artif_visc(const int i, const int j, const int k,
         for(int n=0; n < NVAR; ++n){
             if(n  != UTEMP){
                 div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
-                div1 = difmag*std::min(0.0, div1); 
+                div1 = difmag*amrex::min(0.0, div1); 
                 flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
             }
         }

@@ -2,7 +2,7 @@
 #define PELEC_METHOD_2D_H_
 #include <AMReX_FArrayBox.H>
 #include <AMReX_IArrayBox.H>
-#include "PeleC_Parameters.H"
+#include "PeleC_Parameters.H" 
 #include "PeleC_index_macros.H"
 #include "PeleC_EOS.H" 
 #include <cmath> 

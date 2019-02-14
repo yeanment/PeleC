@@ -113,10 +113,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
 
+
         AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx, 
             {
                  PeleC_ctoprim(tbx, *statein_gp, q.fab(), qaux.fab());                  
              });
+        amrex::Print() << "CTOPRIM done" << std::endl; 
+
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
             //
@@ -165,6 +168,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 AMREX_LAUNCH_DEVICE_LAMBDA(qbx,tbx,{
                       PeleC_srctoprim(tbx, q.fab(), qaux.fab(), *source_in_d, src_q.fab()); 
                 });
+          amrex::Print() << "SRCTOPRIM done" << std::endl; 
 
                     // Allocate fabs for fluxes
                 for (int i = 0; i < BL_SPACEDIM ; i++)  {

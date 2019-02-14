@@ -49,7 +49,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     AMREX_PARALLEL_FOR_3D (xslpbx, i,j,k, {
        PeleC_plm_x(i, j, k, qxmfab, qxpfab, slfab, qfab, qauxfab, 
                     srcQfab, dlogafab, dx[0], dt);
-                 if(i==25 && j==204){
+/*                 if(i==25 && j==204){
                     amrex::Print()<<"plm_x" << std::endl;
                     for(int n = 0; n < QVAR; ++n){
                         amrex::Print() << n << std::endl; 
@@ -92,7 +92,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k, {
         PeleC_plm_y(i,j,k, qymfab, qypfab, slfab, qfab, qauxfab, 
                 srcQfab, dlogafab, dx[1], dt);
-                 if(i==25 && j==204){
+/*                 if(i==25 && j==204){
                     amrex::Print()<<"plm_y" << std::endl;
                     for(int n = 0; n < QVAR; ++n){
                         amrex::Print() << n << std::endl; 
@@ -122,7 +122,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
         PeleC_transy(i,j,k, qmfab, qpfab, qxmfab, qxpfab, fyfab,
                      srcQfab, qauxfab, q2fab, area2, volfab, hdt, hdtdy);
-                if(i==25 && j==204){
+/*                if(i==25 && j==204){
                     amrex::Print()<<"transy" << std::endl;
                     for(int n = 0; n < QVAR; ++n){
                         amrex::Print() << n << std::endl; 
@@ -155,7 +155,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q,
     AMREX_PARALLEL_FOR_3D (txbx, i, j , k, {
         PeleC_transx(i,j,k, qmfab, qpfab, qymfab, qypfab, fxfab,
                  srcQfab, qauxfab, q1fab, area1, volfab, hdt, hdtdx);                
-                if(i==25 && j==204){
+/*                if(i==25 && j==204){
                     amrex::Print() << "transx" << std::endl; 
                     for(int n = 0; n < QVAR; ++n){
                         amrex::Print() << n << std::endl; 

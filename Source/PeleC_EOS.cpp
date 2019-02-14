@@ -15,10 +15,10 @@ AMREX_GPU_HOST_DEVICE void CKHMS(double*  T, int * iwrk,double*  rwrk,double*  u
 AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double*  e,double*  y, int * iwrk,double*  rwrk,double*  t, int *ierr);
 }
 
-EOS::EOS()
+AMREX_GPU_HOST_DEVICE EOS::EOS()
 {}
 
-EOS::~EOS()
+AMREX_GPU_HOST_DEVICE EOS::~EOS()
 {}
 
 AMREX_GPU_HOST_DEVICE 

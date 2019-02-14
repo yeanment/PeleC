@@ -12,8 +12,8 @@ using namespace amrex;
 class EOS
 {
 public:
-    EOS(); 
-    ~EOS(); 
+   AMREX_GPU_HOST_DEVICE EOS(); 
+   AMREX_GPU_HOST_DEVICE ~EOS(); 
 
 //TODO Stupid Vars we don't actually need but are arguments to functions 
     int iwrk = 0; 
