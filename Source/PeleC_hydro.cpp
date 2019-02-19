@@ -101,18 +101,21 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    FArrayBox *stateout = &(S_new[mfi]);
 	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
 	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
+
         const Box& xfbx = surroundingNodes(bx, 0); 
+        AsyncFab flx1(xfbx, NGDNV);
 #if (AMREX_SPACEDIM >=2)
-        const Box& yfbx = surroundingNodes(bx, 1); 
+        const Box& yfbx = surroundingNodes(bx, 1);
+        AsyncFab flx2(yfbx, NGDNV); 
 #if (AMREX_SPACEDIM ==3) 
         const Box& zfbx = surroundingNodes(bx, 2); 
+        AsyncFab flx3(zfbx, NGDNV); 
 #endif
 #endif
-        AsyncFab flux[BL_SPACEDIM] = 
-        {D_DECL(AsyncFab(xfbx, NGDNV), AsyncFab(yfbx, NGDNV), AsyncFab(zfbx, NGDNV))}; 
 
         FArrayBox const* statein_gp = S.fabPtr(mfi);
-            
+        const auto &s = S.array(mfi);     
+        const auto &hyd_src = hydro_source.array(mfi); 
         Gpu::AsyncFab q(qbx, QVAR);
         Gpu::AsyncFab qaux(qbx, NQAUX); 
         Gpu::AsyncFab src_q(qbx, QVAR); 
@@ -177,7 +180,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 AMREX_LAUNCH_DEVICE_LAMBDA(qbx,tbx,{
                       PeleC_srctoprim(tbx, q.fab(), qaux.fab(), *source_in_d, src_q.fab()); 
                 });
-          amrex::Print() << "SRCTOPRIM done" << std::endl; 
+               amrex::Print() << "SRCTOPRIM done" << std::endl; 
 
                     // Allocate fabs for fluxes
 /*                for (int i = 0; i < BL_SPACEDIM ; i++)  {
@@ -196,27 +199,26 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 amrex::FArrayBox *prad = &pradial; 
 #endif
 
-
                 PeleC_umdrv
                 (is_finest_level, time,
                  bx, 
 //                 domain_lo, domain_hi,
-                 *statein_gp, *source_out, q.fab(),
-                 qaux.fab(), src_q.fab(),
+                 s, hyd_src, q.array(),
+                 qaux.array(), src_q.array(),
                  *bcMa, dx, dt,
-                 D_DECL( flux[0].fab(),
-                         flux[1].fab(), 
-                         flux[2].fab()), 
+                 D_DECL( flx1.array(),
+                         flx2.array(), 
+                         flx3.array()), 
         #if (BL_SPACEDIM < 3)
 //                 *prad,
         #endif
-                 D_DECL(*(area[0].fabPtr(mfi)),
-                        *(area[1].fabPtr(mfi)),
-                        *(area[2].fabPtr(mfi))),
+                 D_DECL(area[0].array(mfi),
+                        area[1].array(mfi),
+                        area[2].array(mfi)),
         #if (BL_SPACEDIM < 3)
-                 *(dLogArea[0].fabPtr(mfi)),
+                 dLogArea[0].array(mfi),
         #endif
-                 *(volume.fabPtr(mfi)),
+                 volume.array(mfi),
                  cflLoc); 
 /*/
 
@@ -260,9 +262,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                       if (level < finest_level)
                       {
                         getFluxReg(level+1).CrseAdd(mfi,
-                        {D_DECL(&(flux[0].fab()),
-                                &(flux[1].fab()),
-                                &(flux[2].fab()))}, dxDp,dt);
+                        {D_DECL(&(flx1.fab()),
+                                &(flx2.fab()),
+                                &(flx3.fab()))}, dxDp,dt);
 
                         if (!Geometry::IsCartesian()) {
                             amrex::Abort("Flux registers not r-z compatible yet");
@@ -273,9 +275,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                       if (level > 0)
                       {
                         getFluxReg(level).FineAdd(mfi, 
-                        {D_DECL(&(flux[0].fab()),
-                                &(flux[1].fab()),
-                                &(flux[2].fab()))}, dxDp,dt);
+                        {D_DECL(&(flx1.fab()),
+                                &(flx2.fab()),
+                                &(flx3.fab()))}, dxDp,dt);
 
                         if (!Geometry::IsCartesian()) {
                             amrex::Abort("Flux registers not r-z compatible yet");

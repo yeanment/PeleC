@@ -154,22 +154,22 @@ PeleC_divu(const int i, const int j, const int k, amrex::Array4<const amrex::Rea
 
 void 
 PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const &bx, 
-//            amrex::Real const *dom_lo, amrex::Real const *dom_hi, 
-            amrex::FArrayBox const &uin, 
-            amrex::FArrayBox &uout, amrex::FArrayBox const &q, amrex::FArrayBox const &qaux,
-            amrex::FArrayBox const &src_q, amrex::IArrayBox const &bcMask,
+            amrex::Array4<const amrex::Real> const &uin, 
+            amrex::Array4<amrex::Real> const& uout, 
+            amrex::Array4<const amrex::Real> const& q,
+            amrex::Array4<const amrex::Real> const& qaux,
+            amrex::Array4<const amrex::Real> const& src_q, amrex::IArrayBox const& bcMask,
             const amrex::Real *dx, const amrex::Real dt, 
-            D_DECL(amrex::FArrayBox &flux1, amrex::FArrayBox &flux2, 
-                   amrex::FArrayBox &flux3),  
-#if (AMREX_SPACEDIM < 3) 
-//            amrex::FArrayBox pradial, 
-#endif
-            D_DECL(amrex::FArrayBox const &a1, amrex::FArrayBox const &a2, 
-                   amrex::FArrayBox const &a3), 
+            D_DECL(amrex::Array4<amrex::Real> const& flux1,
+                   amrex::Array4<amrex::Real> const& flux2, 
+                   amrex::Array4<amrex::Real> const& flux3), 
+            D_DECL(amrex::Array4<const amrex::Real> const& a1,
+                   amrex::Array4<const amrex::Real> const& a2, 
+                   amrex::Array4<const amrex::Real> const& a3), 
 #if (AMREX_SPACEDIM < 3)
-            amrex::FArrayBox const &dloga, 
+            amrex::Array4<amrex::Real> const &dloga, 
 #endif
-            amrex::FArrayBox const &vol, amrex::Real cflLoc);
+            amrex::Array4<amrex::Real> const &vol, amrex::Real cflLoc);
 
 void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& u, 
                   amrex::Array4<amrex::Real> const& update, 

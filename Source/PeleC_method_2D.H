@@ -956,13 +956,14 @@ PeleC_pdivu(const int i, const int j, const int k,
 
 //Host function to call gpu hydro functions
 //Defined in PeleC_method_2D
-void PeleC_umeth_2D(amrex::Box const& bx, amrex::FArrayBox const &q, 
-           amrex::FArrayBox const& qaux,
-           amrex::FArrayBox const& srcQ, amrex::IArrayBox const& bcMask,
-           amrex::FArrayBox &flx1, amrex::FArrayBox &flx2, 
-           amrex::FArrayBox const& dloga, amrex::FArrayBox &q1,
-           amrex::FArrayBox &q2, amrex::FArrayBox const &a1, 
-           amrex::FArrayBox const &a2, amrex::FArrayBox &pdivu, 
-           amrex::FArrayBox const &vol, const amrex::Real *dx, const amrex::Real dt);
+void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const &q, 
+           amrex::Array4<const amrex::Real> const& qaux,
+           amrex::Array4<const amrex::Real> const& srcQ, amrex::IArrayBox const& bcMask,
+           amrex::Array4<amrex::Real> const& flx1, amrex::Array4<amrex::Real> const& flx2, 
+           amrex::Array4<const amrex::Real> const& dloga, amrex::Array4<amrex::Real> const& q1,
+           amrex::Array4<amrex::Real> const& q2, amrex::Array4<const amrex::Real> const& a1, 
+           amrex::Array4<const amrex::Real> const& a2, amrex::Array4<amrex::Real> const& pdivu, 
+           amrex::Array4<const amrex::Real> const& vol,
+           const amrex::Real *dx, const amrex::Real dt);
 
 #endif 
