@@ -677,7 +677,7 @@ PeleC_plm_y(const int i, const int j, const int k,
             v = q(i,j,k,QV); 
             spzero = v > 0 ? v*dtdy : 1.e0; 
             amrex::Real acmpbot = 0.5e0*(1.e0 - spzero)*slope(i,j,k,n);  
-            qm(i+1,j,k,n) = q(i,j,k,n) + acmpbot; 
+            qm(i,j+1,k,n) = q(i,j,k,n) + acmpbot; 
         }                                           
 }
 

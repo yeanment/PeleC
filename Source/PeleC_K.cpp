@@ -39,7 +39,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     Gpu::AsyncFab q3(q3bx, NGDNV); 
 #endif
 
-    Gpu::AsyncFab divu(bx, 1); 
+    Gpu::AsyncFab divu(bxg2, 1); 
     Gpu::AsyncFab pdivu(bx, 1); 
     auto const&  divarr = divu.array(); 
     auto const& pdivuarr = pdivu.array();
@@ -58,7 +58,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     //divu 
     amrex::Print() << "Calling divu! " << std::endl; 
 
-    AMREX_PARALLEL_FOR_3D (bx, i,j,k, {
+    AMREX_PARALLEL_FOR_3D (bxg2, i,j,k, {
         PeleC_divu(i,j,k, q, dx, divarr); 
     });
 
@@ -73,16 +73,6 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     //TODO have difmag be parm parsed
     amrex::Real difmag = 0.e0; //0.005e0; 
     amrex::Print() << "calling consup!" << std::endl;
-    amrex::Print() << uin(4,25,0,UMY) << std::endl; 
-    amrex::Print() << uout(4,25,0,UMY) << std::endl; 
-    amrex::Print() << a1(4,25,0) << std::endl; 
-    amrex::Print() << a2(4,25,0) << std::endl;
-    amrex::Print() << flux1(4, 25, 0, UMY) << std::endl;
-    amrex::Print() << flux2(4, 25, 0, UMY) << std::endl; 
-    amrex::Print() << vol(4,25,0) << std::endl;
-    amrex::Print() << divarr(4,25,0) << std::endl; 
-    amrex::Print() << pdivuarr(4,25,0) << std::endl; 
-    std::cin.get(); 
     PeleC_consup(bx, uin, uout,
                  D_DECL(flux1, flux2, flux3),
                  D_DECL(a1, a2, a3), 
@@ -113,25 +103,21 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& 
         PeleC_norm_spec_flx(i,j,k, flx1); 
         //Make flux extensive
         PeleC_ext_flx(i,j,k,flx1, a1);                            
-        for (int n = 0; n < NGDNV; ++n)  
-            amrex::Print() << flx1(i,j,k,n) << '\t';  
-        amrex::Print() << std::endl; 
     };);
-    std::cin.get();
 
 //------------------------- y-flux ------------------------------------
     amrex::Box const &yfbx = surroundingNodes(bx, 1); 
     AMREX_PARALLEL_FOR_3D(yfbx, i, j, k, {
         //Artificial Viscosity! 
-//        PeleC_artif_visc(i,j,k,flx2, div, u, dx[1], difmag, 1); 
+        PeleC_artif_visc(i,j,k,flx2, div, u, dx[1], difmag, 1); 
         //Normalize Species Flux 
-//        PeleC_norm_spec_flx(i,j,k,flx2); 
+        PeleC_norm_spec_flx(i,j,k,flx2); 
         //Make flux extensive
-//        PeleC_ext_flx(i,j,k,flx2,a2); 
+        PeleC_ext_flx(i,j,k,flx2,a2); 
     };);
 
 //================ Combine for Hydro Sources ==========================
     AMREX_PARALLEL_FOR_3D(bx, i, j, k, {
- //       PeleC_update(i,j,k, update, flx1, flx2, vol, pdivu); 
+        PeleC_update(i,j,k, update, flx1, flx2, vol, pdivu); 
     };);
 }

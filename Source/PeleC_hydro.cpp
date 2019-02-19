@@ -106,6 +106,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         AsyncFab flx1(xfbx, NGDNV);
 #if (AMREX_SPACEDIM >=2)
         const Box& yfbx = surroundingNodes(bx, 1);
+        amrex::Print() << xfbx << " , " << yfbx << " , " << bx << std::endl; 
+        std::cin.get(); 
         AsyncFab flx2(yfbx, NGDNV); 
 #if (AMREX_SPACEDIM ==3) 
         const Box& zfbx = surroundingNodes(bx, 2); 
