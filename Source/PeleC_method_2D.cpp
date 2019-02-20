@@ -29,7 +29,6 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
     IntVect hix(AMREX_D_DECL(xslpbx.hiVect()[0]+1, xslpbx.hiVect()[1], xslpbx.hiVect()[2])); 
     const Box xmbx(lox, hix);
     const Box& xflxbx = surroundingNodes(bxg1,cdir);
-    amrex::Print()<< "Slope x! " << std::endl; 
     AMREX_PARALLEL_FOR_3D (xslpbx,i,j,k, { 
         PeleC_slope_x(i,j,k, slarr, q);
     }); // */
@@ -40,7 +39,6 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
     auto const& qxmarr = qxm.array(); 
     auto const& qxparr = qxp.array(); 
 
-    amrex::Print() << "PLM X" << std::endl;
     AMREX_PARALLEL_FOR_3D (xslpbx, i,j,k, {
        PeleC_plm_x(i, j, k, qxmarr, qxparr, slarr, q, qaux(i,j,k,QC) , 
                     srcQ, dx[0], dt); // dloga, dx[0], dt);
@@ -52,7 +50,6 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
     auto const& fxarr = fx.array(); 
 
     //bcMaskarr at this point does nothing.  
-    amrex::Print() << "FLUX X " << std::endl; 
     AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k, qxmarr, qxparr, fxarr, q1, qaux,0);
                 // bcMaskarr, 0);
@@ -72,14 +69,12 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
     auto const& qymarr = qym.array(); 
     auto const& qyparr = qyp.array();  
     
-    amrex::Print() << "Slope y !" << std::endl;  
     AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k,{
         PeleC_slope_y(i,j,k, slarr, q); 
     }); // */
    Gpu::Device::synchronize(); 
 
 //==================== Y interp ====================================
-    amrex::Print() << "PLM Y " << std::endl; 
     AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k, {
         PeleC_plm_y(i,j,k, qymarr, qyparr, slarr, q, qaux(i,j,k,QC), 
                 srcQ, dx[1], dt); // dloga, dx[1], dt);
@@ -87,7 +82,6 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
    Gpu::Device::synchronize(); 
 
 //===================== Y initial fluxes ===========================
-    amrex::Print()<< " FLX Y " << std::endl; 
     AsyncFab fy(yflxbx, NVAR); 
     auto const& fyarr = fy.array();
     AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
@@ -103,7 +97,6 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
     const Box& tybx = grow(bx, cdir, 1); 
     auto const& qmarr = qm.array();
     auto const& qparr = qp.array();  
-    amrex::Print() << " Transy " << std::endl; 
     AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
         PeleC_transy(i,j,k, qmarr, qparr, qxmarr, qxparr, fyarr,
                      srcQ, qaux, q2, a2, vol, hdt, hdtdy);
@@ -111,7 +104,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
    Gpu::Device::synchronize(); 
 
 //===================== Final Riemann problem X ====================
-    const Box& xfxbx = surroundingNodes(bx, cdir); 
+    const Box& xfxbx = surroundingNodes(bx, cdir);
     amrex::Print() << "FLX x 2" << std::endl;
     AMREX_PARALLEL_FOR_3D (xfxbx, i,j,k, {      
       PeleC_cmpflx(i,j,k, qmarr, qparr, flx1, q1, qaux,0); // bcMaskarr, 0);
@@ -137,7 +130,6 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
     Gpu::Device::synchronize(); 
 
 //===================== Construct p div{U} =========================
-    amrex::Print() << "P divu " << std::endl; 
     AMREX_PARALLEL_FOR_3D (bx, i, j, k, {
         PeleC_pdivu(i,j,k, pdivu, q1, q2, a1, a2, vol); 
     });

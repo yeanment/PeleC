@@ -44,7 +44,6 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     auto const&  divarr = divu.array(); 
     auto const& pdivuarr = pdivu.array();
 
-    amrex::Print() << " Calling umeth! " << std::endl; 
 #if AMREX_SPACEDIM == 1
     PeleC_umeth_1D(bx, q,  qaux, src_q, bcMask, flux1, q1, pdivu, dx, dt);  
 #elif AMREX_SPACEDIM==2 
@@ -56,7 +55,6 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 #endif
 
     //divu 
-    amrex::Print() << "Calling divu! " << std::endl; 
 
     AMREX_PARALLEL_FOR_3D (bxg2, i,j,k, {
         PeleC_divu(i,j,k, q, dx, divarr); 
@@ -71,8 +69,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 
 
     //TODO have difmag be parm parsed
-    amrex::Real difmag = 0.e0; //0.005e0; 
-    amrex::Print() << "calling consup!" << std::endl;
+    amrex::Real difmag = 0.1e0; //0.005e0; 
     PeleC_consup(bx, uin, uout,
                  D_DECL(flux1, flux2, flux3),
                  D_DECL(a1, a2, a3), 

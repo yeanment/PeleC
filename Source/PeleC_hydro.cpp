@@ -103,15 +103,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
 
         const Box& xfbx = surroundingNodes(bx, 0); 
-        AsyncFab flx1(xfbx, NGDNV);
+        AsyncFab flx1(xfbx, NVAR);
 #if (AMREX_SPACEDIM >=2)
         const Box& yfbx = surroundingNodes(bx, 1);
-        amrex::Print() << xfbx << " , " << yfbx << " , " << bx << std::endl; 
-        std::cin.get(); 
-        AsyncFab flx2(yfbx, NGDNV); 
+        AsyncFab flx2(yfbx, NVAR); 
 #if (AMREX_SPACEDIM ==3) 
         const Box& zfbx = surroundingNodes(bx, 2); 
-        AsyncFab flx3(zfbx, NGDNV); 
+        AsyncFab flx3(zfbx, NVAR); 
 #endif
 #endif
 
@@ -132,7 +130,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
             {
                  PeleC_ctoprim(tbx, *statein_gp, q.fab(), qaux.fab());                  
              });
-        amrex::Print() << "CTOPRIM done" << std::endl; 
 
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
@@ -182,7 +179,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 AMREX_LAUNCH_DEVICE_LAMBDA(qbx,tbx,{
                       PeleC_srctoprim(tbx, q.fab(), qaux.fab(), *source_in_d, src_q.fab()); 
                 });
-               amrex::Print() << "SRCTOPRIM done" << std::endl; 
 
                     // Allocate fabs for fluxes
 /*                for (int i = 0; i < BL_SPACEDIM ; i++)  {
@@ -200,6 +196,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #if (AMREX_SPACEDIM < 3)
                 amrex::FArrayBox *prad = &pradial; 
 #endif
+
 
                 PeleC_umdrv
                 (is_finest_level, time,
@@ -235,9 +232,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                  BL_TO_FORTRAN(*source_out),
                  BL_TO_FORTRAN(bcMask),
                  dx, &dt,
-                 D_DECL(BL_TO_FORTRAN(flux[0]),
-                    BL_TO_FORTRAN(flux[1]),
-                    BL_TO_FORTRAN(flux[2])),
+                 D_DECL(BL_TO_FORTRAN(flx1.fab()),
+                    BL_TO_FORTRAN(flx2.fab()),
+                    BL_TO_FORTRAN(flx3.fab())),
         #if (BL_SPACEDIM < 3)
                  BL_TO_FORTRAN(pradial),
         #endif

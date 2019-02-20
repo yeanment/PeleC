@@ -407,16 +407,7 @@ PeleC_cmpflx(const int i, const int j, const int k,
                  flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT),
                  q(i,j,k,GU), q(i,j,k,GV), q(i,j,k,GV2), q(i,j,k,GDPRES),
                  q(i,j,k,GDGAME), ustar, idir, qa(i,j,k,QCSML), cav);
-/*         if(idir==1){
-            amrex::Print()<< "i j = "<< i << '\t' << j << '\t'; 
-            for(int n = 0; n < NGDNV; n++){
-                amrex::Print()<< q(i,j,k,n) << '\t'; 
-            }
-            amrex::Print()<< "ustar = " << ustar << std::endl;
-            std::cin.get(); 
-         } 
         
-*/                
         amrex::Real flxrho = flx(i,j,k,URHO); 
         for(int ipass = 0; ipass < npassive; ++ipass){
             int n = EOS::upass_map(ipass); 
