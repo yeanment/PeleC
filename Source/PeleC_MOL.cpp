@@ -161,12 +161,15 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 
       Gpu::AsyncFab q(gbox, QVAR), qaux(gbox, nqaux); 
 
-      const FArrayBox* Sgp = S.fabPtr(mfi);
+      auto const& s = S.array(mfi); 
+      auto const& qar = q.array(); 
+      auto const& qauxar = qaux.array(); 
 
       BL_PROFILE("PeleC::ctoprim call");
-      AMREX_LAUNCH_DEVICE_LAMBDA(gbox, tbx, {
-            PeleC_ctoprim(tbx, *Sgp, q.fab(), qaux.fab());
-        });
+      AMREX_PARALLEL_FOR_3D(gbox, i, j, k, 
+          {
+              PeleC_ctoprim(i,j,k, s, qar, qauxar);                  
+          });
       Gpu::Device::streamSynchronize();
 
       // Compute transport coefficients, coincident with Q

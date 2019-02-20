@@ -113,12 +113,14 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #endif
 #endif
 
-        FArrayBox const* statein_gp = S.fabPtr(mfi);
-        const auto &s = S.array(mfi);     
-        const auto &hyd_src = hydro_source.array(mfi); 
+        auto const& s = S.array(mfi);     
+        auto const& hyd_src = hydro_source.array(mfi); 
         Gpu::AsyncFab q(qbx, QVAR);
         Gpu::AsyncFab qaux(qbx, NQAUX); 
-        Gpu::AsyncFab src_q(qbx, QVAR); 
+        Gpu::AsyncFab src_q(qbx, QVAR);
+        auto const& qarr = q.array(); 
+        auto const& qauxar = qaux.array(); 
+        auto const& srcqarr = src_q.array(); 
 
         bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
                               // First integer is bc_type, second integer about slip/no-slip wall 
@@ -126,9 +128,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
 
 
-        AMREX_LAUNCH_DEVICE_LAMBDA(qbx, tbx, 
+        AMREX_PARALLEL_FOR_3D(qbx, i, j, k, 
             {
-                 PeleC_ctoprim(tbx, *statein_gp, q.fab(), qaux.fab());                  
+                 PeleC_ctoprim(i,j,k, s, qarr, qauxar);                  
              });
 
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
@@ -174,10 +176,10 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
 	    }
 #endif
-                FArrayBox *source_in_d  = sources_for_hydro.fabPtr(mfi);
-          
-                AMREX_LAUNCH_DEVICE_LAMBDA(qbx,tbx,{
-                      PeleC_srctoprim(tbx, q.fab(), qaux.fab(), *source_in_d, src_q.fab()); 
+               const auto & src_in  = sources_for_hydro.array(mfi);
+         
+                AMREX_PARALLEL_FOR_3D(qbx,i, j, k,{
+                      PeleC_srctoprim(i, j, k, qarr, qauxar, src_in, srcqarr); 
                 });
 
                     // Allocate fabs for fluxes
@@ -202,8 +204,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 (is_finest_level, time,
                  bx, 
 //                 domain_lo, domain_hi,
-                 s, hyd_src, q.array(),
-                 qaux.array(), src_q.array(),
+                 s, hyd_src, qarr,
+                 qauxar, srcqarr,
                  *bcMa, dx, dt,
                  D_DECL( flx1.array(),
                          flx2.array(), 

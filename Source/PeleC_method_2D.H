@@ -427,7 +427,7 @@ void
 PeleC_plm_x(const int i, const int j, const int k,
     amrex::Array4<amrex::Real> const& qm, amrex::Array4<amrex::Real> const& qp,
     amrex::Array4<const amrex::Real> const& slope,  amrex::Array4<const amrex::Real> const& q,
-    amrex::Real const cc,   amrex::Array4<const amrex::Real> const& srcQ, 
+    amrex::Real const cc, 
 //    amrex::Array4<const amrex::Real> const& dloga,
     amrex::Real const dx, amrex::Real const dt)
 {
@@ -552,7 +552,7 @@ void
 PeleC_plm_y(const int i, const int j, const int k, 
     amrex::Array4<amrex::Real> const& qm         , amrex::Array4<amrex::Real> const& qp,
     amrex::Array4<const amrex::Real> const& slope, amrex::Array4<const amrex::Real> const& q,
-    amrex::Real const cc   , amrex::Array4<const amrex::Real> const& srcQ, 
+    amrex::Real const cc, 
 //    amrex::Array4<const amrex::Real> const& dloga, 
     amrex::Real const dy, amrex::Real const dt)
 {
