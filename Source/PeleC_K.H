@@ -131,7 +131,8 @@ PeleC_divu(const int i, const int j, const int k, amrex::Array4<const amrex::Rea
 //======================================= Host functions ================================
 
 void 
-PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const &bx, 
+PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const &bx,
+            const int* dlo, const int* dhi, const int* bclo, const int* bchi,  
             amrex::Array4<const amrex::Real> const &uin, 
             amrex::Array4<amrex::Real> const& uout, 
             amrex::Array4<const amrex::Real> const& q,

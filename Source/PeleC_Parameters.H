@@ -9,5 +9,8 @@ static AMREX_GPU_DEVICE_MANAGED double small_pres = 1.0e-50;
 static AMREX_GPU_DEVICE_MANAGED double smallu     = 1.0e-16;  
 static AMREX_GPU_DEVICE_MANAGED double n_A = 6.02214129e23; 
 static AMREX_GPU_DEVICE_MANAGED double k_B = 1.3806488e-16;
+
+#define Outflow 2 
+
  
 #endif

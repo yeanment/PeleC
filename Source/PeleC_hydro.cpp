@@ -203,7 +203,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 PeleC_umdrv
                 (is_finest_level, time,
                  bx, 
-//                 domain_lo, domain_hi,
+                 domain_lo, domain_hi,
+                 phys_bc.lo(), phys_bc.hi(), 
                  s, hyd_src, qarr,
                  qauxar, srcqarr,
                  *bcMa, dx, dt,

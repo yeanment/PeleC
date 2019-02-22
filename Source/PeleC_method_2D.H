@@ -182,8 +182,8 @@ riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
              gdnv_state.massfrac[i] = spr[i]; 
         }
         gdnv_state.eos_rp(); 
-        amrex::Real wl = amrex::max(wsmall, std::sqrt(abs(gamcl*pl*rl))); 
-        amrex::Real wr = amrex::max(wsmall, std::sqrt(abs(gamcr*pr*rr))); 
+        amrex::Real wl = amrex::max(wsmall, std::sqrt(std::abs(gamcl*pl*rl))); 
+        amrex::Real wr = amrex::max(wsmall, std::sqrt(std::abs(gamcr*pr*rr))); 
 
         amrex::Real pstar = ((wr*pl + wl*pr) + wl*wr*(ul - ur))/(wl + wr); 
         ustar = ((wl*ul + wr*ur) + (pl - pr))/(wl + wr); 
@@ -328,6 +328,7 @@ AMREX_GPU_DEVICE
 inline
 void
 PeleC_cmpflx(const int i, const int j, const int k,
+     const int bclo, const int bchi, const int domlo, const int domhi, 
      amrex::Array4<const amrex::Real> const& ql, 
      amrex::Array4<const amrex::Real> const & qr, amrex::Array4<amrex::Real> const& flx,
      amrex::Array4<amrex::Real> const& q, amrex::Array4<const amrex::Real> const& qa,
@@ -338,7 +339,8 @@ PeleC_cmpflx(const int i, const int j, const int k,
     amrex::Real cav, ustar;
     amrex::Real spl[NUM_SPECIES];
     amrex::Real spr[NUM_SPECIES]; 
-    amrex::Real ul, ur, vl, vr, v2l, v2r, rel, rer, gamcl, gamcr; 
+    amrex::Real ul, ur, vl, vr, v2l, v2r, rel, rer, gamcl, gamcr;
+    int idx;  
     int IU, IV, IV2;
     int GU, GV, GV2;  
     if(idir == 0){
@@ -349,7 +351,8 @@ PeleC_cmpflx(const int i, const int j, const int k,
          GV = GDV; 
         GV2 = GDW;
         gamcl = qa(i-1,j,k,QGAMC);
-        gamcr = qa(i,j,k,QGAMC); 
+        gamcr = qa(i,j,k,QGAMC);
+        cav = 0.5e0*(qa(i,j,k,QC) + qa(i-1,j,k,QC));  
     }
     else if( idir == 1){
          IU = QV; 
@@ -360,12 +363,9 @@ PeleC_cmpflx(const int i, const int j, const int k,
         GV2 = GDW; 
         gamcl = qa(i,j-1,k,QGAMC);
         gamcr = qa(i,j,k,QGAMC); 
-
+        cav = 0.5e0*(qa(i,j,k,QC) + qa(i,j-1,k,QC)); 
    }
 
-
-    if(idir == 0) cav = 0.5e0*(qa(i,j,k,QC) + qa(i-1,j,k,QC)); 
-    else cav = 0.5e0*(qa(i,j,k,QC) + qa(i,j-1,k,QC));
 #pragma unroll 
     for(int sp = 0; sp < NUM_SPECIES; ++sp){
             spl[sp] = ql(i,j,k,QFS+sp); 
@@ -381,23 +381,22 @@ PeleC_cmpflx(const int i, const int j, const int k,
           v2r = qr(i,j,k,IV2); 
           rer = qr(i,j,k,QREINT); 
 
-// TODO assess if we need this. 
 //Outflow Hack --> 
-/*         idx = idir == 1 ? i : j; 
-         if(bclo[idir] == Outflow && idx == domlo[idir])
+         idx = idir == 1 ? i : j; 
+         if(bclo == Outflow && idx == domlo)
          {
             ul = ur; 
             vl = vr; 
             v2l = v2r; 
             rel = rer; 
          }
-         if(bchi[idir] == Outflow && idx == domhi[idir])
+         if(bchi == Outflow && idx == domhi)
          {  
             ur  = ul; 
             vr  = vl; 
             v2r = v2l; 
             rer = rel;         
-         }  */
+         } 
 
           riemann(ql(i,j,k,QRHO), ul, vl, v2l, 
                  ql(i,j,k,QPRES), rel, gamcl, spl,   
@@ -428,7 +427,7 @@ PeleC_plm_x(const int i, const int j, const int k,
     amrex::Array4<amrex::Real> const& qm, amrex::Array4<amrex::Real> const& qp,
     amrex::Array4<const amrex::Real> const& slope,  amrex::Array4<const amrex::Real> const& q,
     amrex::Real const cc, 
-//    amrex::Array4<const amrex::Real> const& dloga,
+    amrex::Array4<const amrex::Real> const& dloga,
     amrex::Real const dx, amrex::Real const dt)
 {
 
@@ -510,7 +509,7 @@ PeleC_plm_x(const int i, const int j, const int k,
         qm(i+1,j,k,QPRES) = amrex::max(qm(i+1,j,k,QPRES), small_pres);
         qm(i+1,j,k,QREINT) = rhoe_ref + (apleft + amleft)*enth*cs + azeleft;
                         
-/*        if(dloga(i,j,k)!=0){
+        if(dloga(i,j,k)!=0){
             amrex::Real courn = dtdx*(cc+std::abs(u)); 
             amrex::Real eta = (1.e0-courn)/(cc*dt*std::abs(dloga(i,j,k))); 
             amrex::Real dlogatmp = amrex::min(eta, 1.e0)*dloga(i,j,k);
@@ -527,7 +526,7 @@ PeleC_plm_x(const int i, const int j, const int k,
             qp(i,j,k,QRHO) = amrex::max(qp(i,j,k,QRHO), small_dens); 
             qp(i,j,k,QPRES) += sourcp; 
             qp(i,j,k,QREINT) += source; 
-        } */
+        } //*/
 //--------------- Upwind the passive variables --------------------------------
 #pragma unroll
         for(int ipassive = 0; ipassive < npassive; ++ipassive){
@@ -947,7 +946,9 @@ PeleC_pdivu(const int i, const int j, const int k,
 
 //Host function to call gpu hydro functions
 //Defined in PeleC_method_2D
-void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const &q, 
+void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi, 
+           const int* domlo, const int* domhi, 
+           amrex::Array4<const amrex::Real> const &q, 
            amrex::Array4<const amrex::Real> const& qaux,
            amrex::Array4<const amrex::Real> const& srcQ, amrex::IArrayBox const& bcMask,
            amrex::Array4<amrex::Real> const& flx1, amrex::Array4<amrex::Real> const& flx2, 

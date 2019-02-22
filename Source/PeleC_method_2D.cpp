@@ -1,7 +1,9 @@
 #include "PeleC_method_2D.H" 
 
 //Host function to call gpu hydro functions
-void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const &q, 
+void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi, 
+           const int* domlo, const int* domhi, 
+           amrex::Array4<const amrex::Real> const &q, 
            amrex::Array4<const amrex::Real> const& qaux,
            amrex::Array4<const amrex::Real> const& srcQ, amrex::IArrayBox const& bcMask,
            amrex::Array4<amrex::Real> const& flx1, amrex::Array4<amrex::Real> const& flx2, 
@@ -17,6 +19,15 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
     amrex::Real const hdtdy = 0.5*dt/dy; 
     amrex::Real const hdt   = 0.5*dt; 
 
+    const int bclx = bclo[0]; 
+    const int bcly = bclo[1]; 
+    const int bchx = bchi[0]; 
+    const int bchy = bchi[1]; 
+    const int dlx  = domlo[0]; 
+    const int dly  = domlo[1];     
+    const int dhx  = domhi[0]; 
+    const int dhy  = domhi[1]; 
+    
     auto const& bcMaskarr = bcMask.array();
     const Box& bxg1 = grow(bx, 1); 
     const Box& bxg2 = grow(bx, 2);
@@ -42,16 +53,15 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
    
     AMREX_PARALLEL_FOR_3D (xslpbx, i,j,k, {
       PeleC_plm_x(i, j, k, qxmarr, qxparr, slarr, q, qaux(i,j,k,QC), 
-                   dx, dt); // dloga, dx[0], dt);
+                   dloga, dx, dt);
     });
-
 //===================== X initial fluxes ===========================
     AsyncFab fx(xflxbx, NVAR);
     auto const& fxarr = fx.array(); 
 
     //bcMaskarr at this point does nothing. 
     AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k, qxmarr, qxparr, fxarr, q1, qaux,0);
+        PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, q1, qaux,0);
                 // bcMaskarr, 0);
     });
 
@@ -68,7 +78,8 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
     auto const& qymarr = qym.array(); 
     auto const& qyparr = qyp.array();  
     AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k,{
-        PeleC_slope_y(i,j,k, slarr, q); 
+        PeleC_slope_y(i,j,k, slarr, q);
+
     }); // */
 
 //==================== Y interp ====================================
@@ -76,12 +87,11 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
         PeleC_plm_y(i,j,k, qymarr, qyparr, slarr, q, qaux(i,j,k,QC), 
                     dy, dt); // dloga, dx[1], dt);
     });
-
 //===================== Y initial fluxes ===========================
     AsyncFab fy(yflxbx, NVAR); 
     auto const& fyarr = fy.array();
     AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k, qymarr, qyparr, fyarr, q2, qaux, 1); 
+        PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qymarr, qyparr, fyarr, q2, qaux, 1); 
         // bcMaskarr, 1);
     }); 
 
@@ -95,12 +105,11 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
     AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
         PeleC_transy(i,j,k, qmarr, qparr, qxmarr, qxparr, fyarr,
                      srcQ, qaux, q2, a2, vol, hdt, hdtdy);
-   });
-
+   }); 
 //===================== Final Riemann problem X ====================
     const Box& xfxbx = surroundingNodes(bx, cdir);
     AMREX_PARALLEL_FOR_3D (xfxbx, i,j,k, {      
-      PeleC_cmpflx(i,j,k, qmarr, qparr, flx1, q1, qaux,0); // bcMaskarr, 0);
+      PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmarr, qparr, flx1, q1, qaux,0); // bcMaskarr, 0);
     }); 
 
 //===================== Y interface corrections ====================
@@ -110,12 +119,11 @@ void PeleC_umeth_2D(amrex::Box const& bx, amrex::Array4<const amrex::Real> const
         PeleC_transx(i,j,k, qmarr, qparr, qymarr, qyparr, fxarr,
                      srcQ, qaux, q1, a1, vol, hdt, hdtdx);                
     });
-
 //===================== Final Riemann problem Y ====================
     
     const Box& yfxbx = surroundingNodes(bx, cdir);
     AMREX_PARALLEL_FOR_3D (yfxbx, i, j, k, {
-      PeleC_cmpflx(i,j,k, qmarr, qparr, flx2, q2, qaux, 1); // bcMaskarr, 1); 
+      PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmarr, qparr, flx2, q2, qaux, 1); // bcMaskarr, 1); 
     });
 
 //===================== Construct p div{U} =========================

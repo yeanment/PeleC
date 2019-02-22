@@ -1,7 +1,10 @@
 #include "PeleC_K.H" 
 
+
 void 
-PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const &bx, 
+PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const &bx,
+            const int* domain_lo, const int* domain_hi,
+            const int* bclo,   const int* bchi, 
             amrex::Array4<const amrex::Real> const &uin, 
             amrex::Array4<amrex::Real> const& uout, 
             amrex::Array4<const amrex::Real> const& q,
@@ -45,13 +48,13 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     auto const& pdivuarr = pdivu.array();
 
 #if AMREX_SPACEDIM == 1
-    PeleC_umeth_1D(bx, q,  qaux, src_q, bcMask, flux1, q1, pdivu, dx, dt);  
+    PeleC_umeth_1D(bx, bclo, bchi, domain_lo, domain_hi,  q,  qaux, src_q, 
+                   bcMask, flux1, q1, pdivu, dx, dt);  
 #elif AMREX_SPACEDIM==2 
-    PeleC_umeth_2D(bx, q,  qaux, src_q, bcMask, flux1, flux2, dloga, q1.array(), q2.array(), a1, a2, 
-                   pdivuarr, vol, dx, dt); 
+    PeleC_umeth_2D(bx, bclo, bchi, domain_lo, domain_hi,q,  qaux, src_q, bcMask, flux1, flux2, dloga,                   q1.array(), q2.array(), a1, a2, pdivuarr, vol, dx, dt); 
 #else
-    PeleC_umeth_3D(bx, q,  qaux, src_q, bcMask, flux1, flux2, flux3, 
-                   q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
+    PeleC_umeth_3D(bx, bclo, bchi, domain_lo, domain_hi,q,  qaux, src_q, bcMask, flux1, flux2,
+                   flux3,  q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
 #endif
 
     //divu 
