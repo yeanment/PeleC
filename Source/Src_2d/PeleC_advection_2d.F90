@@ -143,6 +143,7 @@ contains
                   qxm,qxp,qym,qyp,ilo1-1,ilo2-1,ihi1+2,ihi2+2, &
                   srcQ,src_l1,src_l2,src_h1,src_h2, &
                   ilo1,ilo2,ihi1,ihi2,dx,dy,dt)
+          
     else
        call trace_ppm(q,qaux(:,:,QC),flatn,qd_l1,qd_l2,qd_h1,qd_h2, &
                       dloga,dloga_l1,dloga_l2,dloga_h1,dloga_h2, &
@@ -151,6 +152,7 @@ contains
                       qaux(:,:,QGAMC),qd_l1,qd_l2,qd_h1,qd_h2, &
                       ilo1,ilo2,ihi1,ihi2,dx,dy,dt)
     end if
+
     ! Solve the Riemann problem in the x-direction using these first
     ! guesses for the x-interface states.  This produces the flux fx
     call cmpflx(qxm, qxp, ilo1-1, ilo2-1, ihi1+2, ihi2+2, &
@@ -180,7 +182,7 @@ contains
                 srcQ, src_l1, src_l2, src_h1, src_h2, &
                 hdt, hdtdy, &
                 ilo1-1, ihi1+1, ilo2, ihi2)
-   
+
     ! Solve the final Riemann problem across the x-interfaces with the
     ! full unsplit states.  The resulting flux through the x-interfaces
     ! is flux1
@@ -203,6 +205,8 @@ contains
                 area1, area1_l1, area1_l2, area1_h1, area1_h2, &
                 vol, vol_l1, vol_l2, vol_h1, vol_h2, &
                 ilo1, ihi1, ilo2-1, ihi2+1)
+
+
 
     ! Solve the final Riemann problem across the y-interfaces with the
     ! full unsplit states.  The resulting flux through the y-interfaces

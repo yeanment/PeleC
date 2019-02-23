@@ -481,7 +481,7 @@ contains
           du = ugp-ugm
           geav = HALF*(gegp+gegm)
           dge = gegp-gegm
-
+          
           !-------------------------------------------------------------------
           ! qp state
           !-------------------------------------------------------------------
@@ -512,7 +512,7 @@ contains
                 renewr = rer
                 reset_state = .true.
              end if
-
+ 
              ! convert back to non-conservation form
              rhotmp =  rrnewr
              qpo(i,j,QRHO  ) = rhotmp           + hdt*srcQ(i,j,QRHO)

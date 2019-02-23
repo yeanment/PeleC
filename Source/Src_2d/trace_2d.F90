@@ -10,7 +10,6 @@ module trace_module
 
 contains
 
-!AMREX_DEVICE  
         subroutine trace(q,c,flatn,qd_l1,qd_l2,qd_h1,qd_h2, &
                          dloga,dloga_l1,dloga_l2,dloga_h1,dloga_h2, &
                          qxm,qxp,qym,qyp,qpd_l1,qpd_l2,qpd_h1,qpd_h2, &
@@ -65,12 +64,10 @@ contains
     double precision :: rho_ref, u_ref, v_ref, p_ref, rhoe_ref
     double precision :: e(3)
 
-!#ifndef AMREX_USE_CUDA
     if (ppm_type .ne. 0) then
        print *,'Oops -- shouldnt be in trace with ppm_type != 0'
        call amrex_error("Error:: trace_2d.f90")
     end if
-!#endif 
     
     dtdx = dt/dx
     dtdy = dt/dy

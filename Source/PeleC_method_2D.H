@@ -11,82 +11,77 @@
 AMREX_GPU_DEVICE
 inline
 void
-PeleC_slope_x(const int i, const int j, const int k, 
+PeleC_slope_x(const int i, const int j, const int k, const int n,  
       amrex::Array4< amrex::Real> const& dq, amrex::Array4<const amrex::Real> const& q)
 {
     amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn, dtemp;
     amrex::Real qm, qp, qi;
-#pragma unroll 
-    for(int n = 0; n < QVAR; ++n){
-        qi = q(i,j,k,n); 
-        qm = q(i-1,j,k,n); 
-        qp = q(i+1,j,k,n); 
+    qi = q(i,j,k,n); 
+    qm = q(i-1,j,k,n); 
+    qp = q(i+1,j,k,n); 
 
-        dlft = qm - q(i-2,j,k,n); 
-        drgt = qi - qm; 
-        dcen = 0.5*(dlft+drgt);        
-        dsgn = std::copysign(1.e0, dcen);  
-        dlim = (dlft*drgt > 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
-        dfm = dsgn*amrex::min(dlim, std::abs(dcen));
+    dlft = qm - q(i-2,j,k,n); 
+    drgt = qi - qm; 
+    dcen = 0.5*(dlft+drgt);        
+    dsgn = std::copysign(1.e0, dcen);  
+    dlim = (dlft*drgt > 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
+    dfm = dsgn*amrex::min(dlim, std::abs(dcen));
 
-        dlft = qp - qi; 
-        drgt = q(i+2,j,k,n) - qp; 
-        dcen = 0.5*(dlft+drgt);         
-        dsgn = std::copysign(1.e0, dcen);  
-        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
-        dfp = dsgn*amrex::min(dlim, std::abs(dcen)); 
+    dlft = qp - qi; 
+    drgt = q(i+2,j,k,n) - qp; 
+    dcen = 0.5*(dlft+drgt);         
+    dsgn = std::copysign(1.e0, dcen);  
+    dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
+    dfp = dsgn*amrex::min(dlim, std::abs(dcen)); 
 
-        dlft = qi - qm; 
-        drgt = qp - qi; 
-        dcen = 0.5*(dlft+drgt);         
-        dsgn = std::copysign(1.e0, dcen);  
-        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
-        
-        dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
+    dlft = qi - qm; 
+    drgt = qp - qi; 
+    dcen = 0.5*(dlft+drgt);         
+    dsgn = std::copysign(1.e0, dcen);  
+    dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
+
+    dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
 
 //flattening can go here. 
-        dq(i,j,k,n) = dsgn*amrex::min(dlim, std::abs(dtemp)); 
-    }
+    dq(i,j,k,n) = dsgn*amrex::min(dlim, std::abs(dtemp)); 
 }
 
 AMREX_GPU_DEVICE
 inline
 void
-PeleC_slope_y (const int i, const int j, const int k,
+PeleC_slope_y (const int i, const int j, const int k, const int n, 
                amrex::Array4<amrex::Real> const& dq, amrex::Array4<const amrex::Real> const& q)
 {
     amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn, dtemp;
     amrex::Real qm, qp, qj;
 #pragma unroll 
-    for(int n = 0; n < QVAR; ++n){
-        qj = q(i,j,k,n); 
-        qm = q(i,j-1,k,n); 
-        qp = q(i,j+1,k,n); 
+    qj = q(i,j,k,n); 
+    qm = q(i,j-1,k,n); 
+    qp = q(i,j+1,k,n); 
 
-        dlft = qm - q(i,j-2,k,n); 
-        drgt = qj - qm; 
-        dcen = 0.5*(dlft+drgt);         
-        dsgn = std::copysign(1.e0, dcen);  
-        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
-        dfm = dsgn*amrex::min(dlim, std::abs(dcen));
+    dlft = qm - q(i,j-2,k,n); 
+    drgt = qj - qm; 
+    dcen = 0.5*(dlft+drgt);         
+    dsgn = std::copysign(1.e0, dcen);  
+    dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
+    dfm = dsgn*amrex::min(dlim, std::abs(dcen));
 
-        dlft = qp - qj; 
-        drgt = q(i,j+2,k,n) - qp; 
-        dcen = 0.5*(dlft+drgt);         
-        dsgn = std::copysign(1.e0, dcen); 
-        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
-        dfp = dsgn*amrex::min(dlim, std::abs(dcen)); 
+    dlft = qp - qj; 
+    drgt = q(i,j+2,k,n) - qp; 
+    dcen = 0.5*(dlft+drgt);         
+    dsgn = std::copysign(1.e0, dcen); 
+    dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
+    dfp = dsgn*amrex::min(dlim, std::abs(dcen)); 
 
-        dlft = qj - qm; 
-        drgt = qp - qj; 
-        dcen = 0.5*(dlft+drgt);         
-        dsgn = std::copysign(1.e0, dcen);  
-        dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
-        
-        dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
+    dlft = qj - qm; 
+    drgt = qp - qj; 
+    dcen = 0.5*(dlft+drgt);         
+    dsgn = std::copysign(1.e0, dcen);  
+    dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
+
+    dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
 //flattening can go here. 
-        dq(i,j,k,n) = dsgn*amrex::min(dlim, std::abs(dtemp)); 
-    }
+    dq(i,j,k,n) = dsgn*amrex::min(dlim, std::abs(dtemp)); 
 }
 
 

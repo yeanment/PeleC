@@ -201,10 +201,10 @@ inline
 void PeleC_norm_spec_flx(const int i, const int j, const int k,
                          amrex::Array4<amrex::Real> const& flx) 
 {
-    amrex::Real summ,fac;
-    summ = 0.0;  
+    amrex::Real summ, fac;
+    summ = 0.e0;  
     for(int n = UFS; n < NVAR; ++n) summ += flx(i,j,k,n);
-    fac = (summ != 0) ? flx(i,j,k,URHO)/summ : 1.e0; 
+    fac = (summ != 0.e0) ? flx(i,j,k,URHO)/summ : 1.e0; 
 #pragma unroll 
     for(int n = UFS; n < NVAR; ++n) flx(i,j,k,n) *= fac; 
 
@@ -216,8 +216,9 @@ void PeleC_ext_flx(const int i, const int j, const int k,
                    amrex::Array4<amrex::Real> const& flx,
                    amrex::Array4<const amrex::Real> const& a) 
 {
+    amrex::Real area = a(i,j,k); //avoid reading from global memory NVAR times
 #pragma unroll 
-    for(int n = 0; n < NVAR; ++n) flx(i,j,k,n) *= a(i,j,k); 
+    for(int n = 0; n < NVAR; ++n) flx(i,j,k,n) *= area; 
 }
 
 AMREX_GPU_DEVICE
@@ -229,12 +230,12 @@ void PeleC_update(const int i, const int j, const int k,
                   amrex::Array4<const amrex::Real> const &vol,
                   amrex::Array4<const amrex::Real> const& pdivu)
 {
+    amrex::Real v = vol(i,j,k); 
 #pragma unroll 
     for(int n = 0; n < NVAR; ++n)
     { 
        update(i,j,k,n) += (flx1(i,j,k,n) - flx1(i+1,j,k,n)
-                       +   flx2(i,j,k,n) - flx2(i,j+1,k,n))
-                       /   vol(i,j,k); 
+                       +   flx2(i,j,k,n) - flx2(i,j+1,k,n))/v; 
     }
 
     update(i,j,k,UEINT) -= pdivu(i,j,k);     
