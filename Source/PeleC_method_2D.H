@@ -754,10 +754,11 @@ PeleC_transx(const int i, const int j, const int k,
         qp(i,j,k,QU)   = runewr/rrnewr + hdt*srcQ(i,j,k,QU); 
         qp(i,j,k,QV)   = rvnewr/rrnewr + hdt*srcQ(i,j,k,QV); 
         rwr           *= rrnewr; 
-        rhoekinr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwr*rwr )/rrnewr; 
+        rhoekinr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwr*rwr)/rrnewr; 
         amrex::Real pnewr = qyp(i,j,k,QPRES) 
-                          - hdt*(dAup + pav*dAu*(qa(i,j,k,QGAMC) - 1.e0))/vol(i,j,k); 
-        qp(i,j,k,QPRES) = amrex::max(pnewr + hdt*srcp , small_pres); 
+                          - hdt*(dAup + pav*dAu*(qa(i,j,k,QGAMC) - 1.e0))/vol(i,j,k);
+                    pnewr += hdt*srcp;  
+        qp(i,j,k,QPRES) = amrex::max(pnewr, small_pres); 
         qp(i,j,k,QREINT) = renewr - rhoekinr + hdt*srce;
 //        qp(i,j,k,QGAME)  = qyp(i,j,k,QGAME);  
 //======================= QM ================================================

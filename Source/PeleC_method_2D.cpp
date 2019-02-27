@@ -43,7 +43,8 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const Box xmbx(lox, hix);
     const Box& xflxbx = surroundingNodes(bxg1,cdir);
     AMREX_PARALLEL_FOR_4D (xslpbx, QVAR, i,j,k,n, { 
-        PeleC_slope_x(i,j,k,n, slarr, q);
+//        PeleC_slope_x(i,j,k,n, slarr, q);
+        slarr(i,j,k,n) =0.e0; 
     }); // */
 //==================== X interp ====================================
     AsyncFab qxm(xmbx, QVAR); 
@@ -54,15 +55,22 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (xslpbx,i,j,k, {
       PeleC_plm_x(i, j, k, qxmarr, qxparr, slarr, q, qaux(i,j,k,QC), 
                    dloga, dx, dt);
-    });  
+    }); 
+ 
+/*       AMREX_PARALLEL_FOR_4D(xslpbx, QVAR, i, j, k, n,{ 
+               qxmarr(i+1,j,k,n) = q(i,j,k,n); 
+               qxparr(i,j,k,n) = q(i,j,k,n); 
+        }); //*/
 
 //===================== X initial fluxes ===========================
     AsyncFab fx(xflxbx, NVAR);
     auto const& fxarr = fx.array(); 
+    AsyncFab qgdx(bxg2, NGDNV); 
+    auto const& gdtemp = qgdx.array(); 
 
     //bcMaskarr at this point does nothing. 
     AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, q1, qaux,0);
+        PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, gdtemp, qaux,0);
                 // bcMaskarr, 0);
     });
 
@@ -79,7 +87,8 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     auto const& qymarr = qym.array(); 
     auto const& qyparr = qyp.array();  
     AMREX_PARALLEL_FOR_4D (yslpbx, QVAR, i, j, k, n,{
-        PeleC_slope_y(i, j, k, n, slarr, q);
+//        PeleC_slope_y(i, j, k, n, slarr, q);
+        slarr(i,j,k,n) =0.e0; 
 
     }); // */
 
@@ -101,7 +110,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     cdir = 0; 
     AsyncFab qm(bxg2, QVAR); 
     AsyncFab qp(bxg2, QVAR);
-    const Box& tybx = grow(bx, cdir, 1); 
+    const Box& tybx = grow(bx, cdir, 1);
     auto const& qmarr = qm.array();
     auto const& qparr = qp.array();  
     AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
@@ -109,8 +118,10 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
                      srcQ, qaux, q2, a2, vol, hdt, hdtdy);
    });  /*/ 
        AMREX_PARALLEL_FOR_4D(tybx, QVAR, i, j, k, n,{ 
-               qmarr(i+1,j,k,n) = qxmarr(i+1,j,k,n); 
-               qparr(i,j,k,n) = qxparr(i,j,k,n); 
+//               qmarr(i+1,j,k,n) = q(i,j,k,n); 
+//               qparr(i,j,k,n) = q(i,j,k,n); 
+                 qmarr(i+1,j,k,n) = qxmarr(i+1,j,k,n); 
+                 qparr(i,j,k,n) = qxparr(i,j,k,n); 
         }); //*/
 
 //===================== Final Riemann problem X ====================
@@ -124,11 +135,13 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const Box& txbx = grow(bx, cdir, 1);
     AMREX_PARALLEL_FOR_3D (txbx, i, j , k, {
         PeleC_transx(i,j,k, qmarr, qparr, qymarr, qyparr, fxarr,
-                     srcQ, qaux, q1, a1, vol, hdt, hdtdx);                
+                     srcQ, qaux, gdtemp, a1, vol, hdt, hdtdx);                
     }); /*/ 
        AMREX_PARALLEL_FOR_4D(txbx, QVAR, i, j, k, n,{ 
-               qmarr(i,j+1,k,n) = qymarr(i,j+1,k,n); 
-               qparr(i,j,k,n) = qyparr(i,j,k,n); 
+//               qmarr(i,j+1,k,n) = q(i,j,k,n); 
+//               qparr(i,j,k,n) = q(i,j,k,n); 
+                 qmarr(i,j+1,k,n) = qymarr(i,j+1,k,n); 
+                 qparr(i,j,k,n) = qyparr(i,j,k,n); 
         });// */ 
 
 //===================== Final Riemann problem Y ====================
