@@ -87,7 +87,9 @@ contains
                    flatn, qd_l1, qd_l2, qd_h1, qd_h2, &
                    dqx  ,qpd_l1,qpd_l2,qpd_h1,qpd_h2, &
                    ilo1,ilo2,ihi1,ihi2,QVAR,1)
-
+      qxm(ilo1-1:ihi1+1,ilo2-1:ihi2+1,1:QVAR)= dqx(ilo1-1:ihi1+1,ilo2-1:ihi2+1,1:QVAR)
+    endif
+#if 0 
        call uslope(q,flatn,qd_l1,qd_l2,qd_h1,qd_h2, &
                    dqy,qpd_l1,qpd_l2,qpd_h1,qpd_h2, &
                    ilo1,ilo2,ihi1,ihi2,QVAR,2)
@@ -388,6 +390,7 @@ contains
     enddo
 
 !    deallocate(dqx,dqy)
+#endif 
     
   end subroutine trace
   

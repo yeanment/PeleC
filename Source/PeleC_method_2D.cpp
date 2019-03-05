@@ -3,7 +3,7 @@
 //Host function to call gpu hydro functions
 void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi, 
            const int* domlo, const int* domhi, 
-           amrex::Array4<const amrex::Real> const &q, 
+           amrex::Array4<amrex::Real> const &q, 
            amrex::Array4<const amrex::Real> const& qaux,
            amrex::Array4<const amrex::Real> const& srcQ, amrex::IArrayBox const& bcMask,
            amrex::Array4<amrex::Real> const& flx1, amrex::Array4<amrex::Real> const& flx2, 
@@ -43,9 +43,16 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const Box xmbx(lox, hix);
     const Box& xflxbx = surroundingNodes(bxg1,cdir);
     AMREX_PARALLEL_FOR_4D (xslpbx, QVAR, i,j,k,n, { 
-//        PeleC_slope_x(i,j,k,n, slarr, q);
-        slarr(i,j,k,n) =0.e0; 
+        PeleC_slope_x(i,j,k,n, slarr, q);
+//        slarr(i,j,k,n) =0.e0; 
     }); // */
+    AMREX_PARALLEL_FOR_4D (xslpbx, QVAR, i,j,k,n, { 
+        q(i,j,k,n) = slarr(i,j,k,n); 
+//        slarr(i,j,k,n) =0.e0; 
+    }); // */
+
+    return; 
+    std::cin.get(); 
 //==================== X interp ====================================
     AsyncFab qxm(xmbx, QVAR); 
     AsyncFab qxp(xslpbx, QVAR);

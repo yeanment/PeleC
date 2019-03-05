@@ -7,7 +7,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
             const int* bclo,   const int* bchi, 
             amrex::Array4<const amrex::Real> const &uin, 
             amrex::Array4<amrex::Real> const& uout, 
-            amrex::Array4<const amrex::Real> const& q,
+            amrex::Array4<amrex::Real> const& q,
             amrex::Array4<const amrex::Real> const& qaux,
             amrex::Array4<const amrex::Real> const& src_q, amrex::IArrayBox const& bcMask,
             const amrex::Real *dx, const amrex::Real dt, 
@@ -56,7 +56,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     PeleC_umeth_3D(bx, bclo, bchi, domain_lo, domain_hi,q,  qaux, src_q, bcMask, flux1, flux2,
                    flux3,  q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
 #endif
-
+    return;
     //divu 
     const amrex::Real delx = dx[0]; 
     const amrex::Real dely = dx[1];  

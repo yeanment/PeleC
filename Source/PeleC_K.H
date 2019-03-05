@@ -135,7 +135,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
             const int* dlo, const int* dhi, const int* bclo, const int* bchi,  
             amrex::Array4<const amrex::Real> const &uin, 
             amrex::Array4<amrex::Real> const& uout, 
-            amrex::Array4<const amrex::Real> const& q,
+            amrex::Array4<amrex::Real> const& q,
             amrex::Array4<const amrex::Real> const& qaux,
             amrex::Array4<const amrex::Real> const& src_q, amrex::IArrayBox const& bcMask,
             const amrex::Real *dx, const amrex::Real dt, 

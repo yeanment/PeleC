@@ -24,7 +24,7 @@ PeleC_slope_x(const int i, const int j, const int k, const int n,
     drgt = qi - qm; 
     dcen = 0.5*(dlft+drgt);        
     dsgn = std::copysign(1.e0, dcen);  
-    dlim = (dlft*drgt > 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
+    dlim = (dlft*drgt >= 0.0) ? 2.0*amrex::min(std::abs(dlft), std::abs(drgt)) : 0.0; 
     dfm = dsgn*amrex::min(dlim, std::abs(dcen));
 
     dlft = qp - qi; 
@@ -43,7 +43,7 @@ PeleC_slope_x(const int i, const int j, const int k, const int n,
     dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
 
 //flattening can go here. 
-    dq(i,j,k,n) = dsgn*amrex::min(dlim, std::abs(dtemp)); 
+    dq(i,j,k,n) = dsgn*amrex::min(dlim, std::abs(dtemp));
 }
 
 AMREX_GPU_DEVICE
@@ -944,7 +944,7 @@ PeleC_pdivu(const int i, const int j, const int k,
 //Defined in PeleC_method_2D
 void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi, 
            const int* domlo, const int* domhi, 
-           amrex::Array4<const amrex::Real> const &q, 
+           amrex::Array4< amrex::Real> const &q, 
            amrex::Array4<const amrex::Real> const& qaux,
            amrex::Array4<const amrex::Real> const& srcQ, amrex::IArrayBox const& bcMask,
            amrex::Array4<amrex::Real> const& flx1, amrex::Array4<amrex::Real> const& flx2, 

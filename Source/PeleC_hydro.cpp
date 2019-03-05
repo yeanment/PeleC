@@ -57,7 +57,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     Real courno    = -1.0e+200;
 
     MultiFab& S_new = get_new_data(State_Type);
-
+    MultiFab  Qout(S.boxArray(), S.DistributionMap(), QVAR, 4); 
     // note: the radiation consup currently does not fill these
     Real E_added_flux    = 0.;
     Real mass_added_flux = 0.;
@@ -256,6 +256,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                  E_added_flux,
                  mass_lost, xmom_lost, ymom_lost, zmom_lost,
                  eden_lost, xang_lost, yang_lost, zang_lost); //  */
+                 (Qout[mfi]).copy(q.fab()); 
 
                  courno = std::max(courno,cflLoc);
 
@@ -291,6 +292,10 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     } // end of OMP parallel region
 
     hydro_source.FillBoundary(geom.periodicity());
+    VisMF::Write(Qout, "cpp");
+//    VisMF::Write(Qout, "ftn"); 
+    std::cout<< "written! " << std::endl; 
+    std::cin.get();  
 
     BL_PROFILE_VAR_STOP(PC_UMDRV);
 
