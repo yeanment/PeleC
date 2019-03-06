@@ -160,7 +160,6 @@ subroutine pc_umdrv(is_finest_level, time, &
                pdivu, vol, vol_l1, vol_l2, vol_h1, vol_h2, &
                dloga,dloga_l1,dloga_l2,dloga_h1,dloga_h2, &
                domlo, domhi)
-#if 0 
   ! Compute divergence of velocity field (on surroundingNodes(lo,hi))
   ! this is used for the artifical viscosity
   call divu(lo,hi,q,q_l1,q_l2,q_h1,q_h2, &
@@ -188,5 +187,4 @@ subroutine pc_umdrv(is_finest_level, time, &
   end if
 
   deallocate(flatn,div,q1,q2,pdivu)
-#endif 
 end subroutine pc_umdrv

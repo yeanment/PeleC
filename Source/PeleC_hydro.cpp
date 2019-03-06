@@ -57,7 +57,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     Real courno    = -1.0e+200;
 
     MultiFab& S_new = get_new_data(State_Type);
-    MultiFab  Qout(S.boxArray(), S.DistributionMap(), QVAR, 4); 
+    MultiFab  Qout(S.boxArray(), S.DistributionMap(), QVAR, 4);
+    MultiFab  Qtemp(S.boxArray(), S.DistributionMap(), QVAR, 4);
+
     // note: the radiation consup currently does not fill these
     Real E_added_flux    = 0.;
     Real mass_added_flux = 0.;
@@ -101,6 +103,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    FArrayBox *stateout = &(S_new[mfi]);
 	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
 	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
+        FArrayBox *qout = &(Qout[mfi]); 
 
         const Box& xfbx = surroundingNodes(bx, 0); 
         AsyncFab flx1(xfbx, NVAR);
@@ -132,6 +135,16 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
             {
                  PeleC_ctoprim(i,j,k, s, qarr, qauxar);                  
              });
+
+        (Qtemp[mfi]).copy(q.fab()); 
+       
+        ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
+            (*statein).dataPtr(), ARLIM_3D((*statein).loVect()), ARLIM_3D((*statein).hiVect()),
+            (*qout).dataPtr(), ARLIM_3D((*qout).loVect()), ARLIM_3D((*qout).hiVect()),
+            (qaux.fab()).dataPtr(), 
+             ARLIM_3D((qaux.fab()).loVect()),
+             ARLIM_3D((qaux.fab()).hiVect()));
+  
 
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
             // See Motheau et al. AIAA J. (In Press) for the theory. 
@@ -200,7 +213,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 #endif
 
 
-                PeleC_umdrv
+                 PeleC_umdrv
                 (is_finest_level, time,
                  bx, 
                  domain_lo, domain_hi,
@@ -256,7 +269,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                  E_added_flux,
                  mass_lost, xmom_lost, ymom_lost, zmom_lost,
                  eden_lost, xang_lost, yang_lost, zang_lost); //  */
-                 (Qout[mfi]).copy(q.fab()); 
+//                 (Qout[mfi]).copy(q.fab()); 
 
                  courno = std::max(courno,cflLoc);
 
@@ -292,11 +305,20 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     } // end of OMP parallel region
 
     hydro_source.FillBoundary(geom.periodicity());
-    VisMF::Write(Qout, "cpp");
-//    VisMF::Write(Qout, "ftn"); 
+/*
+//    VisMF::Write(Qout, "cpp");
+    VisMF::Write(Qout, "ftn"); 
     std::cout<< "written! " << std::endl; 
-    std::cin.get();  
+    std::cin.get();  */
+    Qout.minus(Qtemp, 0, QVAR, 4); 
+    std::vector<Real> mf_norm(QVAR); 
+    for(int i = 0; i < QVAR; i++){
+        mf_norm[i] = Qout.norm1(i, geom.periodicity());
+        amrex::Print() << "Norm of comp " << i << '\t' << mf_norm[i] << std::endl;
+    }
+    std::cin.get(); 
 
+    
     BL_PROFILE_VAR_STOP(PC_UMDRV);
 
     // Flush Fortran output

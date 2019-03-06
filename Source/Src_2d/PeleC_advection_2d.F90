@@ -143,9 +143,6 @@ contains
                   qxm,qxp,qym,qyp,ilo1-1,ilo2-1,ihi1+2,ihi2+2, &
                   srcQ,src_l1,src_l2,src_h1,src_h2, &
                   ilo1,ilo2,ihi1,ihi2,dx,dy,dt)
-       q(ilo1:ihi1,ilo2:ihi2,:) = qxm(ilo1:ihi1,ilo2:ihi2,:) 
-    endif
-#if 0          
     else
        call trace_ppm(q,qaux(:,:,QC),flatn,qd_l1,qd_l2,qd_h1,qd_h2, &
                       dloga,dloga_l1,dloga_l2,dloga_h1,dloga_h2, &
@@ -237,7 +234,6 @@ contains
 !    deallocate(fx,fy)
 !    deallocate(shk)
 !    deallocate(qgdxtmp)
-#endif 
 
   end subroutine umeth2d
 

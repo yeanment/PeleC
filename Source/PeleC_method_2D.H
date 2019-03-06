@@ -328,7 +328,7 @@ PeleC_cmpflx(const int i, const int j, const int k,
      amrex::Array4<const amrex::Real> const & qr, amrex::Array4<amrex::Real> const& flx,
      amrex::Array4<amrex::Real> const& q, amrex::Array4<const amrex::Real> const& qa,
 //     amrex::Array4<const int> const& bcMask,
-     int idir)
+     const int idir)
 {
     EOS gdnv_state; 
     amrex::Real cav, ustar;
@@ -377,22 +377,26 @@ PeleC_cmpflx(const int i, const int j, const int k,
           rer = qr(i,j,k,QREINT); 
 
 //Outflow Hack --> 
-         idx = idir == 1 ? i : j; 
-         if(bclo == Outflow && idx == domlo)
+         idx = (idir == 0) ? i : j;
+/*         if(idir == 1 && idx >= domhi){
+            amrex::Print() << " idx  = " <<  idx << "  domhi  = " << domhi << std::endl; 
+            std::cin.get(); 
+         } 
+         if(bclo == Outflow && idx <= domlo)
          {
             ul = ur; 
             vl = vr; 
             v2l = v2r; 
             rel = rer; 
          }
-         if(bchi == Outflow && idx == domhi)
+         if(bchi == Outflow && idx >= domhi)
          {  
             ur  = ul; 
             vr  = vl; 
             v2r = v2l; 
             rer = rel;         
          } 
-
+*/
           riemann(ql(i,j,k,QRHO), ul, vl, v2l, 
                  ql(i,j,k,QPRES), rel, gamcl, spl,   
                  qr(i,j,k,QRHO), ur, vr, v2r, 
@@ -534,7 +538,7 @@ PeleC_plm_x(const int i, const int j, const int k,
             qp(i,j,k,n) = q(i,j,k,n) + acmprght;
 
 //            u = q(i,j,k,QU); 
-            spzero = u > 0 ? u*dtdx : 1.e0; 
+            spzero = u >= 0 ? u*dtdx : 1.e0; 
             amrex::Real acmpleft = 0.5e0*(1.e0 - spzero)*slope(i,j,k,n);  
             qm(i+1, j, k, n) = q(i,j,k,n) + acmpleft; 
         }                            
@@ -659,8 +663,7 @@ PeleC_plm_y(const int i, const int j, const int k,
             amrex::Real acmptop = 0.5e0*(-1.e0 - spzero)*slope(i,j,k,n); 
             qp(i,j,k,n) = q(i,j,k,n) + acmptop;
 
-            v = q(i,j,k,QV); 
-            spzero = v > 0 ? v*dtdy : 1.e0; 
+            spzero = v >= 0 ? v*dtdy : 1.e0; 
             amrex::Real acmpbot = 0.5e0*(1.e0 - spzero)*slope(i,j,k,n);  
             qm(i,j+1,k,n) = q(i,j,k,n) + acmpbot; 
         }                                           
@@ -944,7 +947,7 @@ PeleC_pdivu(const int i, const int j, const int k,
 //Defined in PeleC_method_2D
 void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi, 
            const int* domlo, const int* domhi, 
-           amrex::Array4< amrex::Real> const &q, 
+           amrex::Array4<const amrex::Real> const &q, 
            amrex::Array4<const amrex::Real> const& qaux,
            amrex::Array4<const amrex::Real> const& srcQ, amrex::IArrayBox const& bcMask,
            amrex::Array4<amrex::Real> const& flx1, amrex::Array4<amrex::Real> const& flx2, 
