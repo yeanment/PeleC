@@ -181,7 +181,6 @@ contains
                 srcQ, src_l1, src_l2, src_h1, src_h2, &
                 hdt, hdtdy, &
                 ilo1-1, ihi1+1, ilo2, ihi2)
-
     ! Solve the final Riemann problem across the x-interfaces with the
     ! full unsplit states.  The resulting flux through the x-interfaces
     ! is flux1
@@ -195,6 +194,7 @@ contains
     ! Correct the y-interface states (qym, qyp) by adding the
     ! transverse flux difference in the x-direction to the y-interface
     ! states.  This results in the new y-interface states qm and qp
+
     call transx(qym, qm, qyp, qp, ilo1-1, ilo2-1, ihi1+2, ihi2+2, &
                 fx, ilo1, ilo2-1, ihi1+1, ihi2+1, &
                 qgdxtmp, q1_l1, q1_l2, q1_h1, q1_h2, &

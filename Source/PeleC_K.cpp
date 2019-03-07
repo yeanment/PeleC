@@ -107,7 +107,7 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& 
     });
 //------------------------- y-flux ------------------------------------
 
-    amrex::Box const &yfbx = surroundingNodes(bx, 1); 
+    amrex::Box const &yfbx = surroundingNodes(bx, 1);
     AMREX_PARALLEL_FOR_3D(yfbx, i, j, k, {
         //Artificial Viscosity! 
         PeleC_artif_visc(i,j,k,flx2, div, u, dy, difmag, 1); 
@@ -117,7 +117,7 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& 
         PeleC_ext_flx(i,j,k,flx2,a2); 
     };);
 //================ Combine for Hydro Sources ==========================
-
+      
     AMREX_PARALLEL_FOR_3D(bx, i, j, k, {
         PeleC_update(i,j,k, update, flx1, flx2, vol, pdivu); 
     };);

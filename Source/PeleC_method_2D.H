@@ -378,25 +378,21 @@ PeleC_cmpflx(const int i, const int j, const int k,
 
 //Outflow Hack --> 
          idx = (idir == 0) ? i : j;
-/*         if(idir == 1 && idx >= domhi){
-            amrex::Print() << " idx  = " <<  idx << "  domhi  = " << domhi << std::endl; 
-            std::cin.get(); 
-         } 
-         if(bclo == Outflow && idx <= domlo)
+         if(bclo == Outflow && idx == domlo)
          {
             ul = ur; 
             vl = vr; 
             v2l = v2r; 
             rel = rer; 
          }
-         if(bchi == Outflow && idx >= domhi)
+         if(bchi == Outflow && idx == domhi+1)
          {  
             ur  = ul; 
             vr  = vl; 
             v2r = v2l; 
             rer = rel;         
          } 
-*/
+//*/
           riemann(ql(i,j,k,QRHO), ul, vl, v2l, 
                  ql(i,j,k,QPRES), rel, gamcl, spl,   
                  qr(i,j,k,QRHO), ur, vr, v2r, 

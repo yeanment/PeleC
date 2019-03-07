@@ -173,23 +173,24 @@ void PeleC_artif_visc(const int i, const int j, const int k,
 {
     amrex::Real div1;
     if(cdir==0){
+        div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
+        div1 = difmag*amrex::min(0.0, div1); 
+
 #pragma unroll
         for(int n=0; n < NVAR; ++n){
             if(n != UTEMP){
-                div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
 // Passing in difmag TODO not pass in. 
-                div1 = difmag*amrex::min(0.0, div1); 
-                flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i-1,j,k,n));
+                flx(i,j,k,n) += dx*div1*(u(i,j,k,n) - u(i-1,j,k,n));
             }
         }
     }
     else if(cdir==1){
+        div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
+        div1 = difmag*amrex::min(0.0, div1); 
 #pragma unroll 
         for(int n=0; n < NVAR; ++n){
             if(n  != UTEMP){
-                div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
-                div1 = difmag*amrex::min(0.0, div1); 
-                flx(i,j,k,n) = flx(i,j,k,n) + dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
+                flx(i,j,k,n) += dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
             }
         }
     }
@@ -201,12 +202,14 @@ inline
 void PeleC_norm_spec_flx(const int i, const int j, const int k,
                          amrex::Array4<amrex::Real> const& flx) 
 {
+    int num = NUM_SPECIES + UFS; 
     amrex::Real summ, fac;
     summ = 0.e0;  
-    for(int n = UFS; n < NVAR; ++n) summ += flx(i,j,k,n);
+    for(int n = UFS; n < num; ++n) summ += flx(i,j,k,n);
+
     fac = (summ != 0.e0) ? flx(i,j,k,URHO)/summ : 1.e0; 
 #pragma unroll 
-    for(int n = UFS; n < NVAR; ++n) flx(i,j,k,n) *= fac; 
+    for(int n = UFS; n < num; ++n) flx(i,j,k,n) *= fac; 
 
 }
 
@@ -225,9 +228,9 @@ AMREX_GPU_DEVICE
 inline 
 void PeleC_update(const int i, const int j, const int k,
                   amrex::Array4<amrex::Real> const& update, 
-                  amrex::Array4<const amrex::Real> const &flx1,
+                  amrex::Array4<const amrex::Real> const& flx1,
                   amrex::Array4<const amrex::Real> const& flx2, 
-                  amrex::Array4<const amrex::Real> const &vol,
+                  amrex::Array4<const amrex::Real> const& vol,
                   amrex::Array4<const amrex::Real> const& pdivu)
 {
     amrex::Real v = vol(i,j,k); 
