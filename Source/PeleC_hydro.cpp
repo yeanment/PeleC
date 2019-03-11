@@ -130,11 +130,12 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
 
-
+        BL_PROFILE_VAR("PeleC::ctoprim()", ctop); 
         AMREX_PARALLEL_FOR_3D(qbx, i, j, k, 
             {
                  PeleC_ctoprim(i,j,k, s, qarr, qauxar);                  
              });
+        BL_PROFILE_VAR_STOP(ctop); 
 
 //        (Qtemp[mfi]).copy(q.fab()); 
        
@@ -183,10 +184,11 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    }
 #endif
                const auto & src_in  = sources_for_hydro.array(mfi);
-         
+        BL_PROFILE_VAR("PeleC::srctoprim()", srctop);  
                 AMREX_PARALLEL_FOR_3D(qbx,i, j, k,{
                       PeleC_srctoprim(i, j, k, qarr, qauxar, src_in, srcqarr); 
                 });
+        BL_PROFILE_VAR_STOP(srctop); 
 
                     // Allocate fabs for fluxes
 /*                for (int i = 0; i < BL_SPACEDIM ; i++)  {
@@ -205,7 +207,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 amrex::FArrayBox *prad = &pradial; 
 #endif
 
-
+            BL_PROFILE_VAR("PeleC::umdrv()", purm); 
                          PeleC_umdrv
                         (is_finest_level, time,
                          bx, 
@@ -263,8 +265,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                  mass_lost, xmom_lost, ymom_lost, zmom_lost,
                  eden_lost, xang_lost, yang_lost, zang_lost); //  */
 //                 (Qout[mfi]).copy(q.fab()); 
+            BL_PROFILE_VAR_STOP(purm); 
 
-                 courno = std::max(courno,cflLoc);
+            courno = std::max(courno,cflLoc);
 
                     if (do_reflux  && sub_iteration == sub_ncycle-1 )
                     {
@@ -297,17 +300,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
          } // MFIter loop
     } // end of OMP parallel region
 
-/*    std::cout << " src ngrow " << hydro_source.nGrow()<< std::endl;
-    hydro_source.setBndry(0.0); 
-    hydro_source.FillBoundary(geom.periodicity());
-//    VisMF::Write(hydro_source, "cpp"); 
-    VisMF::Write(hydro_source, "ftn");
-    std::cout<<" MF written " << std::endl; 
-    std::cin.get();  
-//    VisMF::Write(Qout, "cpp");
-    VisMF::Write(Qout, "ftn"); 
-    std::cout<< "written! " << std::endl; 
-    std::cin.get();  */
     
     BL_PROFILE_VAR_STOP(PC_UMDRV);
 

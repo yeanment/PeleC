@@ -430,7 +430,9 @@ PeleC::do_sdc_iteration (Real time,
   construct_Snew(S_new, S_old, dt);
 
   int ng_src = 0;
+  BL_PROFILE_VAR("PeleC::computeTemp()", cmpT); 
   computeTemp(S_new, ng_src);
+  BL_PROFILE_VAR_STOP(cmpT); 
 
   // Now update t_new sources (diffusion separate because it requires a fill patch)
   if (do_diffuse)
@@ -497,9 +499,11 @@ PeleC::do_sdc_iteration (Real time,
   }
 #else
   construct_Snew(S_new, S_old, dt);
-#endif
+#endif 
 
+  BL_PROFILE_VAR_START(cmpT); 
   computeTemp(S_new, ng_src);
+  BL_PROFILE_VAR_STOP(cmpT); 
 
   finalize_sdc_iteration(time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle);
 

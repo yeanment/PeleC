@@ -46,7 +46,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     Gpu::AsyncFab pdivu(bx, 1); 
     auto const&  divarr = divu.array(); 
     auto const& pdivuarr = pdivu.array();
-
+    BL_PROFILE_VAR("PeleC::umeth()", umeth); 
 #if AMREX_SPACEDIM == 1
     PeleC_umeth_1D(bx, bclo, bchi, domain_lo, domain_hi,  q,  qaux, src_q, 
                    bcMask, flux1, q1, pdivu, dx, dt);  
@@ -56,6 +56,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     PeleC_umeth_3D(bx, bclo, bchi, domain_lo, domain_hi,q,  qaux, src_q, bcMask, flux1, flux2,
                    flux3,  q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
 #endif
+    BL_PROFILE_VAR_STOP(umeth); 
     //divu 
     const amrex::Real delx = dx[0]; 
     const amrex::Real dely = dx[1];  
@@ -71,11 +72,13 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 
 
     //TODO have difmag be parm parsed
-    amrex::Real difmag = 0.1e0; //0.005e0; 
+    amrex::Real difmag = 0.1e0; //0.005e0;
+    BL_PROFILE_VAR("PeleC::consup()",cons);  
     PeleC_consup(bx, uin, uout,
                  D_DECL(flux1, flux2, flux3),
                  D_DECL(a1, a2, a3), 
                  vol, divarr, pdivuarr, dx, difmag); 
+    BL_PROFILE_VAR_STOP(cons); 
 }
 
 

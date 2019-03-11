@@ -165,7 +165,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       auto const& qar = q.array(); 
       auto const& qauxar = qaux.array(); 
 
-      BL_PROFILE("PeleC::ctoprim call");
+//      BL_PROFILE("PeleC::ctoprim call");
       AMREX_PARALLEL_FOR_3D(gbox, i, j, k, 
           {
               PeleC_ctoprim(i,j,k, s, qar, qauxar);                  

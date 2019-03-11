@@ -68,6 +68,9 @@ PeleC::volWgtSum (const std::string& name,
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
+#ifdef AMREX_USE_CUDA
+    sum = MultiFab::Dot(*mf, 0, volume, 0, 0, 0, local);
+#else
 #ifdef _OPENMP
 #pragma omp parallel reduction(+:sum)
 #endif    
@@ -100,7 +103,7 @@ PeleC::volWgtSum (const std::string& name,
 
     sum += s;
   }
-
+#endif //CUDA
 
   if (!local)
     ParallelDescriptor::ReduceRealSum(sum);

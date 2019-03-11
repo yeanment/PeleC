@@ -53,7 +53,6 @@ void PeleC_ctoprim(const int i, const int j, const int k,
 
     eos_state.e = (u(i,j,k,UEDEN) - kineng)*rhoinv;
     eos_state.T = u(i,j,k,UTEMP); 
-//TODO figure out massfrac and auxilary vars
 #pragma unroll 
     for(int sp = 0; sp < NUM_SPECIES; ++sp) eos_state.massfrac[sp] = q(i,j,k,sp+QFS);
 #pragma unroll

@@ -61,7 +61,7 @@ void EOS::eos_re()
     int lierr=0; 
     eos_wb();
     GET_T_GIVEN_EY(&e, massfrac, &iwrk, &rwrk, &T, &lierr);
-    T = amrex::max(T, smallT); //*/
+//    T = amrex::max(T, smallT); //*/
     CKUMS(&T, &iwrk, &rwrk, ei); 
     CKPY(&rho, &T, massfrac, &iwrk, &rwrk, &p);
 

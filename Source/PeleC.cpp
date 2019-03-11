@@ -1737,10 +1737,14 @@ PeleC::reset_internal_energy(MultiFab& S_new, int ng)
     for (MFIter mfi(S_new,true); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.growntilebox(ng);
-
+        const auto& sarr = S_new.array(mfi); 
+        AMREX_PARALLEL_FOR_3D(bx, i, j, k, {
+            rst_int_e(i,j,k, sarr); 
+        });
+/*
         reset_internal_e(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
                          BL_TO_FORTRAN_3D(S_new[mfi]),
-			 print_fortran_warnings);
+			 print_fortran_warnings); */ 
     }
 
     // Flush Fortran output
@@ -1768,7 +1772,11 @@ PeleC::reset_internal_energy(MultiFab& S_new, int ng)
 void
 PeleC::computeTemp(MultiFab& S, int ng)
 {
+//TODO GPUize 
+
+  BL_PROFILE_VAR("PeleC::reset_internal_energy()", rnrg); 
   reset_internal_energy(S, ng);
+  BL_PROFILE_VAR_STOP(rnrg); 
 
 #ifdef PELE_USE_EB
   auto const& fact = dynamic_cast<EBFArrayBoxFactory const&>(S.Factory());
@@ -1790,8 +1798,12 @@ PeleC::computeTemp(MultiFab& S, int ng)
     }
 #endif
 
-    auto& Sfab = S[mfi];
-    compute_temp(ARLIM_3D(bx.loVect()),ARLIM_3D(bx.hiVect()),BL_TO_FORTRAN_3D(Sfab));
+//    auto& Sfab = S[mfi];
+    const auto& sarr = S.array(mfi); 
+    AMREX_PARALLEL_FOR_3D(bx, i, j, k, {
+        cmpTemp(i,j,k,sarr);
+    });
+//    compute_temp(ARLIM_3D(bx.loVect()),ARLIM_3D(bx.hiVect()),BL_TO_FORTRAN_3D(Sfab));
   }
 }
 

@@ -110,14 +110,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
         PeleC_transy(i,j,k, qmarr, qparr, qxmarr, qxparr, fyarr,
                      srcQ, qaux, q2, a2, vol, hdt, hdtdy);
-   }); /*/
-       AMREX_PARALLEL_FOR_4D(tybx, QVAR, i, j, k, n,{ 
-//               qmarr(i,j+1,k,n) = q(i,j,k,n); 
-//               qparr(i,j,k,n) = q(i,j,k,n); 
-                 qmarr(i+1,j,k,n) = qxmarr(i+1,j,k,n); 
-                 qparr(i,j,k,n) = qxparr(i,j,k,n); 
-        });// */ 
-
+   }); 
 //===================== Final Riemann problem X ====================
     const Box& xfxbx = surroundingNodes(bx, cdir);
     AMREX_PARALLEL_FOR_3D (xfxbx, i,j,k, {      
@@ -130,14 +123,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (txbx, i, j , k, {
         PeleC_transx(i,j,k, qmarr, qparr, qymarr, qyparr, fxarr,
                      srcQ, qaux, gdtemp, a1, vol, hdt, hdtdx);                
-    }); /*/ 
-       AMREX_PARALLEL_FOR_4D(txbx, QVAR, i, j, k, n,{ 
-//               qmarr(i,j+1,k,n) = q(i,j,k,n); 
-//               qparr(i,j,k,n) = q(i,j,k,n); 
-                 qmarr(i,j+1,k,n) = qymarr(i,j+1,k,n); 
-                 qparr(i,j,k,n) = qyparr(i,j,k,n); 
-        });// */ 
-
+    }); 
 //===================== Final Riemann problem Y ====================
     
     const Box& yfxbx = surroundingNodes(bx, cdir);
