@@ -23,29 +23,27 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
             amrex::Array4<amrex::Real> const &vol, amrex::Real cflLoc)
 {
 
-//    TODO Check for CFL violation, this is a reduce operation. 
-//    amrex::Real cour = PeleC_cfl(bx, q, qaux, dt, dx, courno); 
-//    if(cour > 1.e0) 
-        
-    //TODO Do Flattening when we go to PPM. 
-    
-    //Call the method!
-    const auto& bxg2 = grow(bx, 2); 
-    const auto q1bx = surroundingNodes(bxg2,0); 
+//  Set Up for Hydro Flux Calculations 
+    auto const& bxg2 = grow(bx, 2); 
+    auto const& q1bx = surroundingNodes(bxg2,0); 
     Gpu::AsyncFab q1(q1bx, NGDNV); 
+
 #if AMREX_SPACEDIM > 1
-    const auto q2bx = surroundingNodes(bxg2,1); 
+    auto const& q2bx = surroundingNodes(bxg2,1); 
     Gpu::AsyncFab q2(q2bx, NGDNV); 
-#endif
+
 #if AMREX_SPACEDIM > 2 
-    const auto q3bx = surroundingNodes(bxg2,2); 
+    auto const& q3bx = surroundingNodes(bxg2,2); 
     Gpu::AsyncFab q3(q3bx, NGDNV); 
 #endif
+#endif
 
+//  Temporary FArrayBoxes 
     Gpu::AsyncFab divu(bxg2, 1); 
     Gpu::AsyncFab pdivu(bx, 1); 
     auto const&  divarr = divu.array(); 
     auto const& pdivuarr = pdivu.array();
+
     BL_PROFILE_VAR("PeleC::umeth()", umeth); 
 #if AMREX_SPACEDIM == 1
     PeleC_umeth_1D(bx, bclo, bchi, domain_lo, domain_hi,  q,  qaux, src_q, 
@@ -57,28 +55,21 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
                    flux3,  q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
 #endif
     BL_PROFILE_VAR_STOP(umeth); 
+
     //divu 
     const amrex::Real delx = dx[0]; 
     const amrex::Real dely = dx[1];  
     AMREX_PARALLEL_FOR_3D (bxg2, i,j,k, {
         PeleC_divu(i,j,k, q, delx, dely, divarr); 
     });
+
     //consup 
+    amrex::Real difmag = 0.1e0; 
 
-/* Only used for cylindrical coords "at this point" 
-    auto const& D_DECL(q1fab = q1.array(), 
-                       q2fab = q2.array(), 
-                       q3fab = q3.array()); */ 
-
-
-    //TODO have difmag be parm parsed
-    amrex::Real difmag = 0.1e0; //0.005e0;
-    BL_PROFILE_VAR("PeleC::consup()",cons);  
     PeleC_consup(bx, uin, uout,
                  D_DECL(flux1, flux2, flux3),
                  D_DECL(a1, a2, a3), 
                  vol, divarr, pdivuarr, dx, difmag); 
-    BL_PROFILE_VAR_STOP(cons); 
 }
 
 

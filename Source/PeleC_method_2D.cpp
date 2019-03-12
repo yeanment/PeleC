@@ -38,13 +38,11 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     int cdir = 0; 
     const Box& xslpbx = grow(bxg1, cdir, 1);
 
-    IntVect lox(AMREX_D_DECL(xslpbx.loVect()[0], xslpbx.loVect()[1], xslpbx.loVect()[2])); 
-    IntVect hix(AMREX_D_DECL(xslpbx.hiVect()[0]+1, xslpbx.hiVect()[1], xslpbx.hiVect()[2])); 
-    const Box xmbx(lox, hix);
+    const Box& xmbx = growHi(xslpbx,0, 1); 
     const Box& xflxbx = surroundingNodes(bxg1,cdir);
     AMREX_PARALLEL_FOR_4D (xslpbx, QVAR, i,j,k,n, { 
         PeleC_slope_x(i,j,k,n, slarr, q);
-    }); // */
+    }); 
 //==================== X interp ====================================
     AsyncFab qxm(xmbx, QVAR); 
     AsyncFab qxp(xslpbx, QVAR);
@@ -62,31 +60,27 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qgdx(bxg2, NGDNV); 
     auto const& gdtemp = qgdx.array(); 
 
-    //bcMaskarr at this point does nothing. 
     AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, gdtemp, qaux, 0);
-                // bcMaskarr, 0);
     });
 
 //==================== Y slopes ====================================
     cdir = 1; 
     const Box& yflxbx = surroundingNodes(bxg1,cdir); 
     const Box& yslpbx = grow(bxg1, cdir, 1);
-    IntVect loy(AMREX_D_DECL(yslpbx.loVect()[0], yslpbx.loVect()[1], yslpbx.loVect()[2])); 
-    IntVect hiy(AMREX_D_DECL(yslpbx.hiVect()[0], yslpbx.hiVect()[1]+1, yslpbx.hiVect()[2])); 
-    const Box ymbx(loy,hiy);
+    const Box& ymbx = growHi(yslpbx, 1, 1); 
     AsyncFab qym(ymbx, QVAR);
     AsyncFab qyp(yslpbx, QVAR);
     auto const& qymarr = qym.array(); 
     auto const& qyparr = qyp.array();  
     AMREX_PARALLEL_FOR_4D (yslpbx, QVAR, i, j, k, n,{
         PeleC_slope_y(i, j, k, n, slarr, q);
-    }); // */
+    });
 
 //==================== Y interp ====================================
     AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k, {
         PeleC_plm_y(i,j,k, qymarr, qyparr, slarr, q, qaux(i,j,k,QC), 
-                    dy, dt); // dloga, dx[1], dt);
+                    dy, dt);
     });
  
 //===================== Y initial fluxes ===========================
@@ -94,15 +88,11 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     auto const& fyarr = fy.array();
     AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qymarr, qyparr, fyarr, q2, qaux, 1); 
-        // bcMaskarr, 1);
     }); 
 
 //===================== X interface corrections ====================
     cdir = 0;
-    IntVect lom(AMREX_D_DECL(bxg1.loVect()[0], bxg1.loVect()[1], bxg1.loVect()[2])); 
-    IntVect him(AMREX_D_DECL(bxg1.hiVect()[0]+1, bxg1.hiVect()[1]+1, bxg1.hiVect()[2])); 
-    const Box qmbx(lom, him); 
-    AsyncFab qm(qmbx, QVAR); 
+    AsyncFab qm(bxg2, QVAR); 
     AsyncFab qp(bxg1, QVAR);
     const Box& tybx = grow(bx, cdir, 1);
     auto const& qmarr = qm.array();
@@ -110,11 +100,12 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
         PeleC_transy(i,j,k, qmarr, qparr, qxmarr, qxparr, fyarr,
                      srcQ, qaux, q2, a2, vol, hdt, hdtdy);
-   }); 
+   });
+ 
 //===================== Final Riemann problem X ====================
     const Box& xfxbx = surroundingNodes(bx, cdir);
     AMREX_PARALLEL_FOR_3D (xfxbx, i,j,k, {      
-      PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmarr, qparr, flx1, q1, qaux,0); // bcMaskarr, 0);
+      PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmarr, qparr, flx1, q1, qaux,0); 
     }); 
 
 //===================== Y interface corrections ====================
@@ -128,7 +119,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     
     const Box& yfxbx = surroundingNodes(bx, cdir);
     AMREX_PARALLEL_FOR_3D (yfxbx, i, j, k, {
-      PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmarr, qparr, flx2, q2, qaux, 1); // bcMaskarr, 1); 
+      PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmarr, qparr, flx2, q2, qaux, 1);
     });
 
 //===================== Construct p div{U} =========================
