@@ -57,8 +57,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     Real courno    = -1.0e+200;
 
     MultiFab& S_new = get_new_data(State_Type);
-/*    MultiFab  Qout(S.boxArray(), S.DistributionMap(), QVAR, 4);
-    MultiFab  Qtemp(S.boxArray(), S.DistributionMap(), QVAR, 4); */
 
     // note: the radiation consup currently does not fill these
     Real E_added_flux    = 0.;
@@ -85,7 +83,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     reduction(max:courno)
 #endif
     {
-    //	FArrayBox flux[BL_SPACEDIM];
 	FArrayBox pradial(Box::TheUnitBox(),1);
 	IArrayBox bcMask;
 
@@ -95,6 +92,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	const int*  domain_hi = geom.Domain().hiVect();
 	for (MFIter mfi(S_new,hydro_tile_size); mfi.isValid(); ++mfi)
 	{
+
+        BL_PROFILE_VAR("umdrv_alloc", ualloc); 
 	    const Box& bx  = mfi.tilebox();
 	    const Box& qbx = amrex::grow(bx, NUM_GROW);
 	    const int* lo = bx.loVect();
@@ -103,7 +102,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    FArrayBox *stateout = &(S_new[mfi]);
 	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
 	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
-//        FArrayBox *qout = &(Qout[mfi]); 
 
         const Box& xfbx = surroundingNodes(bx, 0); 
         AsyncFab flx1(xfbx, NVAR);
@@ -124,11 +122,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         auto const& qarr = q.array(); 
         auto const& qauxar = qaux.array(); 
         auto const& srcqarr = src_q.array(); 
-
+        BL_PROFILE_VAR_STOP(ualloc); 
+#ifndef AMREX_USE_CUDA
         bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
                               // First integer is bc_type, second integer about slip/no-slip wall 
         bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
         set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
+#endif 
 
         BL_PROFILE_VAR("PeleC::ctoprim()", ctop); 
         AMREX_PARALLEL_FOR_3D(qbx, i, j, k, 
@@ -137,7 +137,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
              });
         BL_PROFILE_VAR_STOP(ctop); 
 
-//        (Qtemp[mfi]).copy(q.fab()); 
        
 
             // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
@@ -147,7 +146,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
             // to temporary fill ghost-cells for EXT_DIR and to provide target BC values.
             // See the COVO test case for an example.
             // Here we test periodicity in the domain to choose the proper routine.
-
 #if (BL_SPACEDIM == 1)
             if (i_nscbc == 1)
             {
@@ -183,29 +181,24 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
 	    }
 #endif
-               const auto & src_in  = sources_for_hydro.array(mfi);
         BL_PROFILE_VAR("PeleC::srctoprim()", srctop);  
+        const auto & src_in  = sources_for_hydro.array(mfi);
                 AMREX_PARALLEL_FOR_3D(qbx,i, j, k,{
                       PeleC_srctoprim(i, j, k, qarr, qauxar, src_in, srcqarr); 
                 });
         BL_PROFILE_VAR_STOP(srctop); 
 
-                    // Allocate fabs for fluxes
-/*                for (int i = 0; i < BL_SPACEDIM ; i++)  {
-                const Box& bxtmp = amrex::surroundingNodes(bx,i);
-                flux[i].resize(bxtmp,NUM_STATE);
-                }
-*/
-                if (!Geometry::IsCartesian()) {
-                pradial.resize(amrex::surroundingNodes(bx,0),1);
-                }
+
+        if (!Geometry::IsCartesian()) {
+            pradial.resize(amrex::surroundingNodes(bx,0),1);
+        }
 
 
 
                 amrex::IArrayBox *bcMa = &bcMask; 
-#if (AMREX_SPACEDIM < 3)
-                amrex::FArrayBox *prad = &pradial; 
-#endif
+//#if (AMREX_SPACEDIM < 3)
+//                amrex::FArrayBox *prad = &pradial; 
+//#endif
 
             BL_PROFILE_VAR("PeleC::umdrv()", purm); 
                          PeleC_umdrv
@@ -266,9 +259,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                  eden_lost, xang_lost, yang_lost, zang_lost); //  */
 //                 (Qout[mfi]).copy(q.fab()); 
             BL_PROFILE_VAR_STOP(purm); 
-
+            
+            BL_PROFILE_VAR("courno + flux reg", crno); 
             courno = std::max(courno,cflLoc);
-
                     if (do_reflux  && sub_iteration == sub_ncycle-1 )
                     {
                       if (level < finest_level)
@@ -297,6 +290,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                         }
                       }
                     }
+            BL_PROFILE_VAR_STOP(crno); 
          } // MFIter loop
     } // end of OMP parallel region
 
