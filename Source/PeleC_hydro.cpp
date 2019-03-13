@@ -83,8 +83,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     reduction(max:courno)
 #endif
     {
-	FArrayBox pradial(Box::TheUnitBox(),1);
-	IArrayBox bcMask;
+//	FArrayBox pradial(Box::TheUnitBox(),1);
+//	IArrayBox bcMask;
 
 	Real cflLoc = -1.0e+200;
 	int is_finest_level = (level == finest_level) ? 1 : 0;
@@ -96,12 +96,14 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
         BL_PROFILE_VAR("umdrv_alloc", ualloc); 
 	    const Box& bx  = mfi.tilebox();
 	    const Box& qbx = amrex::grow(bx, NUM_GROW);
+#ifndef AMREX_USE_CUDA
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
 	    const FArrayBox *statein  = &S[mfi];
-	    FArrayBox *stateout = &(S_new[mfi]);
-	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
-	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
+#endif
+//	    FArrayBox *stateout = &(S_new[mfi]);
+//	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
+//	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
 
         const Box& xfbx = surroundingNodes(bx, 0); 
         AsyncFab flx1(xfbx, NVAR);
@@ -146,6 +148,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
             // to temporary fill ghost-cells for EXT_DIR and to provide target BC values.
             // See the COVO test case for an example.
             // Here we test periodicity in the domain to choose the proper routine.
+
+#ifndef AMREX_USE_CUDA
 #if (BL_SPACEDIM == 1)
             if (i_nscbc == 1)
             {
@@ -181,6 +185,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
 	    }
 #endif
+#endif
         BL_PROFILE_VAR("PeleC::srctoprim()", srctop);  
         const auto & src_in  = sources_for_hydro.array(mfi);
                 AMREX_PARALLEL_FOR_3D(qbx,i, j, k,{
@@ -188,14 +193,13 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                 });
         BL_PROFILE_VAR_STOP(srctop); 
 
-
+#ifndef AMREX_USE_CUDA
         if (!Geometry::IsCartesian()) {
             pradial.resize(amrex::surroundingNodes(bx,0),1);
         }
 
-
-
-                amrex::IArrayBox *bcMa = &bcMask; 
+        amrex::IArrayBox *bcMa = &bcMask; 
+#endif 
 //#if (AMREX_SPACEDIM < 3)
 //                amrex::FArrayBox *prad = &pradial; 
 //#endif
@@ -208,7 +212,8 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
                          phys_bc.lo(), phys_bc.hi(), 
                          s, hyd_src, qarr,
                          qauxar, srcqarr,
-                         *bcMa, dx, dt,
+//                         *bcMa,
+                         dx, dt,
                          D_DECL( flx1.array(),
                                  flx2.array(), 
                                  flx3.array()), 

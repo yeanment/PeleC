@@ -5,7 +5,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
            const int* domlo, const int* domhi, 
            amrex::Array4<const amrex::Real> const &q, 
            amrex::Array4<const amrex::Real> const& qaux,
-           amrex::Array4<const amrex::Real> const& srcQ, amrex::IArrayBox const& bcMask,
+           amrex::Array4<const amrex::Real> const& srcQ,// amrex::IArrayBox const& bcMask,
            amrex::Array4<amrex::Real> const& flx1, amrex::Array4<amrex::Real> const& flx2, 
            amrex::Array4<const amrex::Real> const& dloga, amrex::Array4<amrex::Real> const& q1,
            amrex::Array4<amrex::Real> const& q2, amrex::Array4<const amrex::Real> const& a1, 
@@ -28,7 +28,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const int dhx  = domhi[0]; 
     const int dhy  = domhi[1]; 
     
-    auto const& bcMaskarr = bcMask.array();
+//    auto const& bcMaskarr = bcMask.array();
     const Box& bxg1 = grow(bx, 1); 
     const Box& bxg2 = grow(bx, 2);
     AsyncFab slope(bxg2, QVAR);
