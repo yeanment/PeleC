@@ -761,6 +761,12 @@ void cmpTemp(const int i, const int j, const int k, amrex::Array4<amrex::Real> c
     State(i,j,k,UTEMP) = eos_state.T; 
 }
 
+void PeleC_bcfill (Box const& bx, FArrayBox& data,
+                 const int dcomp, const int numcomp,
+                 Geometry const& geom, const Real time,
+                 const Vector<BCRec>& bcr, const int bcomp,
+                 const int scomp);
+
 AMREX_GPU_DEVICE
 inline
 void rst_int_e(const int i, const int j, const int k, amrex::Array4<amrex::Real> const& S)

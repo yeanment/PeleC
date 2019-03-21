@@ -83,8 +83,10 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
     reduction(max:courno)
 #endif
     {
-//	FArrayBox pradial(Box::TheUnitBox(),1);
-//	IArrayBox bcMask;
+#ifndef AMREX_USE_CUDA
+	FArrayBox pradial(Box::TheUnitBox(),1);
+	IArrayBox bcMask;
+#endif
 
 	Real cflLoc = -1.0e+200;
 	int is_finest_level = (level == finest_level) ? 1 : 0;

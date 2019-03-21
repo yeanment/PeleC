@@ -387,6 +387,7 @@ PeleC::do_sdc_iteration (Real time,
 #endif
 
     // Build other (neither spray nor diffusion) sources at t_old
+    BL_PROFILE_VAR("PeleC::construct_old_source()", cnstrct_old); 
     for (int n = 0; n < src_list.size(); ++n)
     {
       if (src_list[n] != diff_src
@@ -395,10 +396,11 @@ PeleC::do_sdc_iteration (Real time,
 #endif
         )
       {
-	construct_old_source(src_list[n], time, dt, amr_iteration, amr_ncycle,
-			     sub_iteration, sub_ncycle);
+      	construct_old_source(src_list[n], time, dt, amr_iteration, amr_ncycle,
+	                   	     sub_iteration, sub_ncycle);
       }
     }
+    BL_PROFILE_VAR_STOP(cnstrct_old); 
 
     // Get diffusion source separate from other sources, since it requires grow cells, and we
     //  may want to reuse what we fill-patched for hydro
@@ -413,11 +415,13 @@ PeleC::do_sdc_iteration (Real time,
     }
 
     // Initialize sources at t_new by copying from t_old
+    BL_PROFILE_VAR("PeleC::copy_old_srcs()", cpy_old); 
     for (int n = 0; n < src_list.size(); ++n)
     {
       MultiFab::Copy(*new_sources[src_list[n]],
 		     *old_sources[src_list[n]],0,0,NUM_STATE,0);
     }
+    BL_PROFILE_VAR_STOP(cpy_old); 
   }
 
   // Construct hydro source, will use old and current iterate of new sources.

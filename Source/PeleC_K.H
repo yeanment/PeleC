@@ -2,6 +2,7 @@
 #define PeleC_K_H_
 
 #include <AMReX_FArrayBox.H>
+#include <AMReX_Geometry.H>
 #include "PeleC_index_macros.H" 
 #include "PeleC_EOS.H"
 
@@ -19,6 +20,64 @@ struct Real3{
     amrex::Real y; 
     amrex::Real z; 
 };
+
+AMREX_GPU_HOST_DEVICE
+inline 
+amrex::Real 
+PeleC_estdt ( amrex::Box const& bx, amrex::FArrayBox const& statefab, 
+             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz)) noexcept 
+{
+    const auto lo = amrex::lbound(bx); 
+    const auto hi = amrex::ubound(bx); 
+    const auto u = statefab.array(); 
+#if !defined(__CUDACC__) || (__CUDACC_VER_MAJOR__ !=9) || (__CUDACC_VER_MINOR__ != 2) 
+    amrex::Real dt = std::numeric_limits<amrex::Real>::max(); 
+#else 
+    amrex::Real dt = 1.e37;
+#endif
+    EOS state;  
+    amrex::Real rhoInv; 
+    amrex::Real ux, dt1, c; 
+#if AMREX_SPACEDIM > 1
+    amrex::Real uy, dt2; 
+#if AMREX_SPACEDIM > 2
+    amrex::Real uz, dt3; 
+#endif
+#endif 
+
+    for         (int k = lo.z; k <= hi.z; ++k){
+        for     (int j = lo.y; j <= hi.y; ++j){
+            for (int i = lo.x; i <= hi.x; ++i){
+                rhoInv = 1.e0/ u(i,j,k,URHO); 
+                state.rho = u(i,j,k,URHO); 
+                state.T   = u(i,j,k,UTEMP); 
+                state.e   = u(i,j,k,UEINT)*rhoInv; 
+                for(int n = 0; n < NUM_SPECIES; ++n) state.massfrac[n] = u(i,j,k,UFS+n)*rhoInv; 
+                for(int n = 0; n < NUM_AUXILIARY; ++n) state.aux[n] = u(i,j,k,UFX+n)*rhoInv; 
+                state.eos_re();
+
+                c = state.cs;
+                ux = u(i,j,k,UMX)*rhoInv; 
+               dt1 = dx/(c+std::abs(ux)); 
+                dt = amrex::min(dt, dt1); 
+#if AMREX_SPACEDIM > 1
+                uy = u(i,j,k,UMY)*rhoInv; 
+               dt2 = dy/(c+std::abs(uy));
+                dt = amrex::min(dt, dt2);               
+#if AMREX_SPACEDIM > 2
+                uz = u(i,j,k,UMZ)*rhoInv;  
+               dt2 = dz/(c+std::abs(uz)); 
+                dt = amrex::min(dt, dt3); 
+#endif
+#endif
+           }
+        }
+    }
+            
+    return dt; 
+
+}
+
 
 AMREX_GPU_DEVICE
 inline
@@ -125,6 +184,22 @@ PeleC_divu(const int i, const int j, const int k, amrex::Array4<const amrex::Rea
      amrex::Real vy = 0.5e0*(q(i,j,k,QV) - q(i,j-1,k,QV) + 
                     q(i-1,j,k,QV) - q(i-1,j-1,k,QV))/dy; 
      divu(i,j,k) = ux + vy; 
+}
+
+AMREX_GPU_DEVICE 
+inline 
+amrex::Real  
+PeleC_pres(const int i , const int j, const int k, amrex::Array4<const amrex::Real> const &u)
+{
+    EOS state; 
+    amrex::Real rhoInv = 1.e0/ u(i,j,k,URHO); 
+    state.rho = u(i,j,k,URHO); 
+    state.T   = u(i,j,k,UTEMP); 
+    state.e   = u(i,j,k,UEINT)*rhoInv; 
+    for(int n = 0; n < NUM_SPECIES; ++n) state.massfrac[n] = u(i,j,k,UFS+n)*rhoInv; 
+    for(int n = 0; n < NUM_AUXILIARY; ++n) state.aux[n] = u(i,j,k,UFX+n)*rhoInv;
+    state.eos_re(); 
+    return state.p;  
 }
 
 //======================================= Host functions ================================
@@ -242,5 +317,10 @@ void PeleC_update(const int i, const int j, const int k,
 
     update(i,j,k,UEINT) -= pdivu(i,j,k);     
 }
+
+//Derive routines 
+void PeleC_derpres(const Box& bx, FArrayBox& pfab, int dcomp, int /*ncomp*/,
+                  const FArrayBox& ufab, const Geometry& /*geomdata*/,
+                  Real /*time*/, const int* /*bcrec*/, int /*level*/);
 
 #endif 

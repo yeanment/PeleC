@@ -29,6 +29,7 @@ using std::string;
 #include <AMReX_ParmParse.H>
 
 #include <PeleC_error_F.H>
+#include <PeleC_K.H> 
 
 #ifdef AMREX_USE_EB
 #include <AMReX_EBMultiFabUtil.H>
@@ -818,14 +819,23 @@ PeleC::estTimeStep (Real dt_old)
   // criterion, we will get exactly max_dt for a timestep.
 
   Real estdt_hydro = max_dt / cfl;
-
   if (do_hydro || do_mol_AD || diffuse_vel || diffuse_temp || diffuse_enth)
   {
-
-
+      
 #ifdef PELE_USE_EB
     auto const& fact = dynamic_cast<EBFArrayBoxFactory const&>(stateMF.Factory());
     auto const& flags = fact.getMultiEBCellFlagFab();
+#else
+    if(do_hydro){
+         amrex::Real D_DECL(dx1 = dx[0], dx2 = dx[1], dx3 = dx[2]); 
+         Real dt = amrex::ReduceMin(stateMF, 0, 
+          [=] AMREX_GPU_HOST_DEVICE( Box const  bx, FArrayBox const& fab) noexcept -> Real 
+          {
+              return PeleC_estdt(bx, fab, D_DECL(dx1, dx2, dx3)); 
+          });
+          estdt_hydro = amrex::min(estdt_hydro, dt); 
+      }
+
 #endif
 
 #ifdef _OPENMP
@@ -835,6 +845,7 @@ PeleC::estTimeStep (Real dt_old)
       for (MFIter mfi(stateMF,true); mfi.isValid(); ++mfi)
       {
         const Box& box = mfi.tilebox();
+        const auto& Sfab = stateMF[mfi];
 
 #ifdef PELE_USE_EB
         const auto& flag_fab = flags[mfi];
@@ -842,9 +853,7 @@ PeleC::estTimeStep (Real dt_old)
         if (typ == FabType::covered) {
           continue;
         }
-#endif
 
-        const auto& Sfab = stateMF[mfi];
 
         if (do_hydro)
         {
@@ -854,9 +863,10 @@ PeleC::estTimeStep (Real dt_old)
                    ZFILL(dx),&dt);
           estdt_hydro = std::min(estdt_hydro,dt);
         }
+#endif
 
         if (diffuse_vel)
-        {
+         {
           Real dt = max_dt / cfl;
           pc_estdt_vel_diffusion(ARLIM_3D(box.loVect()), ARLIM_3D(box.hiVect()),
                                  BL_TO_FORTRAN_3D(Sfab),ZFILL(dx),&dt);

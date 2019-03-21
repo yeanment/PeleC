@@ -2,6 +2,7 @@
 CEXE_sources += PeleC.cpp
 CEXE_sources += PeleC_advance.cpp
 CEXE_sources += PeleC_hydro.cpp
+CEXE_sources += PeleC_bcfill.cpp
 CEXE_sources += PeleC_sources.cpp
 CEXE_sources += PeleC_setup.cpp
 CEXE_sources += PeleC_EOS.cpp

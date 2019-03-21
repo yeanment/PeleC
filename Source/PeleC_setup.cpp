@@ -3,6 +3,7 @@
 #include "AMReX_LevelBld.H"
 #include <AMReX_ParmParse.H>
 #include "PeleC.H"
+#include "PeleC_K.H"
 #include <Derive_F.H>
 #include "AMReX_buildInfo.H"
 
@@ -404,11 +405,22 @@ PeleC::variableSetUp ()
 	name[cnt] = "rho_" + aux_names[i];
     }
 
+//TODO make this better! 
+#ifndef AMREX_USE_CUDA 
     desc_lst.setComponent(State_Type,
 			  Density,
 			  name,
 			  bcs,
-			  BndryFunc(pc_denfill,pc_hypfill));
+			  BndryFunc(pc_denfill,pc_hypfill));  
+#else
+    StateDescriptor::BndryFunc bndryfunc(PeleC_bcfill); 
+    bndryfunc.setRunOnGPU(true); // I promise the bc function will launch gpu kernels 
+    desc_lst.setComponent(State_Type,
+			  Density,
+			  name,
+			  bcs,
+			  bndryfunc);  
+#endif
 
 #ifdef REACTIONS
     for (int i=0; i<NumSpec; ++i) {
@@ -452,7 +464,7 @@ PeleC::variableSetUp ()
     //
     // Pressure
     //
-    derive_lst.add("pressure",IndexType::TheCellType(),1,pc_derpres,the_same_box);
+    derive_lst.add("pressure",IndexType::TheCellType(),1,PeleC_derpres,the_same_box);
     derive_lst.addComponent("pressure",desc_lst,State_Type,Density,NUM_STATE);
 
     //

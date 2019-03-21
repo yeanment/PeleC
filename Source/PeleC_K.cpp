@@ -74,6 +74,20 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
                  vol, divarr, pdivuarr, dx, difmag); 
 }
 
+void PeleC_derpres(const Box& bx, FArrayBox& pfab, int dcomp, int /*ncomp*/,
+                  const FArrayBox& ufab, const Geometry& /*geomdata*/,
+                  Real /*time*/, const int* /*bcrec*/, int /*level*/)
+{
+    auto const u = ufab.array();
+    auto       p    = pfab.array();
+    amrex::ParallelFor(bx,
+    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+        p(i,j,k,dcomp) = PeleC_pres(i, j, k, u);
+    });
+}
+
+
 
 //NOTE THIS IS ONLY FOR 2D! 
 void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& u, 
