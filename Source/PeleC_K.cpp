@@ -27,18 +27,20 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     auto const& bxg2 = grow(bx, 2); 
     auto const& q1bx = surroundingNodes(bxg2,0); 
     Gpu::AsyncFab q1(q1bx, NGDNV); 
+    amrex::Real const delx    = dx[0]; 
 
 #if AMREX_SPACEDIM > 1
+    amrex::Real const dely    = dx[1]; 
     auto const& q2bx = surroundingNodes(bxg2,1); 
     Gpu::AsyncFab q2(q2bx, NGDNV); 
 
-#if AMREX_SPACEDIM > 2 
+#if AMREX_SPACEDIM > 2
+    amrex::Real const delz    = dx[2]; 
     auto const& q3bx = surroundingNodes(bxg2,2); 
     Gpu::AsyncFab q3(q3bx, NGDNV); 
 #endif
 #endif
-    amrex::Real const delx    = dx[0]; 
-    amrex::Real const dely    = dx[1]; 
+
 
 //  Temporary FArrayBoxes 
     Gpu::AsyncFab divu(bxg2, 1); 
@@ -55,7 +57,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
                    flux1, flux2, dloga,
                    q1.array(), q2.array(), a1, a2, pdivuarr, vol, dx, dt); */ 
 
-// ========================== UMETH 2D ============================  
+// ================================= UMETH 2D ====================================  
     amrex::Real const dtdx  = dt/delx; 
     amrex::Real const hdtdx = 0.5*dtdx; 
     amrex::Real const hdtdy = 0.5*dt/dely; 
@@ -169,7 +171,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     AMREX_PARALLEL_FOR_3D (bx, i, j, k, {
         PeleC_pdivu(i,j,k, pdivuarr, q1arr, q2arr, a1, a2, vol); 
     });
-
+/* ======================== END UMETH2D =========================== */ 
 #else
     PeleC_umeth_3D(bx, bclo, bchi, domlo, domhi,q,  qaux, src_q, bcMask, flux1, flux2,
                    flux3,  q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
@@ -178,7 +180,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 
     //divu 
     AMREX_PARALLEL_FOR_3D (bxg2, i,j,k, {
-        PeleC_divu(i,j,k, q, delx, dely, divarr); 
+        PeleC_divu(i,j,k, q, D_DECL(delx, dely, delz), divarr); 
     });
 
     //consup 
@@ -189,6 +191,7 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
                  D_DECL(a1, a2, a3), 
                  vol, divarr, pdivuarr, dx, difmag); 
 }
+
 
 void PeleC_derpres(const Box& bx, FArrayBox& pfab, int dcomp, int /*ncomp*/,
                   const FArrayBox& ufab, const Geometry& /*geomdata*/,
@@ -205,13 +208,15 @@ void PeleC_derpres(const Box& bx, FArrayBox& pfab, int dcomp, int /*ncomp*/,
 
 
 
-//NOTE THIS IS ONLY FOR 2D! 
 void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& u, 
                   amrex::Array4<amrex::Real> const& update, 
-                  amrex::Array4<amrex::Real> const& flx1,
+                  D_DECL(amrex::Array4<amrex::Real> const& flx1,
                   amrex::Array4<amrex::Real> const& flx2,
+                  amrex::Array4<amrex::Real> const& flx3),
+                  D_DECL(
                   amrex::Array4<const amrex::Real> const &a1,
                   amrex::Array4<const amrex::Real> const &a2, 
+                  amrex::Array4<const amrex::Real> const &a3), 
                   amrex::Array4<const amrex::Real> const &vol,
                   amrex::Array4<const amrex::Real> const &div, 
                   amrex::Array4<const amrex::Real> const &pdivu,
@@ -222,7 +227,6 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& 
 //-------------------------- x-flux -----------------------------------
     amrex::Box const &xfbx = surroundingNodes(bx, 0); 
     const amrex::Real dx  = del[0]; 
-    const amrex::Real dy  = del[1];  
 
     AMREX_PARALLEL_FOR_3D(xfbx, i, j, k, {
         PeleC_artif_visc(i,j,k,flx1, div, u, dx, difmag, 0);
@@ -231,8 +235,9 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& 
         //Make flux extensive
         PeleC_ext_flx(i,j,k,flx1, a1);                            
     });
+#if(AMREX_SPACEDIM>1)
 //------------------------- y-flux ------------------------------------
-
+    const amrex::Real dy  = del[1];  
     amrex::Box const &yfbx = surroundingNodes(bx, 1);
     AMREX_PARALLEL_FOR_3D(yfbx, i, j, k, {
         //Artificial Viscosity! 
@@ -242,9 +247,23 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& 
         //Make flux extensive
         PeleC_ext_flx(i,j,k,flx2,a2); 
     };);
+#if(AMREX_SPACEDIM>2)
+//------------------------- y-flux ------------------------------------
+    const amrex::Real dz  = del[2];  
+    amrex::Box const &zfbx = surroundingNodes(bx, 2);
+    AMREX_PARALLEL_FOR_3D(yfbx, i, j, k, {
+        //Artificial Viscosity! 
+        PeleC_artif_visc(i,j,k,flx3, div, u, dz, difmag, 1); 
+        //Normalize Species Flux 
+        PeleC_norm_spec_flx(i,j,k,flx3); 
+        //Make flux extensive
+        PeleC_ext_flx(i,j,k,flx3,a3); 
+    };);
+#endif
+#endif
 //================ Combine for Hydro Sources ==========================
       
     AMREX_PARALLEL_FOR_3D(bx, i, j, k, {
-        PeleC_update(i,j,k, update, flx1, flx2, vol, pdivu); 
+        PeleC_update(i,j,k, update, D_DECL(flx1, flx2, flx3), vol, pdivu); 
     };);
 }

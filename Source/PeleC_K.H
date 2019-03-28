@@ -179,11 +179,29 @@ void
 PeleC_divu(const int i, const int j, const int k, amrex::Array4<const amrex::Real> const &q, 
            const amrex::Real dx, const amrex::Real dy, amrex::Array4<amrex::Real> const& divu)
 {
+#if(AMREX_SPACEDIM==2)
      amrex::Real ux = 0.5e0*(q(i,j,k,QU) - q(i-1,j,k,QU) + 
                     q(i,j-1,k,QU) - q(i-1,j-1,k,QU))/dx; 
      amrex::Real vy = 0.5e0*(q(i,j,k,QV) - q(i,j-1,k,QV) + 
                     q(i-1,j,k,QV) - q(i-1,j-1,k,QV))/dy; 
      divu(i,j,k) = ux + vy; 
+#elif(AMREX_SPACEDIM==3)
+    amrex::Real ux = 0.25e0*(q(i,j,k,QU) - q(i-1,j,k,QU) 
+                           + q(i,j,k-1,QU) - q(i-1,j,k-1,QU) 
+                           + q(i,j-1,k  ,QU) - q(i-1,j-1,k,QU) 
+                           + q(i,j-1,k-1,QU) - q(i-1,j-1,k-1,QU) )/dx; 
+
+    amrex::Real vy = 0.25e0*(q(i,j,k,QV) - q(i,j-1,k,QV) 
+                           + q(i,j,k-1,QV) - q(i,j-1,k-1,QV) 
+                           + q(i-1,j,k  ,QV) - q(i-1,j-1,k,QV) 
+                           + q(i-1,j,k-1,QV) - q(i-1,j-1,k-1,QV) )/dy; 
+
+    amrex::Real wz = 0.25e0*(q(i,j,k,QW) - q(i,j,k-1,QW) 
+                           + q(i-1,j,k,QW) - q(i-1,j,k-1,QW) 
+                           + q(i,j-1,k  ,QW) - q(i,j-1,k-1,QW) 
+                           + q(i-1,j-1,k,QW) - q(i-1,j-1,k-1,QW) )/dz; 
+    divu(i,j,k) = ux + vy + wz; 
+#endif
 }
 
 AMREX_GPU_DEVICE 
@@ -301,9 +319,11 @@ void PeleC_ext_flx(const int i, const int j, const int k,
 AMREX_GPU_DEVICE
 inline 
 void PeleC_update(const int i, const int j, const int k,
-                  amrex::Array4<amrex::Real> const& update, 
+                  amrex::Array4<amrex::Real> const& update,
+                  D_DECL( 
                   amrex::Array4<const amrex::Real> const& flx1,
                   amrex::Array4<const amrex::Real> const& flx2, 
+                  amrex::Array4<const amrex::Real> const& flx3), 
                   amrex::Array4<const amrex::Real> const& vol,
                   amrex::Array4<const amrex::Real> const& pdivu)
 {
@@ -311,8 +331,14 @@ void PeleC_update(const int i, const int j, const int k,
 #pragma unroll 
     for(int n = 0; n < NVAR; ++n)
     { 
+#if(AMREX_SPACEDIM==2)
        update(i,j,k,n) += (flx1(i,j,k,n) - flx1(i+1,j,k,n)
                        +   flx2(i,j,k,n) - flx2(i,j+1,k,n))/v; 
+#elif(AMREX_SPACEDIM==3)
+       update(i,j,k,n) += (flx1(i,j,k,n) - flx1(i+1,j,k,n)
+                       +   flx2(i,j,k,n) - flx2(i,j+1,k,n)
+                           flx3(i,j,k,n) - flx3(i,j,k+1,n))/v; 
+#endif
     }
 
     update(i,j,k,UEINT) -= pdivu(i,j,k);     
