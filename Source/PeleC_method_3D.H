@@ -1516,6 +1516,8 @@ PeleC_transz2(const int i, const int j, const int k,
         qm(i,j+1,k,QPRES) = amrex::max(pnewl, small_pres); 
 }
 
+
+//Z corrected from xy 
 AMREX_GPU_DEVICE
 inline 
 void 
@@ -1555,7 +1557,7 @@ PeleC_transxy(const int i, const int j, const int k,
         srcv   = srcq(i,j,k,QV); 
         srcw   = srcq(i,j,k,QW); 
         srce   = srcq(i,j,k,QREINT);  
-        srcp   = srcq(i,j,k,QPRESS); 
+        srcp   = srcq(i,j,k,QPRES); 
 // ---------------------------  Update Passive Variables ------------------
         rrr = qzp(i,j,k  ,QRHO); 
         rrl = qzm(i,j,k+1,QRHO); 
@@ -1594,13 +1596,15 @@ PeleC_transxy(const int i, const int j, const int k,
         dAupy = pggpy*ugpy - pggmy*ugmy; //
         pavy  = 0.5e0*(pggpy + pggmy); 
         dAuy  = ugpy - ugmy; //
+        amrex::Real pxnew = cdtdx*(dAupx + pavx*dAux*(c - 1.e0)); 
+        amrex::Real pynew = cdtdy*(dAupy + pavy*dAuy*(c - 1.e0)); 
 
 // ---------------------- qp state ------------------------------------- 
         rur = rrr*qzp(i,j,k,QU); 
         rvr = rrr*qzp(i,j,k,QV); 
         rwr = rrr*qzp(i,j,k,QW); 
         ekenr = 0.5*(rur*rur + rvr*rvr + rwr*rwr)/rrr; 
-        rer = qp(i,j,k,QREINT) + ekenr; 
+        rer = qzp(i,j,k,QREINT) + ekenr; 
 
         runewr = rur - flxu; 
         rvnewr = rvr - flxv; 
@@ -1608,14 +1612,284 @@ PeleC_transxy(const int i, const int j, const int k,
         renewr = rer - flxe; 
 
         qp(i,j,k,QRHO) = rrnewr + hdt*srcrho; 
-        qp(i,j,k,QU  ) = runewr + hdt*srcu; 
-        qp(i,j,k,QV  ) = rvnewr + hdt*srcv; 
-        qp(i,j,k,QW  ) = rwnewr + hdt*srcw;
+        qp(i,j,k,QU  ) = runewr/rrnewr + hdt*srcu; 
+        qp(i,j,k,QV  ) = rvnewr/rrnewr + hdt*srcv; 
+        qp(i,j,k,QW  ) = rwnewr/rrnewr + hdt*srcw;
         rhoekenr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwnewr*rwnewr)/rrnewr; 
-        qp(i,j,k,QREINT) = renewr - rhoekenr + hdt*srce;  
+        qp(i,j,k,QREINT) = renewr - rhoekenr + hdt*srce;
+        amrex::Real temppres = qzp(i,j,k,QPRES) - pxnew - pynew + hdt*srcp;  
+        qp(i,j,k,QPRES) = amrex::max(temppres, small_pres);  
 
+// --------------------- qm state ----------------------------------- 
+        rul = rrl*qzm(i,j,k+1,QU); 
+        rvl = rrl*qzm(i,j,k+1,QV); 
+        rwl = rrl*qzm(i,j,k+1,QW); 
+        ekenl = 0.5*(rul*rul + rvl*rvl + rwl*rwl); 
+        rel = qzm(i,j,k+1,QREINT) + ekenl; 
+
+        runewl = rul - flxu; 
+        rvnewl = rvl - flxv; 
+        rwnewl = rwl - flxw; 
+        renewl = rel - flxe; 
+        
+        qm(i,j,k+1,QRHO) = rrnewl + hdt*srcrho; 
+        qm(i,j,k+1,QU  ) = runewl/rrnewl + hdt*srcu; 
+        qm(i,j,k+1,QV  ) = rvnewl/rrnewl + hdt*srcv; 
+        qm(i,j,k+1,QW  ) = rwnewl/rrnewl + hdt*srcw; 
+        rhoekenl = 0.5e0*(runewl*runewl + rvnewl*rvnewl + rwnewl*rwnewl)/rrnewl; 
+        qm(i,j,k+1,QREINT) = renewl - rhokenr + hdt*srce; 
+        temppres = qzm(i,j,k+1,QPRES) - pxnew - pynew + hdt*srcp; 
+        qm(i,j,k+1,QPRES) = amrex::max(temppres, small_pres);  
+}
+
+//Y corrected by x and z 
+AMREX_GPU_DEVICE
+inline 
+void 
+PeleC_transxz(const int i, const int j, const int k, 
+         amrex::Array4<amrex::Real> const &qm        , amrex::Array4<amrex::Real> const &qp, 
+         amrex::Array4<const amrex::Real> const& qym , amrex::Array4<const amrex::Real> const& qyp,
+         amrex::Array4<const amrex::Real> const& flxx, amrex::Array4<const amrex::Real> const& flxz, 
+         amrex::Array4<const amrex::Real> const& qx  , amrex::Array4<const amrex::Real> const& qz, 
+         amrex::Array4<const amrex::Real> const& srcq, const amrex::Real hdt, const amrex::Real cdtdx, 
+         const amrex::Real cdtdz)
+{
+        amrex::Real compnr, compnl , rr, rrnew, compo, rwr, c;
+        amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr;
+        amrex::Real runewr, rvnewr, rwnewr, renewr, rhoekinr ;
+        amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl,rwnewl, renewl;
+        amrex::Real rhoekinl, rwl;
+        amrex::Real pggpx, pggmx, ugpx, ugmx;
+        amrex::Real dAupx, pavx, dAux;
+        amrex::Real pggpy, pggmy, ugpy, ugmy;
+        amrex::Real dAupy, pavy, dAuy;
+
+        amrex::Real flxrho, flxu, flxv, flxw, flxe;
+        amrex::Real srcpass, srcrho, srcu, srcv, srcw, srce, srcp; 
+
+        flxrho = cdtdx*(flxx(i+1,j,k,URHO)  - flxx(i,j,k,URHO)) 
+               + cdtdz*(flxz(i,j,k+1,URHO)  - flxz(i,j,k,URHO)); 
+        flxu   = cdtdx*(flxx(i+1,j,k,UMX)   - flxx(i,j,k,UMX)) 
+               + cdtdz*(flxz(i,j,k+1,UMX)   - flxz(i,j,k,UMX)); 
+        flxv   = cdtdx*(flxx(i+1,j,k,UMY)   - flxx(i,j,k,UMY)) 
+               + cdtdz*(flxz(i,j,k+1,UMY)   - flxz(i,j,k,UMY)); 
+        flxw   = cdtdx*(flxx(i+1,j,k,UMZ)   - flxx(i,j,k,UMZ)) 
+               + cdtdz*(flxz(i,j,k+1,UMZ)   - flxz(i,j,k,UMZ)); 
+        flxe   = cdtdx*(flxx(i+1,j,k,UEDEN) - flxx(i,j,k,UEDEN)) 
+               + cdtdz*(flxz(i,j,k+1,UEDEN) - flxz(i,j,k,UEDEN)); 
+        c      = qa(i,j,k,QGAMC); 
+        srcu   = srcq(i,j,k,QU); 
+        srcv   = srcq(i,j,k,QV); 
+        srcw   = srcq(i,j,k,QW); 
+        srce   = srcq(i,j,k,QREINT);  
+        srcp   = srcq(i,j,k,QPRES); 
+// ---------------------------  Update Passive Variables ------------------
+        rrr = qyp(i,j,k  ,QRHO); 
+        rrl = qym(i,j+1,k,QRHO); 
+        rrnewl = rrl - flxrho; 
+        rrnewr = rrr - flxrho; 
+        for (int ipass = 0; ipass < npassive; ++ipass){
+            int n   = EOS::upass_map(ipass);
+            int nqp = EOS::qpass_map(ipass);
+            srcpass = srcq(i,j,k,n); 
+            compn = cdtdx*(flxx(i+1,j,k,n) - flxx(i,j,k,n))
+                  + cdtdz*(flxz(i,j,k+1,n) - flxz(i,j,k,n));
+            //qp
+            compo = rrr*qyp(i,j,k,nqp) - compn;
+            qp(i,j,k,nqp) = compo/rrnewr + hdt*srcpass;          
+            //qm
+            compo = rrl*qym(i,j+1,k,nqp) - compn;
+            qm(i,j+1,k,nqp) = compo/rrnewl + hdt*srcpass;
+        }
+
+ //------------------------------- Update hydro vars -----------------------
+
+        pggpx = qx(i+1,j,k,GDPRES); 
+        pggmx = qx(i,j,k,GDPRES); 
+        ugpx  = qx(i+1,j,k,GDV); 
+        ugmx  = qx(i,j,k,GDV); 
+    
+        dAupx = pggpx*ugpx - pggmx*ugmx; //
+        pavx  = 0.5e0*(pggpx + pggmx); 
+        dAux  = ugpx - ugmx; //
+       
+        pggpz = qz(i,j,k+1,GDPRES); 
+        pggmz = qz(i,j,k,GDPRES); 
+        ugpz  = qz(i,j,k+1,GDV); 
+        ugmz  = qz(i,j,k,GDV); 
+    
+        dAupz = pggpz*ugpz - pggmz*ugmz; //
+        pavz  = 0.5e0*(pggpz + pggmz); 
+        dAuz  = ugpz - ugmz; //
+        amrex::Real pxnew = cdtdx*(dAupx + pavx*dAux*(c - 1.e0)); 
+        amrex::Real pznew = cdtdz*(dAupz + pavz*dAuz*(c - 1.e0)); 
+
+// ---------------------- qp state ------------------------------------- 
+        rur = rrr*qyp(i,j,k,QU); 
+        rvr = rrr*qyp(i,j,k,QV); 
+        rwr = rrr*qyp(i,j,k,QW); 
+        ekenr = 0.5*(rur*rur + rvr*rvr + rwr*rwr)/rrr; 
+        rer = qyp(i,j,k,QREINT) + ekenr; 
+
+        runewr = rur - flxu; 
+        rvnewr = rvr - flxv; 
+        rwnewr = rwr - flxw; 
+        renewr = rer - flxe; 
+
+        qp(i,j,k,QRHO) = rrnewr + hdt*srcrho; 
+        qp(i,j,k,QU  ) = runewr/rrnewr + hdt*srcu; 
+        qp(i,j,k,QV  ) = rvnewr/rrnewr + hdt*srcv; 
+        qp(i,j,k,QW  ) = rwnewr/rrnewr + hdt*srcw;
+        rhoekenr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwnewr*rwnewr)/rrnewr; 
+        qp(i,j,k,QREINT) = renewr - rhoekenr + hdt*srce;
+        amrex::Real temppres = qyp(i,j,k,QPRES) - pxnew - pznew + hdt*srcp;  
+        qp(i,j,k,QPRES) = amrex::max(temppres, small_pres);  
+
+// --------------------- qm state ----------------------------------- 
+        rul = rrl*qym(i,j+1,k,QU); 
+        rvl = rrl*qym(i,j+1,k,QV); 
+        rwl = rrl*qym(i,j+1,k,QW); 
+        ekenl = 0.5*(rul*rul + rvl*rvl + rwl*rwl); 
+        rel = qym(i,j+1,k,QREINT) + ekenl; 
+
+        runewl = rul - flxu; 
+        rvnewl = rvl - flxv; 
+        rwnewl = rwl - flxw; 
+        renewl = rel - flxe; 
+        
+        qm(i,j+1,k,QRHO) = rrnewl + hdt*srcrho; 
+        qm(i,j+1,k,QU  ) = runewl/rrnewl + hdt*srcu; 
+        qm(i,j+1,k,QV  ) = rvnewl/rrnewl + hdt*srcv; 
+        qm(i,j+1,k,QW  ) = rwnewl/rrnewl + hdt*srcw; 
+        rhoekenl = 0.5e0*(runewl*runewl + rvnewl*rvnewl + rwnewl*rwnewl)/rrnewl; 
+        qm(i,j+1,k,QREINT) = renewl - rhokenr + hdt*srce; 
+        temppres = qym(i,j+1,k,QPRES) - pxnew - pznew + hdt*srcp; 
+        qm(i,j+1,k,QPRES) = amrex::max(temppres, small_pres);  
 }
 
 
+//x corrected by y and z 
+AMREX_GPU_DEVICE
+inline 
+void 
+PeleC_transyz(const int i, const int j, const int k, 
+         amrex::Array4<amrex::Real> const &qm        , amrex::Array4<amrex::Real> const &qp, 
+         amrex::Array4<const amrex::Real> const& qxm , amrex::Array4<const amrex::Real> const& qxp,
+         amrex::Array4<const amrex::Real> const& flxy, amrex::Array4<const amrex::Real> const& flxz, 
+         amrex::Array4<const amrex::Real> const& qy  , amrex::Array4<const amrex::Real> const& qz, 
+         amrex::Array4<const amrex::Real> const& srcq, const amrex::Real hdt, const amrex::Real cdtdy, 
+         const amrex::Real cdtdz)
+{
+        amrex::Real compnr, compnl , rr, rrnew, compo, rwr, c;
+        amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr;
+        amrex::Real runewr, rvnewr, rwnewr, renewr, rhoekinr ;
+        amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl,rwnewl, renewl;
+        amrex::Real rhoekinl, rwl;
+        amrex::Real pggpx, pggmx, ugpx, ugmx;
+        amrex::Real dAupx, pavx, dAux;
+        amrex::Real pggpy, pggmy, ugpy, ugmy;
+        amrex::Real dAupy, pavy, dAuy;
 
+        amrex::Real flxrho, flxu, flxv, flxw, flxe;
+        amrex::Real srcpass, srcrho, srcu, srcv, srcw, srce, srcp; 
+
+        flxrho = cdtdy*(flxy(i,j+1,k,URHO)  - flxy(i,j,k,URHO)) 
+               + cdtdz*(flxz(i,j,k+1,URHO)  - flxz(i,j,k,URHO)); 
+        flxu   = cdtdy*(flxy(i,j+1,k,UMX)   - flxy(i,j,k,UMX)) 
+               + cdtdz*(flxz(i,j,k+1,UMX)   - flxz(i,j,k,UMX)); 
+        flxv   = cdtdy*(flxy(i,j+1,k,UMY)   - flxy(i,j,k,UMY)) 
+               + cdtdz*(flxz(i,j,k+1,UMY)   - flxz(i,j,k,UMY)); 
+        flxw   = cdtdy*(flxy(i,j+1,k,UMZ)   - flxy(i,j,k,UMZ)) 
+               + cdtdz*(flxz(i,j,k+1,UMZ)   - flxz(i,j,k,UMZ)); 
+        flxe   = cdtdy*(flxy(i,j+1,k,UEDEN) - flxy(i,j,k,UEDEN)) 
+               + cdtdz*(flxz(i,j,k+1,UEDEN) - flxz(i,j,k,UEDEN)); 
+        c      = qa(i,j,k,QGAMC); 
+        srcu   = srcq(i,j,k,QU); 
+        srcv   = srcq(i,j,k,QV); 
+        srcw   = srcq(i,j,k,QW); 
+        srce   = srcq(i,j,k,QREINT);  
+        srcp   = srcq(i,j,k,QPRES); 
+// ---------------------------  Update Passive Variables ------------------
+        rrr = qxp(i  ,j,k,QRHO); 
+        rrl = qxm(i+1,j,k,QRHO); 
+        rrnewl = rrl - flxrho; 
+        rrnewr = rrr - flxrho; 
+        for (int ipass = 0; ipass < npassive; ++ipass){
+            int n   = EOS::upass_map(ipass);
+            int nqp = EOS::qpass_map(ipass);
+            srcpass = srcq(i,j,k,n); 
+            compn = cdtdy*(flxy(i,j+1,k,n) - flxy(i,j,k,n))
+                  + cdtdz*(flxz(i,j,k+1,n) - flxz(i,j,k,n));
+            //qp
+            compo = rrr*qxp(i,j,k,nqp) - compn;
+            qp(i,j,k,nqp) = compo/rrnewr + hdt*srcpass;          
+            //qm
+            compo = rrl*qxm(i+1,j,k,nqp) - compn;
+            qm(i+1,j,k,nqp) = compo/rrnewl + hdt*srcpass;
+        }
+
+ //------------------------------- Update hydro vars -----------------------
+
+        pggpz = qz(i,j,k+1,GDPRES); 
+        pggmz = qz(i,j,k,GDPRES); 
+        ugpz  = qz(i,j,k+1,GDU); 
+        ugmz  = qz(i,j,k,GDU); 
+    
+        dAupz = pggpz*ugpz - pggmz*ugmz; //
+        pavz  = 0.5e0*(pggpz + pggmz); 
+        dAuz  = ugpz - ugmz; //
+       
+        pggpy = qy(i,j+1,k,GDPRES); 
+        pggmy = qy(i,j,k,GDPRES); 
+        ugpy  = qy(i,j+1,k,GDU); 
+        ugmy  = qy(i,j,k,GDU); 
+    
+        dAupy = pggpy*ugpy - pggmy*ugmy; //
+        pavy  = 0.5e0*(pggpy + pggmy); 
+        dAuy  = ugpy - ugmy; //
+        amrex::Real pznew = cdtdz*(dAupz + pavz*dAuz*(c - 1.e0)); 
+        amrex::Real pynew = cdtdy*(dAupy + pavy*dAuy*(c - 1.e0)); 
+
+// ---------------------- qp state ------------------------------------- 
+        rur = rrr*qzp(i,j,k,QU); 
+        rvr = rrr*qzp(i,j,k,QV); 
+        rwr = rrr*qzp(i,j,k,QW); 
+        ekenr = 0.5*(rur*rur + rvr*rvr + rwr*rwr)/rrr; 
+        rer = qzp(i,j,k,QREINT) + ekenr; 
+
+        runewr = rur - flxu; 
+        rvnewr = rvr - flxv; 
+        rwnewr = rwr - flxw; 
+        renewr = rer - flxe; 
+
+        qp(i,j,k,QRHO) = rrnewr + hdt*srcrho; 
+        qp(i,j,k,QU  ) = runewr/rrnewr + hdt*srcu; 
+        qp(i,j,k,QV  ) = rvnewr/rrnewr + hdt*srcv; 
+        qp(i,j,k,QW  ) = rwnewr/rrnewr + hdt*srcw;
+        rhoekenr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwnewr*rwnewr)/rrnewr; 
+        qp(i,j,k,QREINT) = renewr - rhoekenr + hdt*srce;
+        amrex::Real temppres = qzp(i,j,k,QPRES) - pznew - pynew + hdt*srcp;  
+        qp(i,j,k,QPRES) = amrex::max(temppres, small_pres);  
+
+// --------------------- qm state ----------------------------------- 
+        rul = rrl*qxm(i+1,j,k,QU); 
+        rvl = rrl*qxm(i+1,j,k,QV); 
+        rwl = rrl*qxm(i+1,j,k,QW); 
+        ekenl = 0.5*(rul*rul + rvl*rvl + rwl*rwl); 
+        rel = qxm(i+1,j,k,QREINT) + ekenl; 
+
+        runewl = rul - flxu; 
+        rvnewl = rvl - flxv; 
+        rwnewl = rwl - flxw; 
+        renewl = rel - flxe; 
+        
+        qm(i+1,j,k,QRHO) = rrnewl + hdt*srcrho; 
+        qm(i+1,j,k,QU  ) = runewl/rrnewl + hdt*srcu; 
+        qm(i+1,j,k,QV  ) = rvnewl/rrnewl + hdt*srcv; 
+        qm(i+1,j,k,QW  ) = rwnewl/rrnewl + hdt*srcw; 
+        rhoekenl = 0.5e0*(runewl*runewl + rvnewl*rvnewl + rwnewl*rwnewl)/rrnewl; 
+        qm(i+1,j,k,QREINT) = renewl - rhokenr + hdt*srce; 
+        temppres = qxm(i+1,j,k,QPRES) - pxnew - pynew + hdt*srcp; 
+        qm(i+1,j,k,QPRES) = amrex::max(temppres, small_pres);  
+}
 #endif
