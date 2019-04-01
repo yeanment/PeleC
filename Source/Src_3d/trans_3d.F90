@@ -1,6 +1,7 @@
+#include<PeleC_index_macros.H>
 module transverse_module
 
-  use bl_constants_module
+  use amrex_constants_module
 
   use chemistry_module, only : nspecies, naux
   use meth_params_module, only : NQ, QVAR, NVAR, QRHO, QU, QV, QW, &

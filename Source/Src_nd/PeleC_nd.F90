@@ -360,7 +360,7 @@ subroutine set_method_params(dm, &
      qpass_map(1) = QW
      countt = 1
   else
-     countt = 1
+     countt = 0 !TODO why was this 1?  
   endif
 
   do iadv = 1, nadv

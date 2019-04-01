@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 subroutine mol_drv(is_finest_level, time, &
                     lo, hi, domlo, domhi, &
                     uin, uin_l1, uin_l2, uin_l3, uin_h1, uin_h2, uin_h3, &

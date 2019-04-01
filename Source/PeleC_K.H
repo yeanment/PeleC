@@ -177,7 +177,8 @@ AMREX_GPU_DEVICE
 inline 
 void 
 PeleC_divu(const int i, const int j, const int k, amrex::Array4<const amrex::Real> const &q, 
-           const amrex::Real dx, const amrex::Real dy, amrex::Array4<amrex::Real> const& divu)
+           D_DECL(const amrex::Real dx, const amrex::Real dy, const amrex::Real dz),
+           amrex::Array4<amrex::Real> const& divu)
 {
 #if(AMREX_SPACEDIM==2)
      amrex::Real ux = 0.5e0*(q(i,j,k,QU) - q(i-1,j,k,QU) + 
@@ -244,14 +245,16 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 
 void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& u, 
                   amrex::Array4<amrex::Real> const& update, 
-                  amrex::Array4<amrex::Real> const& flx1,
+           D_DECL(amrex::Array4<amrex::Real> const& flx1,
                   amrex::Array4<amrex::Real> const& flx2,
-                  amrex::Array4<const amrex::Real> const &a1,
+                  amrex::Array4<amrex::Real> const& flx3),
+           D_DECL(amrex::Array4<const amrex::Real> const &a1,
                   amrex::Array4<const amrex::Real> const &a2, 
+                  amrex::Array4<const amrex::Real> const &a3), 
                   amrex::Array4<const amrex::Real> const &vol,
                   amrex::Array4<const amrex::Real> const &div, 
                   amrex::Array4<const amrex::Real> const &pdivu,
-                  amrex::Real const *dx, amrex::Real const difmag);
+                  amrex::Real const *del, amrex::Real const difmag);
 
 // ====================================== Consup Support Functions =======================================
 // Designed for CPU or GPU 
@@ -337,7 +340,7 @@ void PeleC_update(const int i, const int j, const int k,
 #elif(AMREX_SPACEDIM==3)
        update(i,j,k,n) += (flx1(i,j,k,n) - flx1(i+1,j,k,n)
                        +   flx2(i,j,k,n) - flx2(i,j+1,k,n)
-                           flx3(i,j,k,n) - flx3(i,j,k+1,n))/v; 
+                       +   flx3(i,j,k,n) - flx3(i,j,k+1,n))/v; 
 #endif
     }
 

@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 subroutine pc_umdrv(is_finest_level, time, &
                     lo, hi, domlo, domhi, &
                     uin, uin_l1, uin_l2, uin_l3, uin_h1, uin_h2, uin_h3, &
@@ -26,7 +27,7 @@ subroutine pc_umdrv(is_finest_level, time, &
                                  first_order_hydro
   use advection_util_3d_module, only : divu
   use advection_util_module, only : compute_cfl
-  use bl_constants_module, only : ZERO, ONE
+  use amrex_constants_module, only : ZERO, ONE
   use flatten_module, only: uflaten
   use advection_module, only : umeth3d, consup
   implicit none

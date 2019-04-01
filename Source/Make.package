@@ -40,8 +40,14 @@ CEXE_sources += PeleCParticles.cpp
 endif
 
 ifeq ($(DIM), 2)
+CEXE_headers += PeleC_method_2D.H
 CEXE_sources += PeleC_method_2D.cpp
 endif
+
+ifeq ($(DIM), 3) 
+CEXE_headers += PeleC_method_3D.H
+CEXE_sources += PeleC_method_3D.cpp
+endif 
 
 CEXE_sources += PeleC_K.cpp
 CEXE_sources += PeleC_MOL.cpp

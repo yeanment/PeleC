@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module advection_util_3d_module
 
   implicit none
@@ -19,7 +20,7 @@ contains
 
     use chemistry_module, only : nspecies
     use meth_params_module, only : NVAR, URHO, UFS
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 
@@ -101,7 +102,7 @@ contains
   subroutine divu(lo,hi,q,q_lo,q_hi,dx,div,div_lo,div_hi)
 
     use meth_params_module, only : QU, QV, QW, QVAR
-    use bl_constants_module
+    use amrex_constants_module
 
     implicit none
 

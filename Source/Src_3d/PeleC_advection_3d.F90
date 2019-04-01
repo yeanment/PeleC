@@ -1,3 +1,4 @@
+#include <PeleC_index_macros.H>
 module advection_module
 
   implicit none
@@ -60,7 +61,7 @@ contains
     use eos_type_module
     use eos_module, only : eos_t, eos_rt
     use riemann_module, only: cmpflx, shock
-    use bl_constants_module
+    use amrex_constants_module
     implicit none
 
     integer, intent(in) :: qd_lo(3), qd_hi(3)
@@ -738,7 +739,7 @@ contains
     use chemistry_module, only : nspecies, naux
     use meth_params_module, only : difmag, NVAR, URHO, UMX, UMY, UMZ, &
                                    UEDEN, UEINT, UTEMP, NGDNV, QVAR, track_grid_losses, limit_fluxes_on_small_dens
-    use bl_constants_module, only : ZERO, FOURTH, ONE
+    use amrex_constants_module, only : ZERO, FOURTH, ONE
     use advection_util_3d_module, only : normalize_species_fluxes
     use advection_util_module, only : limit_hydro_fluxes_on_small_dens
     use pelec_util_module, only : position, linear_to_angular_momentum

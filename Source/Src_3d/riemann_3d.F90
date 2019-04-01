@@ -1,7 +1,8 @@
+#include <PeleC_index_macros.H>
 module riemann_module
 
   use bl_types
-  use bl_constants_module
+  use amrex_constants_module
   use riemann_util_module
   use meth_params_module, only : NQ, QVAR, NVAR, QRHO, QU, QV, QW, &
                                  QPRES, QGAME, QREINT, QFS, &
@@ -258,7 +259,7 @@ contains
   subroutine shock(q,qd_lo,qd_hi,shk,s_lo,s_hi,lo,hi,dx)
 
     use prob_params_module, only : coord_type
-    use bl_constants_module
+    use amrex_constants_module
 
     integer, intent(in) :: qd_lo(3), qd_hi(3)
     integer, intent(in) :: s_lo(3), s_hi(3)

@@ -1,5 +1,10 @@
-#include "PeleC_K.H" 
+#include "PeleC_K.H"
+
+#if AMREX_SPACEDIM==2 
 #include "PeleC_method_2D.H"
+#elif AMREX_SPACEDIM==3
+#include "PeleC_method_3D.H" 
+#endif 
 
 void 
 PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const &bx,
@@ -173,8 +178,12 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
     });
 /* ======================== END UMETH2D =========================== */ 
 #else
-    PeleC_umeth_3D(bx, bclo, bchi, domlo, domhi,q,  qaux, src_q, bcMask, flux1, flux2,
-                   flux3,  q1, q2, q3, a1, a2, a3, pdivu, vol, dx, dt);   
+    auto const& q1arr = q1.array(); 
+    auto const& q2arr = q2.array(); 
+    auto const& q3arr = q3.array(); 
+
+    PeleC_umeth_3D(bx, bclo, bchi, domlo, domhi, q,  qaux, src_q, //bcMask,
+                   flux1, flux2, flux3,  q1arr, q2arr, q3arr, a1, a2, a3, pdivuarr, vol, dx, dt);   
 #endif
     BL_PROFILE_VAR_STOP(umeth); 
 
@@ -210,11 +219,10 @@ void PeleC_derpres(const Box& bx, FArrayBox& pfab, int dcomp, int /*ncomp*/,
 
 void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& u, 
                   amrex::Array4<amrex::Real> const& update, 
-                  D_DECL(amrex::Array4<amrex::Real> const& flx1,
+           D_DECL(amrex::Array4<amrex::Real> const& flx1,
                   amrex::Array4<amrex::Real> const& flx2,
                   amrex::Array4<amrex::Real> const& flx3),
-                  D_DECL(
-                  amrex::Array4<const amrex::Real> const &a1,
+           D_DECL(amrex::Array4<const amrex::Real> const &a1,
                   amrex::Array4<const amrex::Real> const &a2, 
                   amrex::Array4<const amrex::Real> const &a3), 
                   amrex::Array4<const amrex::Real> const &vol,
