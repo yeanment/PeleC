@@ -43,14 +43,14 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qpfab(bxg1, QVAR);
     auto const& qm = qmfab.array(); 
     auto const& qp = qpfab.array();  
-    AsyncFab slope(bxg3, QVAR);
+    AsyncFab slope(bxg2, QVAR);
     auto const& slarr = slope.array();
 
 //===================== X slopes ===================================
     int cdir = 0; 
-    const Box& xslpbx = grow(bxg2, cdir, 1);
+    const Box& xslpbx = grow(bxg1, cdir, 1);
     const Box& xmbx = growHi(xslpbx, cdir, 1); 
-    const Box& xflxbx = surroundingNodes(bxg2,cdir);
+    const Box& xflxbx = surroundingNodes(bxg1,cdir);
     AsyncFab qxm(xmbx, QVAR); 
     AsyncFab qxp(xslpbx, QVAR);
     auto const& qxmarr = qxm.array(); 
@@ -79,8 +79,8 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 
 //==================== Y slopes ====================================
     cdir = 1; 
-    const Box& yflxbx = surroundingNodes(bxg2,cdir); 
-    const Box& yslpbx = grow(bxg2, cdir, 1);
+    const Box& yflxbx = surroundingNodes(bxg1,cdir); 
+    const Box& yslpbx = grow(bxg1, cdir, 1);
     const Box& ymbx = growHi(yslpbx, cdir, 1); 
     AsyncFab qym(ymbx, QVAR);
     AsyncFab qyp(yslpbx, QVAR);
@@ -108,18 +108,23 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 
 //===================== Z slopes ===================================
     cdir = 2; 
-    const Box& zslpbx = grow(bxg2, cdir, 1);
+    const Box& zslpbx = grow(bxg1, cdir, 1);
 
     const Box& zmbx = growHi(zslpbx, cdir, 1); 
-    const Box& zflxbx = surroundingNodes(bxg2,cdir);
+    const Box& zflxbx = surroundingNodes(bxg1,cdir);
+    amrex::Print() << "qzmp alloc! " << std::endl; 
     AsyncFab qzm(zmbx, QVAR); 
     AsyncFab qzp(zslpbx, QVAR);
     auto const& qzmarr = qzm.array(); 
-    auto const& qzparr = qzp.array(); 
+    auto const& qzparr = qzp.array();
+
+    amrex::Print()<< "Before Z slope " << std::endl;
+ 
     AMREX_PARALLEL_FOR_4D (zslpbx, QVAR, i,j,k,n, { 
         PeleC_slope_z(i,j,k,n, slarr, q);
     }); 
 //==================== Z interp ====================================
+    amrex::Print() << "Before PLM z" << std::endl; 
     AMREX_PARALLEL_FOR_3D (zslpbx,i,j,k, {
       PeleC_plm_z(i, j, k, qzmarr, qzparr, slarr, q, qaux(i,j,k,QC), 
 //                   dloga,
@@ -133,7 +138,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     auto const& fzarr = fz.array(); 
     AsyncFab qgdz(bxg2, NGDNV); 
     auto const& gdtempz = qgdz.array(); 
-
+    amrex::Print()<< "Before zflx " << std::endl; 
     AMREX_PARALLEL_FOR_3D (zflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qzmarr, qzparr, fzarr, gdtempz, qaux, 0);
     });

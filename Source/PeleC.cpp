@@ -833,7 +833,7 @@ PeleC::estTimeStep (Real dt_old)
           {
               return PeleC_estdt(bx, fab, D_DECL(dx1, dx2, dx3)); 
           });
-          estdt_hydro = amrex::min(estdt_hydro, dt); 
+          estdt_hydro = amrex::min(estdt_hydro, dt);
       }
 
 #endif
@@ -1290,7 +1290,7 @@ PeleC::okToContinue ()
   else if (parent->dtLevel(0) < dt_cutoff)
   {
     test = 0;
-
+    amrex::Print() << parent->dtLevel(0); 
     amrex::Print() << " Signalling a stop of the run because dt < dt_cutoff." << std::endl;
   }
 

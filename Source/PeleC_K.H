@@ -49,7 +49,7 @@ PeleC_estdt ( amrex::Box const& bx, amrex::FArrayBox const& statefab,
         for     (int j = lo.y; j <= hi.y; ++j){
             for (int i = lo.x; i <= hi.x; ++i){
                 rhoInv = 1.e0/ u(i,j,k,URHO); 
-                state.rho = u(i,j,k,URHO); 
+                state.rho = u(i,j,k,URHO);
                 state.T   = u(i,j,k,UTEMP); 
                 state.e   = u(i,j,k,UEINT)*rhoInv; 
                 for(int n = 0; n < NUM_SPECIES; ++n) state.massfrac[n] = u(i,j,k,UFS+n)*rhoInv; 
@@ -65,8 +65,8 @@ PeleC_estdt ( amrex::Box const& bx, amrex::FArrayBox const& statefab,
                dt2 = dy/(c+std::abs(uy));
                 dt = amrex::min(dt, dt2);               
 #if AMREX_SPACEDIM > 2
-                uz = u(i,j,k,UMZ)*rhoInv;  
-               dt2 = dz/(c+std::abs(uz)); 
+                uz = u(i,j,k,UMZ)*rhoInv; 
+               dt3 = dz/(c+std::abs(uz)); 
                 dt = amrex::min(dt, dt3); 
 #endif
 #endif

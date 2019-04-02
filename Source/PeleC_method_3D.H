@@ -1496,7 +1496,8 @@ PeleC_transxy(const int i, const int j, const int k,
                + cdtdy*(flxy(i,j+1,k,UMZ)   - flxy(i,j,k,UMZ)); 
         flxe   = cdtdx*(flxx(i+1,j,k,UEDEN) - flxx(i,j,k,UEDEN)) 
                + cdtdy*(flxy(i,j+1,k,UEDEN) - flxy(i,j,k,UEDEN)); 
-        c      = qa(i,j,k,QGAMC); 
+        c      = qa(i,j,k,QGAMC);
+        srcrho = srcq(i,j,k,QRHO);  
         srcu   = srcq(i,j,k,QU); 
         srcv   = srcq(i,j,k,QV); 
         srcw   = srcq(i,j,k,QW); 
@@ -1622,7 +1623,8 @@ PeleC_transxz(const int i, const int j, const int k,
                + cdtdz*(flxz(i,j,k+1,UMZ)   - flxz(i,j,k,UMZ)); 
         flxe   = cdtdx*(flxx(i+1,j,k,UEDEN) - flxx(i,j,k,UEDEN)) 
                + cdtdz*(flxz(i,j,k+1,UEDEN) - flxz(i,j,k,UEDEN)); 
-        c      = qa(i,j,k,QGAMC); 
+        c      = qa(i,j,k,QGAMC);
+        srcrho = srcq(i,j,k,QRHO);  
         srcu   = srcq(i,j,k,QU); 
         srcv   = srcq(i,j,k,QV); 
         srcw   = srcq(i,j,k,QW); 
@@ -1749,7 +1751,8 @@ PeleC_transyz(const int i, const int j, const int k,
                + cdtdz*(flxz(i,j,k+1,UMZ)   - flxz(i,j,k,UMZ)); 
         flxe   = cdtdy*(flxy(i,j+1,k,UEDEN) - flxy(i,j,k,UEDEN)) 
                + cdtdz*(flxz(i,j,k+1,UEDEN) - flxz(i,j,k,UEDEN)); 
-        c      = qa(i,j,k,QGAMC); 
+        c      = qa(i,j,k,QGAMC);
+        srcrho = srcq(i,j,k,QRHO);  
         srcu   = srcq(i,j,k,QU); 
         srcv   = srcq(i,j,k,QV); 
         srcw   = srcq(i,j,k,QW); 
