@@ -259,7 +259,7 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& 
 //------------------------- y-flux ------------------------------------
     const amrex::Real dz  = del[2];  
     amrex::Box const &zfbx = surroundingNodes(bx, 2);
-    AMREX_PARALLEL_FOR_3D(yfbx, i, j, k, {
+    AMREX_PARALLEL_FOR_3D(zfbx, i, j, k, {
         //Artificial Viscosity! 
         PeleC_artif_visc(i,j,k,flx3, div, u, dz, difmag, 1); 
         //Normalize Species Flux 

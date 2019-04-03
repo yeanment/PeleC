@@ -360,12 +360,13 @@ PeleC_cmpflx(const int i, const int j, const int k,
           v2r = qr(i,j,k,IV2); 
           rer = qr(i,j,k,QREINT); 
 
-//Outflow Hack --> 
-         idx = (idir == 0) ? i : j;
+//Outflow Hack -->
+         if(idir == 2) idx = k; 
+         else idx = (idir == 0) ? i : j;
          if(bclo == Outflow && idx == domlo)
          {
             ul = ur; 
-            vl = vr; 
+            vl = vr;
             v2l = v2r; 
             rel = rer; 
          }
@@ -1511,7 +1512,7 @@ PeleC_transxy(const int i, const int j, const int k,
         for (int ipass = 0; ipass < npassive; ++ipass){
             int n   = EOS::upass_map(ipass);
             int nqp = EOS::qpass_map(ipass);
-            srcpass = srcq(i,j,k,n); 
+            srcpass = srcq(i,j,k,nqp); 
             compn = cdtdx*(flxx(i+1,j,k,n) - flxx(i,j,k,n))
                   + cdtdy*(flxy(i,j+1,k,n) - flxy(i,j,k,n));
             //qp
@@ -1638,7 +1639,7 @@ PeleC_transxz(const int i, const int j, const int k,
         for (int ipass = 0; ipass < npassive; ++ipass){
             int n   = EOS::upass_map(ipass);
             int nqp = EOS::qpass_map(ipass);
-            srcpass = srcq(i,j,k,n); 
+            srcpass = srcq(i,j,k,nqp); 
             compn = cdtdx*(flxx(i+1,j,k,n) - flxx(i,j,k,n))
                   + cdtdz*(flxz(i,j,k+1,n) - flxz(i,j,k,n));
             //qp
@@ -1762,11 +1763,12 @@ PeleC_transyz(const int i, const int j, const int k,
         rrr = qxp(i  ,j,k,QRHO); 
         rrl = qxm(i+1,j,k,QRHO); 
         rrnewl = rrl - flxrho; 
-        rrnewr = rrr - flxrho; 
+        rrnewr = rrr - flxrho;
+
         for (int ipass = 0; ipass < npassive; ++ipass){
             int n   = EOS::upass_map(ipass);
             int nqp = EOS::qpass_map(ipass);
-            srcpass = srcq(i,j,k,n); 
+            srcpass = srcq(i,j,k,nqp); 
             compn = cdtdy*(flxy(i,j+1,k,n) - flxy(i,j,k,n))
                   + cdtdz*(flxz(i,j,k+1,n) - flxz(i,j,k,n));
             //qp
