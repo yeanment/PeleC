@@ -83,7 +83,7 @@
 #define QFS       QFA    + NUM_ADVECT
 #define QFX       QFS    + NUM_SPECIES
 #define QVAR      QTHERM + NUM_ADVECT + NUM_SPECIES + NUM_AUXILIARY
-
+#define NQ        QVAR
 #define NQAUX     6
 #define NGDNV     6
 

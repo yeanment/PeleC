@@ -44,11 +44,7 @@ contains
                      pdivu, domlo, domhi)
 
     use amrex_mempool_module, only : bl_allocate, bl_deallocate
-    use meth_params_module, only : QVAR, NVAR, QPRES, QRHO, QU, QW, &
-                                   QFS, QFX, QTEMP, QREINT, &
-                                   QC, QCSML, QGAMC, NQAUX, &
-                                   NGDNV, GDU, GDV, GDW, GDPRES, &
-                                   ppm_type, &
+    use meth_params_module, only : ppm_type, &
                                    use_pslope, ppm_trace_sources, ppm_temp_fix, &
                                    hybrid_riemann
     use trace_ppm_module, only : tracexy_ppm, tracez_ppm
@@ -737,8 +733,7 @@ contains
                     verbose)
 
     use chemistry_module, only : nspecies, naux
-    use meth_params_module, only : difmag, NVAR, URHO, UMX, UMY, UMZ, &
-                                   UEDEN, UEINT, UTEMP, NGDNV, QVAR, track_grid_losses, limit_fluxes_on_small_dens
+    use meth_params_module, only : difmag, track_grid_losses, limit_fluxes_on_small_dens
     use amrex_constants_module, only : ZERO, FOURTH, ONE
     use advection_util_3d_module, only : normalize_species_fluxes
     use advection_util_module, only : limit_hydro_fluxes_on_small_dens

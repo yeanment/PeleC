@@ -103,9 +103,9 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    const int* hi = bx.hiVect();
 	    const FArrayBox *statein  = &S[mfi];
 #endif
-//	    FArrayBox *stateout = &(S_new[mfi]);
+	    FArrayBox *stateout = &(S_new[mfi]);
 //	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
-//	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
+	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
 
         const Box& xfbx = surroundingNodes(bx, 0); 
         AsyncFab flx1(xfbx, NVAR);
@@ -207,7 +207,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 //#endif
 
             BL_PROFILE_VAR("PeleC::umdrv()", purm); 
-                         PeleC_umdrv
+/*                         PeleC_umdrv
                         (is_finest_level, time,
                          bx, 
                          domain_lo, domain_hi,

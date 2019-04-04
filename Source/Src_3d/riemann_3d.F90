@@ -1,17 +1,13 @@
 #include <PeleC_index_macros.H>
 module riemann_module
 
-  use bl_types
+  use amrex_error_module
+  use amrex_fort_module, only : amrex_real
   use amrex_constants_module
   use riemann_util_module
-  use meth_params_module, only : NQ, QVAR, NVAR, QRHO, QU, QV, QW, &
-                                 QPRES, QGAME, QREINT, QFS, &
-                                 QFX, URHO, UMX, UMY, UMZ, UEDEN, UEINT, &
-                                 UFS, UFX, &
-                                 NGDNV, GDRHO, GDPRES, GDGAME, &
-                                 small_dens, small_pres, small_temp, &
+  use meth_params_module, only : small_dens, small_pres, small_temp, &
                                  cg_maxiter, cg_tol, cg_blend, &
-                                 npassive, upass_map, qpass_map, &
+                                 upass_map, qpass_map, &
                                  riemann_solver, ppm_temp_fix, hybrid_riemann
   implicit none
 
@@ -19,7 +15,7 @@ module riemann_module
 
   public cmpflx, shock
 
-  real (kind=dp_t), parameter :: smallu = 1.e-12_dp_t
+  real (amrex_real), parameter :: smallu = 1.e-12_amrex_real
 
 contains
 
@@ -206,7 +202,7 @@ contains
                  bcMask, bcMask_lo, bcMask_hi, &
                  idir, ilo, ihi, jlo, jhi, kc, kflux, k3d, domlo, domhi)
     else
-       call bl_error("ERROR: invalid value of riemann_solver")
+       call amrex_error("ERROR: invalid value of riemann_solver")
     endif
 
 
@@ -291,7 +287,7 @@ contains
     dzinv = ONE/dx(3)
 
     if (coord_type /= 0) then
-       call bl_error("ERROR: invalid geometry in shock()")
+       call amrex_error("ERROR: invalid geometry in shock()")
     endif
 
     do k = lo(3)-1, hi(3)+1
@@ -457,7 +453,7 @@ contains
 
     if (cg_blend .eq. 2 .and. cg_maxiter < 5) then
 
-       call bl_error("Error: need cg_maxiter >= 5 to do a bisection search on secant iteration failure.")
+       call amrex_error("Error: need cg_maxiter >= 5 to do a bisection search on secant iteration failure.")
 
     endif
 
@@ -717,7 +713,7 @@ contains
                 print *, 'left state  (r,u,p,re,gc): ', rl, ul, pl, rel, gcl
                 print *, 'right state (r,u,p,re,gc): ', rr, ur, pr, rer, gcr
 
-                call bl_error("ERROR: non-convergence in the Riemann solver")
+                call amrex_error("ERROR: non-convergence in the Riemann solver")
 
              else if (cg_blend .eq. 1) then
 
@@ -796,13 +792,13 @@ contains
                    print *, 'left state  (r,u,p,re,gc): ', rl, ul, pl, rel, gcl
                    print *, 'right state (r,u,p,re,gc): ', rr, ur, pr, rer, gcr
 
-                   call bl_error("ERROR: non-convergence in the Riemann solver")
+                   call amrex_error("ERROR: non-convergence in the Riemann solver")
 
                 endif
 
              else
 
-                call bl_error("ERROR: unrecognized cg_blend option.")
+                call amrex_error("ERROR: unrecognized cg_blend option.")
 
              endif
 
@@ -1359,7 +1355,7 @@ contains
     integer :: bnd_fac_x, bnd_fac_y, bnd_fac_z, bnd_fac
     double precision :: wwinv, roinv, co2inv
 
-    double precision :: U_hllc_state(nvar), U_state(nvar), F_state(nvar)
+    double precision :: U_hllc_state(NVAR), U_state(NVAR), F_state(NVAR)
     double precision :: S_l, S_r, S_c
 
     if (idir .eq. 1) then

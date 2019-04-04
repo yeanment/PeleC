@@ -19,7 +19,6 @@ contains
     ! defined in Plewa & Muller, 1999, A&A, 342, 179
 
     use chemistry_module, only : nspecies
-    use meth_params_module, only : NVAR, URHO, UFS
     use amrex_constants_module
 
     implicit none
@@ -101,7 +100,6 @@ contains
 
   subroutine divu(lo,hi,q,q_lo,q_hi,dx,div,div_lo,div_hi)
 
-    use meth_params_module, only : QU, QV, QW, QVAR
     use amrex_constants_module
 
     implicit none

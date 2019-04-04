@@ -1,7 +1,7 @@
-#F90EXE_sources += trace_$(DIM)d.F90
-#F90EXE_sources += trace_ppm_$(DIM)d.F90
-#F90EXE_sources += trans_$(DIM)d.F90
-#F90EXE_sources += ppm_$(DIM)d.F90
+F90EXE_sources += trace_$(DIM)d.F90
+F90EXE_sources += trace_ppm_$(DIM)d.F90
+F90EXE_sources += trans_$(DIM)d.F90
+F90EXE_sources += ppm_$(DIM)d.F90
 ifeq ($(TRANSPORT_TYPE), IDEAL_GAS)
   F90EXE_sources += diffterm_$(DIM)d.F90
 else
@@ -9,20 +9,20 @@ else
 endif
 F90EXE_sources += grad_utils_$(DIM)d.F90
 
-#ifeq ($(HYP_TYPE), MOL)
-#  #F90EXE_sources += PeleC_mol_$(DIM)d.F90
-#  F90EXE_sources += slope_mol_$(DIM)d_EB.F90
-#  F90EXE_sources += Hyp_pele_MOL_$(DIM)d.F90
-#else
-#  F90EXE_sources += slope_$(DIM)d.F90
-#  F90EXE_sources += PeleC_advection_$(DIM)d.F90
-#  F90EXE_sources += PeleC_$(DIM)d.F90
-#endif
+ifeq ($(HYP_TYPE), MOL)
+  #F90EXE_sources += PeleC_mol_$(DIM)d.F90
+  F90EXE_sources += slope_mol_$(DIM)d_EB.F90
+  F90EXE_sources += Hyp_pele_MOL_$(DIM)d.F90
+else
+  F90EXE_sources += slope_$(DIM)d.F90
+  F90EXE_sources += PeleC_advection_$(DIM)d.F90
+  F90EXE_sources += PeleC_$(DIM)d.F90
+endif
 
-#F90EXE_sources += riemann_$(DIM)d.F90
-#F90EXE_sources += advection_util_$(DIM)d.F90
+F90EXE_sources += riemann_$(DIM)d.F90
+F90EXE_sources += advection_util_$(DIM)d.F90
 F90EXE_sources += set_bc_mask_$(DIM)d.F90 
 
-#ifeq ($(USE_EB), TRUE)
- # F90EXE_sources += PeleC_init_eb_$(DIM)d.F90
-#endif
+ifeq ($(USE_EB), TRUE)
+  F90EXE_sources += PeleC_init_eb_$(DIM)d.F90
+endif

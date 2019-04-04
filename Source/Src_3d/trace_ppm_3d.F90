@@ -18,12 +18,10 @@ contains
                          gamc,gc_lo,gc_hi, &
                          ilo1,ilo2,ihi1,ihi2,dt,kc,k3d)
 
-    use meth_params_module, only : QVAR, QRHO, QU, QV, QW, &
-         QREINT, QPRES, QGAME, &
-         small_dens, small_pres, &
+    use meth_params_module, only : small_dens, small_pres, &
          ppm_type, ppm_trace_sources, &
          ppm_reference_eigenvectors, ppm_predict_gammae, &
-         npassive, qpass_map
+         qpass_map
     use amrex_constants_module
 
     implicit none
@@ -964,12 +962,10 @@ contains
                         gamc,gc_lo,gc_hi, &
                         ilo1,ilo2,ihi1,ihi2,dt,km,kc,k3d)
 
-    use meth_params_module, only : QVAR, QRHO, QU, QV, QW, &
-         QREINT, QPRES, QGAME, &
-         small_dens, small_pres, &
+    use meth_params_module, only : small_dens, small_pres, &
          ppm_type, ppm_trace_sources, &
          ppm_reference_eigenvectors, ppm_predict_gammae, &
-         npassive, qpass_map
+         qpass_map
     use amrex_constants_module
 
     implicit none

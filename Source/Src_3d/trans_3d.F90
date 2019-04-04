@@ -4,12 +4,8 @@ module transverse_module
   use amrex_constants_module
 
   use chemistry_module, only : nspecies, naux
-  use meth_params_module, only : NQ, QVAR, NVAR, QRHO, QU, QV, QW, &
-                                 QPRES, QREINT, QGAME, QFS, QFX, &
-                                 URHO, UMX, UMY, UMZ, UEDEN, UEINT, UFS, &
-                                 NGDNV, GDPRES, GDU, GDV, GDW, GDGAME, &
-                                 small_pres, small_temp, &
-                                 npassive, upass_map, qpass_map, &
+  use meth_params_module, only : small_pres, small_temp, &
+                                 upass_map, qpass_map, &
                                  ppm_predict_gammae, ppm_trace_sources, ppm_type, &
                                  transverse_use_eos, transverse_reset_density, transverse_reset_rhoe
   use eos_module

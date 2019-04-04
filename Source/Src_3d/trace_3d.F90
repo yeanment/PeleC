@@ -14,9 +14,7 @@ contains
                          qxm,qxp,qym,qyp,qpd_lo,qpd_hi, &
                          ilo1,ilo2,ihi1,ihi2,dx,dt,kc,k3d)
 
-      use meth_params_module, only : QVAR, QRHO, QU, QV, QW, &
-                                     QREINT, QPRES, &
-                                     npassive, qpass_map, small_dens, small_pres, ppm_type
+      use meth_params_module, only : qpass_map, small_dens, small_pres, ppm_type
       use amrex_constants_module
 
       implicit none
@@ -426,9 +424,7 @@ contains
                         qzm,qzp,qpd_lo,qpd_hi, &
                         ilo1,ilo2,ihi1,ihi2,dx,dt,km,kc,k3d)
 
-      use meth_params_module, only : QVAR, QRHO, QU, QV, QW, &
-                                     QREINT, QPRES, &
-                                     npassive, qpass_map, small_dens, small_pres, ppm_type
+      use meth_params_module, only : qpass_map, small_dens, small_pres, ppm_type
       use amrex_constants_module
 
       implicit none

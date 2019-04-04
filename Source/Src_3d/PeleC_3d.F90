@@ -22,8 +22,7 @@ subroutine pc_umdrv(is_finest_level, time, &
                     eden_lost, xang_lost, yang_lost, zang_lost) bind(C, name="pc_umdrv")
 
   use amrex_mempool_module, only : bl_allocate, bl_deallocate
-  use meth_params_module, only : QVAR, QU, QV, QW, QPRES, NQAUX, NVAR, NHYP, NGDNV, &
-                                 use_flattening, &
+  use meth_params_module, only : NHYP, use_flattening, &
                                  first_order_hydro
   use advection_util_3d_module, only : divu
   use advection_util_module, only : compute_cfl
