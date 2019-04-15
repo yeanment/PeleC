@@ -170,7 +170,7 @@ riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
         ro    = 0.5e0*(rl + rr); 
         uo    = 0.5e0*(ul + ur); 
         po    = 0.5e0*(pl + pr); 
-        roe   = 0.5e0*(rel + rer); 
+        reo   = 0.5e0*(rel + rer); 
         gamco = 0.5e0*(gamcl + gamcr); 
     }
     
@@ -180,7 +180,8 @@ riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
     co = amrex::max(csmall, co); 
     amrex::Real co2inv = 1.e0/(co*co); 
     amrex::Real drho = (pstar - po)*co2inv; 
-    amrex::Real rstar = ro + drho; 
+    amrex::Real rstar = ro + drho;
+    rstar = amrex::max(small_dens, rstar);  
     amrex::Real entho = (reo + po)*roinv*co2inv; 
     amrex::Real estar = reo + (pstar -po)*entho; 
     amrex::Real cstar = std::sqrt(std::abs(gamco*pstar/rstar)); 
@@ -216,7 +217,7 @@ riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
     }
     amrex::Real qint_rho = frac*rstar + (1.e0 - frac)*ro; 
     qint_iu = frac*ustar + (1.e0 - frac)*uo; 
-    qint_gdpres = fracpstar + (1.e0 - frac)*po; 
+    qint_gdpres = frac*pstar + (1.e0 - frac)*po; 
     amrex::Real regdnv = frac*estar + (1.e0 - frac)*reo; 
     if(spout < 0.e0){
         qint_rho = ro; 
@@ -462,11 +463,11 @@ PeleC_cmpflx(const int i, const int j, const int k,
     }
     else if( idir == 1){
          IU = QV; 
-         IV = QW; 
-        IV2 = QU; 
+         IV = QU; 
+        IV2 = QW; 
          GU = GDV; 
-         GV = GDW; 
-        GV2 = GDU; 
+         GV = GDU; 
+        GV2 = GDW; 
         gamcl = qa(i,j-1,k,QGAMC);
         gamcr = qa(i,j,k,QGAMC); 
         cav = 0.5e0*(qa(i,j,k,QC) + qa(i,j-1,k,QC)); 
@@ -516,7 +517,7 @@ PeleC_cmpflx(const int i, const int j, const int k,
          } 
 //*/
 //here we have two riemann dudes riemann_us and riemann_md
-       riemann_us(ql(i,j,k,QRHO), ul, vl, v2l, 
+       riemannus(ql(i,j,k,QRHO), ul, vl, v2l, 
                  ql(i,j,k,QPRES), rel, gamcl, spl,   
                  qr(i,j,k,QRHO), ur, vr, v2r, 
                  qr(i,j,k,QPRES), rer, gamcr, spr,
@@ -834,11 +835,11 @@ PeleC_plm_z(const int i, const int j, const int k,
 
 // ------------ Construct the "left" state on the j+1/2 interface 
         
-        rho_ref = rho + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*drho;
-        u_ref = u + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*du;
-        v_ref = v + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*dv;
-        w_ref = w + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*dw; 
-        p_ref = p + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*dp;
+        rho_ref  = rho + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*drho;
+        u_ref    = u + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*du;
+        v_ref    = v + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*dv;
+        w_ref    = w + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*dw; 
+        p_ref    = p + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*dp;
         rhoe_ref = rhoe + 0.5e0*(1.e0 - dtdz*amrex::max(e[2],0.e0))*drhoe;
 
 //                  apleft = 0.25e0*dtdz*(e[2] - e[2])*(1.e0 + std::copysign(1.e0,e[2]))*alphap;
@@ -940,6 +941,7 @@ PeleC_transx1(const int i, const int j, const int k,
         ekinr = 0.5e0*rrr*(rur*rur + rvr*rvr + rwr*rwr);
         rur *= rrr; 
         rvr *= rrr; 
+        rwr *= rrr; 
 
         rer = qyp(i,j,k,QREINT) + ekinr; 
 // Add transverse predictor 
@@ -1074,7 +1076,7 @@ PeleC_transy1(const int i, const int j, const int k,
         renewr = rer - flxe; 
 
 // Convert back to primitive 
-        qp(i,j,k,QRHO) = rrnewr + hdt*srcr; 
+        qp(i,j,k,QRHO) = rrnewr;// + hdt*srcr; 
         qp(i,j,k,QU)   = runewr/rrnewr; 
         qp(i,j,k,QV)   = rvnewr/rrnewr; 
         qp(i,j,k,QW)   = rvnewr/rrnewr; 
@@ -1134,7 +1136,7 @@ PeleC_transx2(const int i, const int j, const int k,
         amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr;
         amrex::Real runewr, rvnewr, rwnewr, renewr, rhoekinr ;
         amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, rwnewl, renewl;
-        amrex::Real rhoekinl, rwl, srcr, srce, srcp, srcpass;
+        amrex::Real rhoekinl, rwl;
         amrex::Real pggp, pggm, ugp, ugm;
         amrex::Real dAup, pav,dAu;
         amrex::Real flxrho, flxu, flxv, flxw, flxe;
@@ -1144,15 +1146,11 @@ PeleC_transx2(const int i, const int j, const int k,
         flxv   = cdtdx*(flxx(i+1,j,k,UMY)   - flxx(i,j,k,UMY));
         flxw   = cdtdx*(flxx(i+1,j,k,UMZ)   - flxx(i,j,k,UMZ)); 
         flxe   = cdtdx*(flxx(i+1,j,k,UEDEN) - flxx(i,j,k,UEDEN));
-        srcr   = srcQ(i,j,k,QRHO);
-        srce   = srcQ(i,j,k,QREINT);
-        srcp   = srcQ(i,j,k,QPRES);
         c      = qa(i,j,k,QGAMC);
 // ---------------------------  Update Passive Variables ------------------
         for (int ipass = 0; ipass < npassive; ++ipass){
             int n   = EOS::upass_map(ipass);
             int nqp = EOS::qpass_map(ipass);
-            srcpass = srcQ(i,j,k,nqp);
             compn = cdtdx*(flxx(i+1,j,k,n) - flxx(i,j,k,n));
             rr = qzp(i,j,k,QRHO);
             rrnew = rr - flxrho;
@@ -1249,33 +1247,29 @@ PeleC_transy2(const int i, const int j, const int k,
         amrex::Array4<const amrex::Real> const& flxy, amrex::Array4<const amrex::Real> const& srcQ,
         amrex::Array4<const amrex::Real> const& qa  , amrex::Array4<const amrex::Real> const& qint,
         amrex::Array4<const amrex::Real> const& a1  , amrex::Array4<const amrex::Real> const& vol,
-        const amrex::Real hdt, const amrex::Real cdtdx)
+        const amrex::Real hdt, const amrex::Real cdtdy)
 {
         //  Local variables to avoid reading from global memory too much 
         amrex::Real compn, rr, rrnew, compo, rwr, c;
         amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr;
         amrex::Real runewr, rvnewr, rwnewr, renewr, rhoekinr ;
         amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl, rwnewl, renewl;
-        amrex::Real rhoekinl, rwl, srcr, srce, srcp, srcpass;
+        amrex::Real rhoekinl, rwl;
         amrex::Real pggp, pggm, ugp, ugm;
         amrex::Real dAup, pav,dAu;
         amrex::Real flxrho, flxu, flxv, flxw, flxe;
 
-        flxrho = cdtdx*(flxy(i,j+1,k,URHO)  - flxy(i,j,k,URHO));
-        flxu   = cdtdx*(flxy(i,j+1,k,UMX)   - flxy(i,j,k,UMX));
-        flxv   = cdtdx*(flxy(i,j+1,k,UMY)   - flxy(i,j,k,UMY));
-        flxw   = cdtdx*(flxy(i,j+1,k,UMZ)   - flxy(i,j,k,UMZ)); 
-        flxe   = cdtdx*(flxy(i,j+1,k,UEDEN) - flxy(i,j,k,UEDEN));
-        srcr   = srcQ(i,j,k,QRHO);
-        srce   = srcQ(i,j,k,QREINT);
-        srcp   = srcQ(i,j,k,QPRES);
+        flxrho = cdtdy*(flxy(i,j+1,k,URHO)  - flxy(i,j,k,URHO));
+        flxu   = cdtdy*(flxy(i,j+1,k,UMX)   - flxy(i,j,k,UMX));
+        flxv   = cdtdy*(flxy(i,j+1,k,UMY)   - flxy(i,j,k,UMY));
+        flxw   = cdtdy*(flxy(i,j+1,k,UMZ)   - flxy(i,j,k,UMZ)); 
+        flxe   = cdtdy*(flxy(i,j+1,k,UEDEN) - flxy(i,j,k,UEDEN));
         c      = qa(i,j,k,QGAMC);
 // ---------------------------  Update Passive Variables ------------------
         for (int ipass = 0; ipass < npassive; ++ipass){
             int n   = EOS::upass_map(ipass);
             int nqp = EOS::qpass_map(ipass);
-            srcpass = srcQ(i,j,k,nqp);
-            compn = cdtdx*(flxy(i,j+1,k,n) - flxy(i,j,k,n));
+            compn = cdtdy*(flxy(i,j+1,k,n) - flxy(i,j,k,n));
             rr = qzp(i,j,k,QRHO);
             rrnew = rr - flxrho;
             compo = rr*qzp(i,j,k,nqp) - compn;
@@ -1290,8 +1284,8 @@ PeleC_transy2(const int i, const int j, const int k,
 
         pggp = qint(i,j+1,k,GDPRES); 
         pggm = qint(i,j,k,GDPRES); 
-        ugp  = qint(i,j+1,k,GDU); 
-        ugm  = qint(i,j,k,GDU); 
+        ugp  = qint(i,j+1,k,GDV); 
+        ugm  = qint(i,j,k,GDV); 
     
         dAup = pggp*ugp - pggm*ugm; //
         pav  = 0.5e0*(pggp + pggm); 
@@ -1324,7 +1318,7 @@ PeleC_transy2(const int i, const int j, const int k,
         qp(i,j,k,QW)   = rwnewr/rrnewr;  
         rhoekinr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwnewr*rwnewr)/rrnewr; 
         amrex::Real pnewr = qzp(i,j,k,QPRES) 
-                          - cdtdx*(dAup + pav*dAu*(c - 1.e0));
+                          - cdtdy*(dAup + pav*dAu*(c - 1.e0));
         qp(i,j,k,QPRES) = amrex::max(pnewr, small_pres); 
         qp(i,j,k,QREINT) = renewr - rhoekinr;
 //======================= QM ================================================
@@ -1355,7 +1349,7 @@ PeleC_transy2(const int i, const int j, const int k,
 
         qm(i,j,k+1,QREINT) = renewl - rhoekinl;               
         amrex::Real pnewl = qzm(i,j,k+1,QPRES) 
-                          - cdtdx*(dAup + pav*dAu*(c - 1.e0)); 
+                          - cdtdy*(dAup + pav*dAu*(c - 1.e0)); 
         qm(i,j,k+1,QPRES) = amrex::max(pnewl , small_pres); 
 }
 
@@ -1440,7 +1434,7 @@ PeleC_transz1(const int i, const int j, const int k,
         renewr = rer - flxe; 
 
 // Convert back to primitive 
-        qp(i,j,k,QRHO) = rrnewr + hdt*srcr; 
+        qp(i,j,k,QRHO) = rrnewr;// + hdt*srcr; 
         qp(i,j,k,QU)   = runewr/rrnewr; 
         qp(i,j,k,QV)   = rvnewr/rrnewr; 
         qp(i,j,k,QW)   = rvnewr/rrnewr; 
@@ -1547,7 +1541,7 @@ PeleC_transz2(const int i, const int j, const int k,
         ekinr = 0.5e0*rrr*(rur*rur + rvr*rvr + rwr*rwr);
         rur *= rrr; 
         rvr *= rrr; 
-
+        rwr *= rrr; 
         rer = qyp(i,j,k,QREINT) + ekinr; 
 // Add transverse predictor 
         rrnewr = rrr - flxrho; 
@@ -1664,9 +1658,9 @@ PeleC_transxy(const int i, const int j, const int k,
  //------------------------------- Update hydro vars -----------------------
 
         pggpx = qx(i+1,j,k,GDPRES); 
-        pggmx = qx(i,j,k,GDPRES); 
-        ugpx  = qx(i+1,j,k,GDW); 
-        ugmx  = qx(i,j,k,GDW); 
+        pggmx = qx(i  ,j,k,GDPRES); 
+        ugpx  = qx(i+1,j,k,GDU); 
+        ugmx  = qx(i  ,j,k,GDU); 
     
         dAupx = pggpx*ugpx - pggmx*ugmx; //
         pavx  = 0.5e0*(pggpx + pggmx); 
@@ -1674,8 +1668,8 @@ PeleC_transxy(const int i, const int j, const int k,
        
         pggpy = qy(i,j+1,k,GDPRES); 
         pggmy = qy(i,j,k,GDPRES); 
-        ugpy  = qy(i,j+1,k,GDW); 
-        ugmy  = qy(i,j,k,GDW); 
+        ugpy  = qy(i,j+1,k,GDV); 
+        ugmy  = qy(i,j,k,GDV); 
     
         dAupy = pggpy*ugpy - pggmy*ugmy; //
         pavy  = 0.5e0*(pggpy + pggmy); 
@@ -1708,7 +1702,7 @@ PeleC_transxy(const int i, const int j, const int k,
         rul = rrl*qzm(i,j,k+1,QU); 
         rvl = rrl*qzm(i,j,k+1,QV); 
         rwl = rrl*qzm(i,j,k+1,QW); 
-        ekinl = 0.5*(rul*rul + rvl*rvl + rwl*rwl); 
+        ekinl = 0.5*(rul*rul + rvl*rvl + rwl*rwl)/rrl;
         rel = qzm(i,j,k+1,QREINT) + ekinl; 
 
         runewl = rul - flxu; 
@@ -1792,8 +1786,8 @@ PeleC_transxz(const int i, const int j, const int k,
 
         pggpx = qx(i+1,j,k,GDPRES); 
         pggmx = qx(i,j,k,GDPRES); 
-        ugpx  = qx(i+1,j,k,GDV); 
-        ugmx  = qx(i,j,k,GDV); 
+        ugpx  = qx(i+1,j,k,GDU); 
+        ugmx  = qx(i,j,k,GDU); 
     
         dAupx = pggpx*ugpx - pggmx*ugmx; //
         pavx  = 0.5e0*(pggpx + pggmx); 
@@ -1801,8 +1795,8 @@ PeleC_transxz(const int i, const int j, const int k,
        
         pggpz = qz(i,j,k+1,GDPRES); 
         pggmz = qz(i,j,k,GDPRES); 
-        ugpz  = qz(i,j,k+1,GDV); 
-        ugmz  = qz(i,j,k,GDV); 
+        ugpz  = qz(i,j,k+1,GDW); 
+        ugmz  = qz(i,j,k,GDW); 
     
         dAupz = pggpz*ugpz - pggmz*ugmz; //
         pavz  = 0.5e0*(pggpz + pggmz); 
@@ -1835,7 +1829,7 @@ PeleC_transxz(const int i, const int j, const int k,
         rul = rrl*qym(i,j+1,k,QU); 
         rvl = rrl*qym(i,j+1,k,QV); 
         rwl = rrl*qym(i,j+1,k,QW); 
-        ekinl = 0.5*(rul*rul + rvl*rvl + rwl*rwl); 
+        ekinl = 0.5*(rul*rul + rvl*rvl + rwl*rwl)/rrl; 
         rel = qym(i,j+1,k,QREINT) + ekinl; 
 
         runewl = rul - flxu; 
@@ -1921,8 +1915,8 @@ PeleC_transyz(const int i, const int j, const int k,
 
         pggpz = qz(i,j,k+1,GDPRES); 
         pggmz = qz(i,j,k,GDPRES); 
-        ugpz  = qz(i,j,k+1,GDU); 
-        ugmz  = qz(i,j,k,GDU); 
+        ugpz  = qz(i,j,k+1,GDW); 
+        ugmz  = qz(i,j,k,GDW); 
     
         dAupz = pggpz*ugpz - pggmz*ugmz; //
         pavz  = 0.5e0*(pggpz + pggmz); 
@@ -1930,8 +1924,8 @@ PeleC_transyz(const int i, const int j, const int k,
        
         pggpy = qy(i,j+1,k,GDPRES); 
         pggmy = qy(i,j,k,GDPRES); 
-        ugpy  = qy(i,j+1,k,GDU); 
-        ugmy  = qy(i,j,k,GDU); 
+        ugpy  = qy(i,j+1,k,GDV); 
+        ugmy  = qy(i,j,k,GDV); 
     
         dAupy = pggpy*ugpy - pggmy*ugmy; //
         pavy  = 0.5e0*(pggpy + pggmy); 
@@ -1964,7 +1958,7 @@ PeleC_transyz(const int i, const int j, const int k,
         rul = rrl*qxm(i+1,j,k,QU); 
         rvl = rrl*qxm(i+1,j,k,QV); 
         rwl = rrl*qxm(i+1,j,k,QW); 
-        ekinl = 0.5*(rul*rul + rvl*rvl + rwl*rwl); 
+        ekinl = 0.5*(rul*rul + rvl*rvl + rwl*rwl)/rrl; 
         rel = qxm(i+1,j,k,QREINT) + ekinl; 
 
         runewl = rul - flxu; 
@@ -2000,6 +1994,56 @@ PeleC_pdivu(const int i, const int j, const int k,
                      * (q3(i,j,k+1,GDW)*a3(i,j,k+1) - q3(i,j,k,GDW)*a3(i,j,k)))
                      / vol(i,j,k); 
 }
+
+// ====================================== Consup Support Functions =======================================
+// Designed for CPU or GPU 
+AMREX_GPU_DEVICE
+inline 
+void PeleC_artif_visc(const int i, const int j, const int k,
+                      amrex::Array4<amrex::Real> const& flx,
+                      amrex::Array4<const amrex::Real> const& div, 
+                      amrex::Array4<const amrex::Real> const &u,
+                      amrex::Real const dx, amrex::Real const difmag,  const int cdir)
+{
+    amrex::Real div1;
+    if(cdir==0){ //X direction 
+        div1 = 0.25e0*(div(i,j,k) + div(i,j+1,k) + div(i,j,k+1) + div(i,j+1,k+1)); 
+        div1 = difmag*amrex::min(0.0, div1); 
+
+#pragma unroll
+        for(int n=0; n < NVAR; ++n){
+            if(n != UTEMP){
+// Passing in difmag TODO not pass in. 
+                flx(i,j,k,n) += dx*div1*(u(i,j,k,n) - u(i-1,j,k,n)); 
+            }
+        }
+    }
+    else if(cdir==1){ //Y direction 
+        div1 = 0.25e0*(div(i,j,k) + div(i+1,j,k) + div(i,j,k+1) + div(i,j+1,k+1)); 
+        div1 = difmag*amrex::min(0.0, div1); 
+#pragma unroll 
+        for(int n=0; n < NVAR; ++n){
+            if(n  != UTEMP){
+                flx(i,j,k,n) += dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); //Here dx is dy 
+            }
+        }
+    }
+    else{ // Z direction
+        div1 = 0.25e0*(div(i,j,k) + div(i+1,j,k) + div(i,j+1,k) + div(i+1,j+1,k)); 
+        div1 = difmag*amrex::min(0.0, div1); 
+#pragma unroll 
+        for(int n=0; n < NVAR; ++n){
+            if(n  != UTEMP){
+                flx(i,j,k,n) += dx*div1*(u(i,j,k,n) - u(i,j,k-1,n)); //Here dx is dz
+            }
+        }
+    }
+    flx(i,j,k,UTEMP) = 0.e0; 
+ 
+}
+
+
+
 
 // =============================== Host Functions! ========================================
 void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi, 

@@ -19,8 +19,12 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     amrex::Real const dz    = del[2]; 
     amrex::Real const hdtdx = 0.5*dt/dx; 
     amrex::Real const hdtdy = 0.5*dt/dy; 
-    amrex::Real const hdtdz = 0.5*dt/dz; 
+    amrex::Real const hdtdz = 0.5*dt/dz;
+    amrex::Real const cdtdx = 1.0/3.0*dt/dx; 
+    amrex::Real const cdtdy = 1.0/3.0*dt/dy; 
+    amrex::Real const cdtdz = 1.0/3.0*dt/dz;  
     amrex::Real const hdt   = 0.5*dt; 
+
 
     const int bclx = bclo[0]; 
     const int bcly = bclo[1];
@@ -47,9 +51,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 
 //===================== X slopes ===================================
     int cdir = 0; 
-//    const Box& xslpbx = grow(bxg1, cdir, 1);
     const Box& xmbx = growHi(bxg2, cdir, 1); 
-//    const Box& xflxbx = surroundingNodes(bxg1,cdir);
     AsyncFab qxm(xmbx, QVAR); 
     AsyncFab qxp(bxg2, QVAR);
     auto const& qxmarr = qxm.array(); 
@@ -74,13 +76,12 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     auto const& gdtempx = qgdx.array(); 
 
     AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, gdtempx, qaux, 0);
+        PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, gdtempx, qaux, cdir);
     });
 
 //==================== Y slopes ====================================
     cdir = 1; 
     const Box& yflxbx = surroundingNodes(grow(bxg2, cdir, -1) ,cdir); 
-//    const Box& yslpbx = grow(bxg1, cdir, 1);
     const Box& ymbx = growHi(bxg2, cdir, 1); 
     AsyncFab qym(ymbx, QVAR);
     AsyncFab qyp(bxg2, QVAR);
@@ -88,7 +89,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     auto const& qyparr = qyp.array();  
     AMREX_PARALLEL_FOR_4D (bxg2, QVAR, i, j, k, n,{
         PeleC_slope_y(i, j, k, n, slarr, q);
-    });
+    });  
 //==================== Y interp ====================================
     AMREX_PARALLEL_FOR_3D (bxg2, i,j,k, {
         PeleC_plm_y(i,j,k, qymarr, qyparr, slarr, q, qaux(i,j,k,QC), 
@@ -103,7 +104,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qgdy(yflxbx, NGDNV); 
     auto const& gdtempy = qgdy.array(); 
     AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qymarr, qyparr, fyarr, gdtempy, qaux, 1); 
+        PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qymarr, qyparr, fyarr, gdtempy, qaux, cdir); 
     }); 
 
 //===================== Z slopes ===================================
@@ -127,7 +128,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (bxg2,i,j,k, {
       PeleC_plm_z(i, j, k, qzmarr, qzparr, slarr, q, qaux(i,j,k,QC), 
 //                   dloga,
-                   dx, dt);
+                   dz, dt);
     }); 
 // TODO maybe combine slope_y and plm_y launch calls. Reduce the 4D loop to a 3D loop with an
 // inside loop of 0 to QVAR. This could reduce launch overhead. 
@@ -138,7 +139,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qgdz(zflxbx, NGDNV); 
     auto const& gdtempz = qgdz.array(); 
     AMREX_PARALLEL_FOR_3D (zflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qzmarr, qzparr, fzarr, gdtempz, qaux, 0);
+        PeleC_cmpflx(i,j,k,bclz, bchz, dlz, dhz, qzmarr, qzparr, fzarr, gdtempz, qaux, cdir);
     });
 
 
@@ -160,11 +161,11 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (txbx, i,j,k, {
 // ----------------- X|Y ------------------------------------------
         PeleC_transy1(i,j,k, qmxy, qpxy, qxmarr, qxparr, fyarr,
-                     srcQ, qaux, gdtempy, a2, vol, hdt, hdtdy);
+                     srcQ, qaux, gdtempy, a2, vol, hdt, cdtdy);
 
 // ---------------- X|Z ------------------------------------------
         PeleC_transz1(i,j,k, qmxz, qpxz, qxmarr, qxparr, fzarr,
-                     srcQ, qaux, gdtempz, a3, vol, hdt, hdtdz);
+                     srcQ, qaux, gdtempz, a3, vol, hdt, cdtdz);
 
    });
 
@@ -183,9 +184,9 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 
     AMREX_PARALLEL_FOR_3D (txfxbx, i,j,k, {     
 // -----------------  X|Y ---------------------------------------------------       
-      PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmxy, qpxy, flxy, qxy, qaux,0); 
+      PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmxy, qpxy, flxy, qxy, qaux, cdir); 
 // -----------------  X|Z --------------------------------------------------
-      PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmxz, qpxz, flxz, qxz, qaux,0); 
+      PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmxz, qpxz, flxz, qxz, qaux, cdir); 
     }); 
 
 //===================== Y interface corrections ====================
@@ -205,10 +206,10 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (tybx, i, j , k, {
 //--------------------- Y|X -------------------------------------
         PeleC_transx1(i,j,k, qmyx, qpyx, qymarr, qyparr, fxarr,
-                     srcQ, qaux, gdtempx, a1, vol, hdt, hdtdx);  
+                     srcQ, qaux, gdtempx, a1, vol, hdt, cdtdx);  
 //--------------------- Y|Z ------------------------------------              
         PeleC_transz2(i,j,k, qmyz, qpyz, qymarr, qyparr, fzarr, 
-                     srcQ, qaux, gdtempz, a3, vol, hdt, hdtdz); 
+                     srcQ, qaux, gdtempz, a3, vol, hdt, cdtdz); 
     }); 
 
 //===================== Riemann problem Y|X Y|Z  ====================
@@ -226,17 +227,17 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
    
     AMREX_PARALLEL_FOR_3D (tyfxbx, i, j, k, {
 //--------------------- Y|X ----------------------------------------------------
-      PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmyx , qpyx , flyx, qyx, qaux, 1);
+      PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmyx , qpyx , flyx, qyx, qaux, cdir);
 
 //--------------------- Y|Z ----------------------------------------------------
-      PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmyz , qpyz , flyz, qyz, qaux, 1); 
+      PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmyz , qpyz , flyz, qyz, qaux, cdir); 
     });
 
 //===================== Z interface corrections ====================
 
     cdir = 2; 
     const Box& tzbx = grow(bxg1, cdir, 1);
-    const Box& tzbxm = growHi(tzbx, cdir, 1); 
+    const Box& tzbxm = growHi(tzbx, cdir, 1);
     AsyncFab qzxm(tzbxm, QVAR); 
     AsyncFab qzxp(tzbx, QVAR); 
     AsyncFab qzym(tzbxm, QVAR); 
@@ -249,11 +250,11 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (tzbx, i, j , k, {
 //------------------- Z|X -------------------------------------
         PeleC_transx2(i,j,k, qmzx, qpzx, qzmarr, qzparr, fxarr,
-                     srcQ, qaux, gdtempx, a1, vol, hdt, hdtdx);
+                     srcQ, qaux, gdtempx, a1, vol, hdt, cdtdx);
 
 //------------------- Z|Y -------------------------------------                
         PeleC_transy2(i,j,k, qmzy, qpzy, qzmarr, qzparr, fyarr, 
-                     srcQ, qaux, gdtempy, a2, vol, hdt, hdtdy); 
+                     srcQ, qaux, gdtempy, a2, vol, hdt, cdtdy); 
     }); 
 //===================== Riemann problem Z|X Z|Y  ====================
     
@@ -280,8 +281,8 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const Box& xfxbx = surroundingNodes(bx, cdir);
     const Box& tyzbx = grow(bx, cdir, 1); 
     AMREX_PARALLEL_FOR_3D ( tyzbx, i, j, k, { 
-        PeleC_transyz(i,j,k, qm, qp, qxmarr, qxparr, flxy, flxz, qxy, qxz, qaux, srcQ, hdt, hdtdy, hdtdz); 
-    }); 
+        PeleC_transyz(i,j,k, qm, qp, qxmarr, qxparr, flyz, flzy, qyz, qzy, qaux, srcQ, hdt, hdtdy, hdtdz); 
+    });
 
 //============== Final X flux ======================================
     AMREX_PARALLEL_FOR_3D(xfxbx, i, j, k, {
@@ -293,7 +294,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const Box& yfxbx = surroundingNodes(bx, cdir);
     const Box& txzbx = grow(bx, cdir, 1); 
     AMREX_PARALLEL_FOR_3D (txzbx, i, j, k, { 
-        PeleC_transxz(i,j,k, qm, qp, qymarr, qyparr, flyx, flyz, qyx, qyz, qaux, srcQ, hdt, hdtdx, hdtdz); 
+        PeleC_transxz(i,j,k, qm, qp, qymarr, qyparr, flxz, flzx, qxz, qzx, qaux, srcQ, hdt, hdtdx, hdtdz); 
     }); 
 
 //============== Final Y flux ======================================
@@ -306,7 +307,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const Box& zfxbx = surroundingNodes(bx, cdir);
     const Box& txybx = grow(bx, cdir, 1); 
     AMREX_PARALLEL_FOR_3D ( txybx, i, j, k, { 
-        PeleC_transxy(i,j,k, qm, qp, qzmarr, qzparr, flzx, flzy, qzx, qzy, qaux, srcQ, hdt, hdtdx, hdtdy); 
+        PeleC_transxy(i,j,k, qm, qp, qzmarr, qzparr, flxy, flyx, qxy, qyx, qaux, srcQ, hdt, hdtdx, hdtdy);
     }); 
 
 //============== Final Z flux ======================================

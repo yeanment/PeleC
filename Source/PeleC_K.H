@@ -5,7 +5,7 @@
 #include <AMReX_Geometry.H>
 #include "PeleC_index_macros.H" 
 #include "PeleC_EOS.H"
-
+#include <iomanip>
 #if AMREX_SPACEDIM == 1
 #include "PeleC_method_1D.H" 
 #elif AMREX_SPACEDIM == 2
@@ -256,42 +256,6 @@ void PeleC_consup(amrex::Box const &bx, amrex::Array4<const amrex::Real> const& 
                   amrex::Array4<const amrex::Real> const &pdivu,
                   amrex::Real const *del, amrex::Real const difmag);
 
-// ====================================== Consup Support Functions =======================================
-// Designed for CPU or GPU 
-AMREX_GPU_DEVICE
-inline 
-void PeleC_artif_visc(const int i, const int j, const int k,
-                      amrex::Array4<amrex::Real> const& flx,
-                      amrex::Array4<const amrex::Real> const& div, 
-                      amrex::Array4<const amrex::Real> const &u,
-                      amrex::Real const dx, amrex::Real const difmag,  const int cdir)
-{
-    amrex::Real div1;
-    if(cdir==0){
-        div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
-        div1 = difmag*amrex::min(0.0, div1); 
-
-#pragma unroll
-        for(int n=0; n < NVAR; ++n){
-            if(n != UTEMP){
-// Passing in difmag TODO not pass in. 
-                flx(i,j,k,n) += dx*div1*(u(i,j,k,n) - u(i-1,j,k,n));
-            }
-        }
-    }
-    else if(cdir==1){
-        div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
-        div1 = difmag*amrex::min(0.0, div1); 
-#pragma unroll 
-        for(int n=0; n < NVAR; ++n){
-            if(n  != UTEMP){
-                flx(i,j,k,n) += dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
-            }
-        }
-    }
-    flx(i,j,k,UTEMP) = 0.e0;  
-}
-
 AMREX_GPU_DEVICE
 inline
 void PeleC_norm_spec_flx(const int i, const int j, const int k,
@@ -319,6 +283,7 @@ void PeleC_ext_flx(const int i, const int j, const int k,
     for(int n = 0; n < NVAR; ++n) flx(i,j,k,n) *= area; 
 }
 
+
 AMREX_GPU_DEVICE
 inline 
 void PeleC_update(const int i, const int j, const int k,
@@ -340,7 +305,14 @@ void PeleC_update(const int i, const int j, const int k,
 #elif(AMREX_SPACEDIM==3)
        update(i,j,k,n) += (flx1(i,j,k,n) - flx1(i+1,j,k,n)
                        +   flx2(i,j,k,n) - flx2(i,j+1,k,n)
-                       +   flx3(i,j,k,n) - flx3(i,j,k+1,n))/v; 
+                       +   flx3(i,j,k,n) - flx3(i,j,k+1,n))/v;
+/*       if(n==UEINT) update(i,j,k,UEINT) -= pdivu(i,j,k);     
+       if(i==0 && j==20 && k==192){
+            std::cout<<std::setprecision(17)<<std::fixed; 
+            amrex::Print()<<i<<'\t'<<j<<'\t'<<k<<'\t'<<n<<'\t'<<update(i,j,k,n)<< std::endl; 
+            amrex::Print()<< flx3(i,j,k,n) << '\t' << flx3(i,j,k+1,n) << std::endl;          
+            std::cin.get(); 
+        }// */
 #endif
     }
 
