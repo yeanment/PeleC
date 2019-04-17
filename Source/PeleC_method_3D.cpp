@@ -64,6 +64,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_plm_x(i, j, k, qxmarr, qxparr, slarr, q, qaux(i,j,k,QC), 
                   dx, dt);
     }); 
+   
 
 // TODO maybe combine slope_x and plm_x launch calls. Reduce the 4D loop to a 3D loop with an
 // inside loop of 0 to QVAR. This could reduce launch overhead. 
@@ -109,17 +110,14 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 
 //===================== Z slopes ===================================
     cdir = 2; 
-//    const Box& zslpbx = grow(bxg1, cdir, 1);
 
     const Box& zmbx = growHi(bxg2, cdir, 1); 
     const Box& zflxbx = surroundingNodes(grow(bxg2,cdir, -1),cdir);
-//    amrex::Print() << "qzmp alloc! " << std::endl; 
     AsyncFab qzm(zmbx, QVAR); 
     AsyncFab qzp(bxg2, QVAR);
     auto const& qzmarr = qzm.array(); 
     auto const& qzparr = qzp.array();
 
-//    amrex::Print()<< "Before Z slope " << std::endl;
  
     AMREX_PARALLEL_FOR_4D (bxg2, QVAR, i,j,k,n, { 
         PeleC_slope_z(i,j,k,n, slarr, q);
@@ -157,11 +155,11 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qxzp(txbx , QVAR);
     auto const& qmxz = qxzm.array();
     auto const& qpxz = qxzp.array();  
-
     AMREX_PARALLEL_FOR_3D (txbx, i,j,k, {
 // ----------------- X|Y ------------------------------------------
         PeleC_transy1(i,j,k, qmxy, qpxy, qxmarr, qxparr, fyarr,
                      srcQ, qaux, gdtempy, a2, vol, hdt, cdtdy);
+
 
 // ---------------- X|Z ------------------------------------------
         PeleC_transz1(i,j,k, qmxz, qpxz, qxmarr, qxparr, fzarr,
@@ -206,7 +204,8 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (tybx, i, j , k, {
 //--------------------- Y|X -------------------------------------
         PeleC_transx1(i,j,k, qmyx, qpyx, qymarr, qyparr, fxarr,
-                     srcQ, qaux, gdtempx, a1, vol, hdt, cdtdx);  
+                     srcQ, qaux, gdtempx, a1, vol, hdt, cdtdx); 
+
 //--------------------- Y|Z ------------------------------------              
         PeleC_transz2(i,j,k, qmyz, qpyz, qymarr, qyparr, fzarr, 
                      srcQ, qaux, gdtempz, a3, vol, hdt, cdtdz); 
@@ -308,6 +307,10 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const Box& txybx = grow(bx, cdir, 1); 
     AMREX_PARALLEL_FOR_3D ( txybx, i, j, k, { 
         PeleC_transxy(i,j,k, qm, qp, qzmarr, qzparr, flxy, flyx, qxy, qyx, qaux, srcQ, hdt, hdtdx, hdtdy);
+/*        for(int n = 0; n < QVAR; n++){
+            qm(i,j,k+1,n) = qzmarr(i,j,k+1,n); 
+            qp(i,j,k,n) = qzparr(i,j,k,n);
+        }  */
     }); 
 
 //============== Final Z flux ======================================

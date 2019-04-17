@@ -207,7 +207,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 //#endif
 
             BL_PROFILE_VAR("PeleC::umdrv()", purm); 
-/*                         PeleC_umdrv
+                         PeleC_umdrv
                         (is_finest_level, time,
                          bx, 
                          domain_lo, domain_hi,
@@ -301,7 +301,6 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
          } // MFIter loop
     } // end of OMP parallel region
 
-    
     BL_PROFILE_VAR_STOP(PC_UMDRV);
 
     // Flush Fortran output

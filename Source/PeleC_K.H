@@ -187,20 +187,20 @@ PeleC_divu(const int i, const int j, const int k, amrex::Array4<const amrex::Rea
                     q(i-1,j,k,QV) - q(i-1,j-1,k,QV))/dy; 
      divu(i,j,k) = ux + vy; 
 #elif(AMREX_SPACEDIM==3)
-    amrex::Real ux = 0.25e0*(q(i,j,k,QU) - q(i-1,j,k,QU) 
-                           + q(i,j,k-1,QU) - q(i-1,j,k-1,QU) 
-                           + q(i,j-1,k  ,QU) - q(i-1,j-1,k,QU) 
-                           + q(i,j-1,k-1,QU) - q(i-1,j-1,k-1,QU) )/dx; 
+    amrex::Real ux = 0.25e0*(q(i  ,j  ,k  ,QU) - q(i-1,j  ,k  ,QU) 
+                           + q(i  ,j  ,k-1,QU) - q(i-1,j  ,k-1,QU) 
+                           + q(i  ,j-1,k  ,QU) - q(i-1,j-1,k  ,QU) 
+                           + q(i  ,j-1,k-1,QU) - q(i-1,j-1,k-1,QU) )/dx; 
 
-    amrex::Real vy = 0.25e0*(q(i,j,k,QV) - q(i,j-1,k,QV) 
-                           + q(i,j,k-1,QV) - q(i,j-1,k-1,QV) 
-                           + q(i-1,j,k  ,QV) - q(i-1,j-1,k,QV) 
-                           + q(i-1,j,k-1,QV) - q(i-1,j-1,k-1,QV) )/dy; 
+    amrex::Real vy = 0.25e0*(q(i  ,j  ,k  ,QV) - q(i  ,j-1,k  ,QV) 
+                           + q(i  ,j  ,k-1,QV) - q(i  ,j-1,k-1,QV) 
+                           + q(i-1,j  ,k  ,QV) - q(i-1,j-1,k  ,QV) 
+                           + q(i-1,j  ,k-1,QV) - q(i-1,j-1,k-1,QV) )/dy; 
 
-    amrex::Real wz = 0.25e0*(q(i,j,k,QW) - q(i,j,k-1,QW) 
-                           + q(i-1,j,k,QW) - q(i-1,j,k-1,QW) 
-                           + q(i,j-1,k  ,QW) - q(i,j-1,k-1,QW) 
-                           + q(i-1,j-1,k,QW) - q(i-1,j-1,k-1,QW) )/dz; 
+    amrex::Real wz = 0.25e0*(q(i  ,j  ,k  ,QW) - q(i  ,j  ,k-1,QW) 
+                           + q(i-1,j  ,k  ,QW) - q(i-1,j  ,k-1,QW) 
+                           + q(i  ,j-1,k  ,QW) - q(i  ,j-1,k-1,QW) 
+                           + q(i-1,j-1,k  ,QW) - q(i-1,j-1,k-1,QW) )/dz; 
     divu(i,j,k) = ux + vy + wz; 
 #endif
 }
@@ -306,13 +306,6 @@ void PeleC_update(const int i, const int j, const int k,
        update(i,j,k,n) += (flx1(i,j,k,n) - flx1(i+1,j,k,n)
                        +   flx2(i,j,k,n) - flx2(i,j+1,k,n)
                        +   flx3(i,j,k,n) - flx3(i,j,k+1,n))/v;
-/*       if(n==UEINT) update(i,j,k,UEINT) -= pdivu(i,j,k);     
-       if(i==0 && j==20 && k==192){
-            std::cout<<std::setprecision(17)<<std::fixed; 
-            amrex::Print()<<i<<'\t'<<j<<'\t'<<k<<'\t'<<n<<'\t'<<update(i,j,k,n)<< std::endl; 
-            amrex::Print()<< flx3(i,j,k,n) << '\t' << flx3(i,j,k+1,n) << std::endl;          
-            std::cin.get(); 
-        }// */
 #endif
     }
 

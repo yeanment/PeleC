@@ -233,10 +233,10 @@ riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
     }
     qint_gdgame = qint_gdpres/regdnv + 1.e0; 
     qint_gdpres = amrex::max(small_pres, qint_gdpres); 
-    amrex::Real u_adv = qint_iu; 
+//    amrex::Real u_adv = qint_iu; 
     
     //compute fluxes! 
-    uflx_rho = qint_rho*u_adv; 
+    uflx_rho = qint_rho*qint_iu; 
     if( idir == 0){
          uflx_u = uflx_rho*qint_iu + qint_gdpres; 
          uflx_v = uflx_rho*qint_iv1; 
@@ -253,8 +253,8 @@ riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
          uflx_w = uflx_rho*qint_iu + qint_gdpres; 
     }
     amrex::Real rhoetot = regdnv + 0.5e0*qint_rho*(qint_iu*qint_iu + qint_iv1*qint_iv1 + qint_iv2*qint_iv2); 
-    uflx_eden = u_adv*(rhoetot + qint_gdpres); 
-    uflx_eint = u_adv*regdnv; 
+    uflx_eden = qint_iu*(rhoetot + qint_gdpres); 
+    uflx_eint = qint_iu*regdnv; 
 }
 
 
@@ -516,7 +516,7 @@ PeleC_cmpflx(const int i, const int j, const int k,
             rer = rel;         
          } 
 //*/
-//here we have two riemann dudes riemann_us and riemann_md
+//here we have two riemann dudes riemannus and riemann_md
        riemannus(ql(i,j,k,QRHO), ul, vl, v2l, 
                  ql(i,j,k,QPRES), rel, gamcl, spl,   
                  qr(i,j,k,QRHO), ur, vr, v2r, 
@@ -725,6 +725,7 @@ PeleC_plm_y(const int i, const int j, const int k,
         rho_ref = rho + 0.5e0*(1.e0 - dtdy*amrex::max(e[2],0.e0))*drho;
         u_ref = u + 0.5e0*(1.e0 - dtdy*amrex::max(e[2],0.e0))*du;
         v_ref = v + 0.5e0*(1.e0 - dtdy*amrex::max(e[2],0.e0))*dv;
+        w_ref = w + 0.5e0*(1.e0 - dtdy*amrex::max(e[2],0.e0))*dw; 
         p_ref = p + 0.5e0*(1.e0 - dtdy*amrex::max(e[2],0.e0))*dp;
         rhoe_ref = rhoe + 0.5e0*(1.e0 - dtdy*amrex::max(e[2],0.e0))*drhoe;
 
@@ -1079,7 +1080,7 @@ PeleC_transy1(const int i, const int j, const int k,
         qp(i,j,k,QRHO) = rrnewr;// + hdt*srcr; 
         qp(i,j,k,QU)   = runewr/rrnewr; 
         qp(i,j,k,QV)   = rvnewr/rrnewr; 
-        qp(i,j,k,QW)   = rvnewr/rrnewr; 
+        qp(i,j,k,QW)   = rwnewr/rrnewr; 
         rhoekinr = 0.5e0*(runewr*runewr + rvnewr*rvnewr + rwnewr*rwnewr )/rrnewr; 
         
         pnewr = qxp(i,j,k,QPRES) - cdtdy*(dup + pav*du*(c - 1.e0)); 
@@ -2019,7 +2020,7 @@ void PeleC_artif_visc(const int i, const int j, const int k,
         }
     }
     else if(cdir==1){ //Y direction 
-        div1 = 0.25e0*(div(i,j,k) + div(i+1,j,k) + div(i,j,k+1) + div(i,j+1,k+1)); 
+        div1 = 0.25e0*(div(i,j,k) + div(i+1,j,k) + div(i,j,k+1) + div(i+1,j,k+1)); 
         div1 = difmag*amrex::min(0.0, div1); 
 #pragma unroll 
         for(int n=0; n < NVAR; ++n){

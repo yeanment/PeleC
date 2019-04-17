@@ -908,6 +908,41 @@ PeleC_pdivu(const int i, const int j, const int k,
                      / vol(i,j,k); 
 }
 
+// ====================================== Consup Support Functions =======================================
+// Designed for CPU or GPU 
+AMREX_GPU_DEVICE
+inline 
+void PeleC_artif_visc(const int i, const int j, const int k,
+                      amrex::Array4<amrex::Real> const& flx,
+                      amrex::Array4<const amrex::Real> const& div, 
+                      amrex::Array4<const amrex::Real> const &u,
+                      amrex::Real const dx, amrex::Real const difmag,  const int cdir)
+{
+    amrex::Real div1;
+    if(cdir==0){
+        div1 = 0.5e0*(div(i,j,k) + div(i,j+1,k)); 
+        div1 = difmag*amrex::min(0.0, div1); 
+
+#pragma unroll
+        for(int n=0; n < NVAR; ++n){
+            if(n != UTEMP){
+// Passing in difmag TODO not pass in. 
+                flx(i,j,k,n) += dx*div1*(u(i,j,k,n) - u(i-1,j,k,n));
+            }
+        }
+    }
+    else if(cdir==1){
+        div1 = 0.5e0*(div(i,j,k) + div(i+1,j,k)); 
+        div1 = difmag*amrex::min(0.0, div1); 
+#pragma unroll 
+        for(int n=0; n < NVAR; ++n){
+            if(n  != UTEMP){
+                flx(i,j,k,n) += dx*div1*(u(i,j,k,n) - u(i,j-1,k,n)); 
+            }
+        }
+    }
+    flx(i,j,k,UTEMP) = 0.e0;  
+}
 
 //Host function to call gpu hydro functions
 //Defined in PeleC_method_2D
