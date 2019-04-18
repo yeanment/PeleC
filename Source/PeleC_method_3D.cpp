@@ -56,18 +56,13 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qxp(bxg2, QVAR);
     auto const& qxmarr = qxm.array(); 
     auto const& qxparr = qxp.array(); 
-    AMREX_PARALLEL_FOR_4D (bxg2, QVAR, i,j,k,n, { 
-        PeleC_slope_x(i,j,k,n, slarr, q);
-    }); 
+    AMREX_PARALLEL_FOR_3D (bxg2,i,j,k, { 
+        for(int n = 0; n < QVAR; ++n) 
+            PeleC_slope_x(i,j,k,n, slarr, q);
 //==================== X interp ====================================
-    AMREX_PARALLEL_FOR_3D (bxg2,i,j,k, {
-      PeleC_plm_x(i, j, k, qxmarr, qxparr, slarr, q, qaux(i,j,k,QC), 
+        PeleC_plm_x(i, j, k, qxmarr, qxparr, slarr, q, qaux(i,j,k,QC), 
                   dx, dt);
     }); 
-   
-
-// TODO maybe combine slope_x and plm_x launch calls. Reduce the 4D loop to a 3D loop with an
-// inside loop of 0 to QVAR. This could reduce launch overhead. 
 
 //===================== X initial fluxes ===========================
     const Box& xflxbx = surroundingNodes(grow(bxg2, cdir, -1), cdir); 
@@ -88,17 +83,13 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qyp(bxg2, QVAR);
     auto const& qymarr = qym.array(); 
     auto const& qyparr = qyp.array();  
-    AMREX_PARALLEL_FOR_4D (bxg2, QVAR, i, j, k, n,{
-        PeleC_slope_y(i, j, k, n, slarr, q);
-    });  
+    AMREX_PARALLEL_FOR_3D (bxg2, i, j, k,{
+        for(int n = 0; n < QVAR; n++) 
+            PeleC_slope_y(i, j, k, n, slarr, q);
 //==================== Y interp ====================================
-    AMREX_PARALLEL_FOR_3D (bxg2, i,j,k, {
         PeleC_plm_y(i,j,k, qymarr, qyparr, slarr, q, qaux(i,j,k,QC), 
                     dy, dt);
-    });
-// TODO maybe combine slope_y and plm_y launch calls. Reduce the 4D loop to a 3D loop with an
-// inside loop of 0 to QVAR. This could reduce launch overhead. 
-
+    });  
 //===================== Y initial fluxes ===========================
     AsyncFab fy(yflxbx, NVAR); 
     auto const& fyarr = fy.array();
@@ -119,18 +110,13 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     auto const& qzparr = qzp.array();
 
  
-    AMREX_PARALLEL_FOR_4D (bxg2, QVAR, i,j,k,n, { 
+    AMREX_PARALLEL_FOR_3D (bxg2, i,j,k,{ 
+      for(int n = 0; n < QVAR; ++n) 
         PeleC_slope_z(i,j,k,n, slarr, q);
-    }); 
 //==================== Z interp ====================================
-    AMREX_PARALLEL_FOR_3D (bxg2,i,j,k, {
       PeleC_plm_z(i, j, k, qzmarr, qzparr, slarr, q, qaux(i,j,k,QC), 
-//                   dloga,
                    dz, dt);
     }); 
-// TODO maybe combine slope_y and plm_y launch calls. Reduce the 4D loop to a 3D loop with an
-// inside loop of 0 to QVAR. This could reduce launch overhead. 
-
 //===================== Z initial fluxes ===========================
     AsyncFab fz(zflxbx, NVAR);
     auto const& fzarr = fz.array(); 
