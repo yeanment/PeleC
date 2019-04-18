@@ -10,9 +10,9 @@
 
 AMREX_GPU_DEVICE
 inline
-void
+amrex::Real 
 PeleC_slope_x(const int i, const int j, const int k, const int n,  
-      amrex::Array4< amrex::Real> const& dq, amrex::Array4<const amrex::Real> const& q)
+              amrex::Array4<const amrex::Real> const& q)
 {
     amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn, dtemp;
     amrex::Real qm, qp, qi;
@@ -43,14 +43,14 @@ PeleC_slope_x(const int i, const int j, const int k, const int n,
     dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
 
 //flattening can go here. 
-    dq(i,j,k,n) = dsgn*amrex::min(dlim, std::abs(dtemp));
+    return dsgn*amrex::min(dlim, std::abs(dtemp));
 }
 
 AMREX_GPU_DEVICE
 inline
-void
+amrex::Real 
 PeleC_slope_y (const int i, const int j, const int k, const int n, 
-               amrex::Array4<amrex::Real> const& dq, amrex::Array4<const amrex::Real> const& q)
+               amrex::Array4<const amrex::Real> const& q)
 {
     amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn, dtemp;
     amrex::Real qm, qp, qj;
@@ -80,14 +80,14 @@ PeleC_slope_y (const int i, const int j, const int k, const int n,
 
     dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
 //flattening can go here. 
-    dq(i,j,k,n) = dsgn*amrex::min(dlim, std::abs(dtemp)); 
+    return dsgn*amrex::min(dlim, std::abs(dtemp)); 
 }
 
 AMREX_GPU_DEVICE
 inline
-void
+amrex::Real 
 PeleC_slope_z (const int i, const int j, const int k, const int n, 
-               amrex::Array4<amrex::Real> const& dq, amrex::Array4<const amrex::Real> const& q)
+               amrex::Array4<const amrex::Real> const& q)
 {
     amrex::Real dlft, drgt, dcen, dfm, dfp, dlim, dsgn, dtemp;
     amrex::Real qm, qp, qk;
@@ -117,7 +117,7 @@ PeleC_slope_z (const int i, const int j, const int k, const int n,
 
     dtemp  = 4.0/3.0*dcen - 1.0/6.0*(dfp + dfm); 
 //flattening can go here. 
-    dq(i,j,k,n) = dsgn*amrex::min(dlim, std::abs(dtemp)); 
+    return dsgn*amrex::min(dlim, std::abs(dtemp)); 
 }
 
 
@@ -542,7 +542,7 @@ inline
 void 
 PeleC_plm_x(const int i, const int j, const int k,
     amrex::Array4<amrex::Real> const& qm, amrex::Array4<amrex::Real> const& qp,
-    amrex::Array4<const amrex::Real> const& slope,  amrex::Array4<const amrex::Real> const& q,
+    amrex::Real  const slope[QVAR],  amrex::Array4<const amrex::Real> const& q,
     amrex::Real const cc, 
 //   amrex::Array4<const amrex::Real> const& dloga,
     amrex::Real const dx, amrex::Real const dt)
@@ -561,12 +561,12 @@ PeleC_plm_x(const int i, const int j, const int k,
         amrex::Real rhoe  = q(i,j,k,QREINT); 
         amrex::Real enth  = ((rhoe+p)/rho)/cs; 
         
-        amrex::Real drho  = slope(i,j,k,QRHO); 
-        amrex::Real du    = slope(i,j,k,QU); 
-        amrex::Real dv    = slope(i,j,k,QV);
-        amrex::Real dw    = slope(i,j,k,QW);  
-        amrex::Real dp    = slope(i,j,k,QPRES); 
-        amrex::Real drhoe = slope(i,j,k,QREINT); 
+        amrex::Real drho  = slope[QRHO]; 
+        amrex::Real du    = slope[QU]; 
+        amrex::Real dv    = slope[QV];
+        amrex::Real dw    = slope[QW];  
+        amrex::Real dp    = slope[QPRES]; 
+        amrex::Real drhoe = slope[QREINT]; 
         
         amrex::Real alpham = 0.5e0*(dp/(rho*cc) - du)*rho/cc; 
         amrex::Real alphap = 0.5e0*(dp/(rho*cc) + du)*rho/cc; 
@@ -641,11 +641,11 @@ PeleC_plm_x(const int i, const int j, const int k,
             u = q(i,j,k,QU); 
             amrex::Real spzero; 
             spzero = u > 0 ? -1.e0 : u*dtdx; 
-            amrex::Real acmprght = 0.5e0*(-1.e0 - spzero)*slope(i,j,k,n); 
+            amrex::Real acmprght = 0.5e0*(-1.e0 - spzero)*slope[n]; 
             qp(i,j,k,n) = q(i,j,k,n) + acmprght;
 
             spzero = u >= 0 ? u*dtdx : 1.e0; 
-            amrex::Real acmpleft = 0.5e0*(1.e0 - spzero)*slope(i,j,k,n);  
+            amrex::Real acmpleft = 0.5e0*(1.e0 - spzero)*slope[n];  
             qm(i+1, j, k, n) = q(i,j,k,n) + acmpleft; 
         }                            
 } 
@@ -655,7 +655,7 @@ inline
 void 
 PeleC_plm_y(const int i, const int j, const int k, 
     amrex::Array4<amrex::Real> const& qm         , amrex::Array4<amrex::Real> const& qp,
-    amrex::Array4<const amrex::Real> const& slope, amrex::Array4<const amrex::Real> const& q,
+    amrex::Real const slope[QVAR], amrex::Array4<const amrex::Real> const& q,
     amrex::Real const cc, 
     amrex::Real const dy, amrex::Real const dt)
 {
@@ -672,12 +672,12 @@ PeleC_plm_y(const int i, const int j, const int k,
         amrex::Real rhoe  = q(i,j,k,QREINT); 
         amrex::Real enth  = ((rhoe+p)/rho)/cs; 
         
-        amrex::Real drho  = slope(i,j,k,QRHO); 
-        amrex::Real du    = slope(i,j,k,QU); 
-        amrex::Real dv    = slope(i,j,k,QV);
-        amrex::Real dw    = slope(i,j,k,QW);  
-        amrex::Real dp    = slope(i,j,k,QPRES); 
-        amrex::Real drhoe = slope(i,j,k,QREINT); 
+        amrex::Real drho  = slope[QRHO]; 
+        amrex::Real du    = slope[QU]; 
+        amrex::Real dv    = slope[QV];
+        amrex::Real dw    = slope[QW];  
+        amrex::Real dp    = slope[QPRES]; 
+        amrex::Real drhoe = slope[QREINT]; 
         
         amrex::Real alpham = 0.5e0*(dp/(rho*cc) - dv)*rho/cc; 
         amrex::Real alphap = 0.5e0*(dp/(rho*cc) + dv)*rho/cc; 
@@ -754,11 +754,11 @@ PeleC_plm_y(const int i, const int j, const int k,
             v = q(i,j,k,QV); 
             amrex::Real spzero; 
             spzero = v > 0 ? -1.e0 : v*dtdy; 
-            amrex::Real acmptop = 0.5e0*(-1.e0 - spzero)*slope(i,j,k,n); 
+            amrex::Real acmptop = 0.5e0*(-1.e0 - spzero)*slope[n]; 
             qp(i,j,k,n) = q(i,j,k,n) + acmptop;
 
             spzero = v >= 0 ? v*dtdy : 1.e0; 
-            amrex::Real acmpbot = 0.5e0*(1.e0 - spzero)*slope(i,j,k,n);  
+            amrex::Real acmpbot = 0.5e0*(1.e0 - spzero)*slope[n];  
             qm(i,j+1,k,n) = q(i,j,k,n) + acmpbot; 
         }                                           
 }
@@ -768,7 +768,7 @@ inline
 void 
 PeleC_plm_z(const int i, const int j, const int k, 
     amrex::Array4<amrex::Real> const& qm         , amrex::Array4<amrex::Real> const& qp,
-    amrex::Array4<const amrex::Real> const& slope, amrex::Array4<const amrex::Real> const& q,
+    amrex::Real const slope[QVAR], amrex::Array4<const amrex::Real> const& q,
     amrex::Real const cc, 
     amrex::Real const dz, amrex::Real const dt)
 {
@@ -785,12 +785,12 @@ PeleC_plm_z(const int i, const int j, const int k,
         amrex::Real rhoe  = q(i,j,k,QREINT); 
         amrex::Real enth  = ((rhoe+p)/rho)/cs; 
         
-        amrex::Real drho  = slope(i,j,k,QRHO); 
-        amrex::Real du    = slope(i,j,k,QU); 
-        amrex::Real dv    = slope(i,j,k,QV);
-        amrex::Real dw    = slope(i,j,k,QW);  
-        amrex::Real dp    = slope(i,j,k,QPRES); 
-        amrex::Real drhoe = slope(i,j,k,QREINT); 
+        amrex::Real drho  = slope[QRHO]; 
+        amrex::Real du    = slope[QU]; 
+        amrex::Real dv    = slope[QV];
+        amrex::Real dw    = slope[QW];  
+        amrex::Real dp    = slope[QPRES]; 
+        amrex::Real drhoe = slope[QREINT]; 
         
         amrex::Real alpham = 0.5e0*(dp/(rho*cc) - dv)*rho/cc; 
         amrex::Real alphap = 0.5e0*(dp/(rho*cc) + dv)*rho/cc; 
@@ -868,11 +868,11 @@ PeleC_plm_z(const int i, const int j, const int k,
             w = q(i,j,k,QW); 
             amrex::Real spzero; 
             spzero = w > 0 ? -1.e0 : w*dtdz; 
-            amrex::Real acmptop = 0.5e0*(-1.e0 - spzero)*slope(i,j,k,n); 
+            amrex::Real acmptop = 0.5e0*(-1.e0 - spzero)*slope[n]; 
             qp(i,j,k,n) = q(i,j,k,n) + acmptop;
 
             spzero = w >= 0 ? w*dtdz : 1.e0; 
-            amrex::Real acmpbot = 0.5e0*(1.e0 - spzero)*slope(i,j,k,n);  
+            amrex::Real acmpbot = 0.5e0*(1.e0 - spzero)*slope[n];  
             qm(i,j,k+1,n) = q(i,j,k,n) + acmpbot; 
         }                                           
 }
@@ -885,10 +885,9 @@ void
 PeleC_transx1(const int i, const int j, const int k,
         amrex::Array4<amrex::Real> const& qm        , amrex::Array4<amrex::Real> const& qp,
         amrex::Array4<const amrex::Real> const& qym , amrex::Array4<const amrex::Real> const& qyp,
-        amrex::Array4<const amrex::Real> const& flxx, amrex::Array4<const amrex::Real> const& srcQ,
+        amrex::Array4<const amrex::Real> const& flxx,
         amrex::Array4<const amrex::Real> const& qa  , amrex::Array4<const amrex::Real> const& qint,
-        amrex::Array4<const amrex::Real> const& a1  , amrex::Array4<const amrex::Real> const& vol,
-        const amrex::Real hdt, const amrex::Real cdtdx)
+        const amrex::Real cdtdx)
 {
         //  Local variables to avoid reading from global memory too much 
         amrex::Real compn, rr, rrnew, compo, rwr, c;
@@ -1003,10 +1002,9 @@ void
 PeleC_transy1(const int i, const int j, const int k,
      amrex::Array4<amrex::Real> const& qm, amrex::Array4<amrex::Real> const& qp, 
      amrex::Array4<const amrex::Real> const& qxm, amrex::Array4<const amrex::Real> const& qxp, 
-     amrex::Array4<const amrex::Real> const& flxy, amrex::Array4<const amrex::Real> const& srcQ, 
+     amrex::Array4<const amrex::Real> const& flxy, 
      amrex::Array4<const amrex::Real> const& qa,  amrex::Array4<const amrex::Real> const& qint,
-     amrex::Array4<const amrex::Real> const& a1, amrex::Array4<const amrex::Real> const& vol,
-     const amrex::Real hdt, const amrex::Real cdtdy) 
+     const amrex::Real cdtdy) 
 {
 
         amrex::Real compn, rr, rrnew, compo, rwr, c; 
@@ -1018,16 +1016,12 @@ PeleC_transy1(const int i, const int j, const int k,
         //  Local variables to avoid reading from global memory too much 
         amrex::Real dup, pav, du, pnewr, pnewl;
         amrex::Real flxrho, flxu, flxv, flxw, flxe;
-        amrex::Real srcr, srce, srcp;  
 
         flxrho = cdtdy*(flxy(i,j+1,k,URHO)  - flxy(i,j,k,URHO));
         flxu   = cdtdy*(flxy(i,j+1,k,UMX)   - flxy(i,j,k,UMX)); 
         flxv   = cdtdy*(flxy(i,j+1,k,UMY)   - flxy(i,j,k,UMY)); 
         flxw   = cdtdy*(flxy(i,j+1,k,UMZ)   - flxy(i,j,k,UMZ)); 
         flxe   = cdtdy*(flxy(i,j+1,k,UEDEN) - flxy(i,j,k,UEDEN));  
-        srcr   = srcQ(i,j,k,QRHO); 
-        srce   = srcQ(i,j,k,QREINT);
-        srcp   = srcQ(i,j,k,QPRES);
         c      = qa(i,j,k,QGAMC);  
 // ---------------------------  Update Passive Variables ------------------
         for (int ipass = 0; ipass < npassive; ++ipass){
@@ -1127,10 +1121,9 @@ void
 PeleC_transx2(const int i, const int j, const int k,
         amrex::Array4<amrex::Real> const& qm        , amrex::Array4<amrex::Real> const& qp,
         amrex::Array4<const amrex::Real> const& qzm , amrex::Array4<const amrex::Real> const& qzp,
-        amrex::Array4<const amrex::Real> const& flxx, amrex::Array4<const amrex::Real> const& srcQ,
+        amrex::Array4<const amrex::Real> const& flxx, 
         amrex::Array4<const amrex::Real> const& qa  , amrex::Array4<const amrex::Real> const& qint,
-        amrex::Array4<const amrex::Real> const& a1  , amrex::Array4<const amrex::Real> const& vol,
-        const amrex::Real hdt, const amrex::Real cdtdx)
+        const amrex::Real cdtdx)
 {
         //  Local variables to avoid reading from global memory too much 
         amrex::Real compn, rr, rrnew, compo, rwr, c;
@@ -1245,10 +1238,9 @@ void
 PeleC_transy2(const int i, const int j, const int k,
         amrex::Array4<amrex::Real> const& qm        , amrex::Array4<amrex::Real> const& qp,
         amrex::Array4<const amrex::Real> const& qzm , amrex::Array4<const amrex::Real> const& qzp,
-        amrex::Array4<const amrex::Real> const& flxy, amrex::Array4<const amrex::Real> const& srcQ,
+        amrex::Array4<const amrex::Real> const& flxy,
         amrex::Array4<const amrex::Real> const& qa  , amrex::Array4<const amrex::Real> const& qint,
-        amrex::Array4<const amrex::Real> const& a1  , amrex::Array4<const amrex::Real> const& vol,
-        const amrex::Real hdt, const amrex::Real cdtdy)
+        const amrex::Real cdtdy)
 {
         //  Local variables to avoid reading from global memory too much 
         amrex::Real compn, rr, rrnew, compo, rwr, c;
@@ -1361,10 +1353,9 @@ void
 PeleC_transz1(const int i, const int j, const int k,
      amrex::Array4<amrex::Real> const& qm, amrex::Array4<amrex::Real> const& qp, 
      amrex::Array4<const amrex::Real> const& qxm, amrex::Array4<const amrex::Real> const& qxp, 
-     amrex::Array4<const amrex::Real> const& flxz, amrex::Array4<const amrex::Real> const& srcQ, 
+     amrex::Array4<const amrex::Real> const& flxz, 
      amrex::Array4<const amrex::Real> const& qa,  amrex::Array4<const amrex::Real> const& qint,
-     amrex::Array4<const amrex::Real> const& a1, amrex::Array4<const amrex::Real> const& vol,
-     const amrex::Real hdt, const amrex::Real cdtdz) 
+     const amrex::Real cdtdz) 
 {
 
         amrex::Real compn, rr, rrnew, compo, rwr, c; 
@@ -1376,16 +1367,12 @@ PeleC_transz1(const int i, const int j, const int k,
         //  Local variables to avoid reading from global memory too much 
         amrex::Real dup, pav, du, pnewr, pnewl;
         amrex::Real flxrho, flxu, flxv, flxw, flxe; 
-        amrex::Real srcr, srce, srcp; 
 
         flxrho = cdtdz*(flxz(i,j,k+1,URHO)  - flxz(i,j,k,URHO));
         flxu   = cdtdz*(flxz(i,j,k+1,UMX)   - flxz(i,j,k,UMX)); 
         flxv   = cdtdz*(flxz(i,j,k+1,UMY)   - flxz(i,j,k,UMY)); 
         flxw   = cdtdz*(flxz(i,j,k+1,UMZ)   - flxz(i,j,k,UMZ)); 
         flxe   = cdtdz*(flxz(i,j,k+1,UEDEN) - flxz(i,j,k,UEDEN));  
-        srcr   = srcQ(i,j,k,QRHO); 
-        srce   = srcQ(i,j,k,QREINT);
-        srcp   = srcQ(i,j,k,QPRES);
         c      = qa(i,j,k,QGAMC);  
 // ---------------------------  Update Passive Variables ------------------
         for (int ipass = 0; ipass < npassive; ++ipass){
@@ -1485,10 +1472,9 @@ void
 PeleC_transz2(const int i, const int j, const int k,
         amrex::Array4<amrex::Real> const& qm        , amrex::Array4<amrex::Real> const& qp,
         amrex::Array4<const amrex::Real> const& qym , amrex::Array4<const amrex::Real> const& qyp,
-        amrex::Array4<const amrex::Real> const& flxz, amrex::Array4<const amrex::Real> const& srcQ,
+        amrex::Array4<const amrex::Real> const& flxz,
         amrex::Array4<const amrex::Real> const& qa  , amrex::Array4<const amrex::Real> const& qint,
-        amrex::Array4<const amrex::Real> const& a1  , amrex::Array4<const amrex::Real> const& vol,
-        const amrex::Real hdt, const amrex::Real cdtdz)
+        const amrex::Real cdtdz)
 {
         //  Local variables to avoid reading from global memory too much 
         amrex::Real compn, rr, rrnew, compo, rwr, c;

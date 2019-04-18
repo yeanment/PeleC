@@ -46,8 +46,6 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qpfab(bxg1, QVAR);
     auto const& qm = qmfab.array(); 
     auto const& qp = qpfab.array();  
-    AsyncFab slope(bxg2, QVAR);
-    auto const& slarr = slope.array();
 
 //===================== X data  ===================================
 
@@ -80,24 +78,23 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 
 
     AMREX_PARALLEL_FOR_3D (bxg2,i,j,k, {
+        amrex::Real slope[QVAR];
 //===================== X slopes ===================================
-        for(int n = 0; n < QVAR; ++n) 
-            PeleC_slope_x(i,j,k,n, slarr, q);
+        for(int n = 0; n < QVAR; ++n)
+           slope[n] = PeleC_slope_x(i,j,k,n,q);
 //==================== X interp ====================================
-        PeleC_plm_x(i, j, k, qxmarr, qxparr, slarr, q, qaux(i,j,k,QC), 
-                  dx, dt);
+        PeleC_plm_x(i, j, k, qxmarr, qxparr, slope, q, qaux(i,j,k,QC), dx, dt);
 //==================== Y slopes ====================================
-        for(int n = 0; n < QVAR; n++) 
-            PeleC_slope_y(i, j, k, n, slarr, q);
+        for(int n = 0; n < QVAR; n++)
+            slope[n] =  PeleC_slope_y(i, j, k, n, q);
 //==================== Y interp ====================================
-        PeleC_plm_y(i,j,k, qymarr, qyparr, slarr, q, qaux(i,j,k,QC), 
-                    dy, dt);
+        PeleC_plm_y(i,j,k, qymarr, qyparr, slope, q, qaux(i,j,k,QC),dy, dt);
 //===================== Z slopes ===================================
-      for(int n = 0; n < QVAR; ++n) 
-        PeleC_slope_z(i,j,k,n, slarr, q);
+        for(int n = 0; n < QVAR; ++n)
+            slope[n] = PeleC_slope_z(i,j,k,n, q);
 //==================== Z interp ====================================
-      PeleC_plm_z(i, j, k, qzmarr, qzparr, slarr, q, qaux(i,j,k,QC), 
-                   dz, dt);
+        PeleC_plm_z(i, j, k, qzmarr, qzparr, slope, q, qaux(i,j,k,QC), dz, dt);
+
     }); 
 
 //===================== X initial fluxes ===========================
@@ -151,12 +148,12 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (txbx, i,j,k, {
 // ----------------- X|Y ------------------------------------------
         PeleC_transy1(i,j,k, qmxy, qpxy, qxmarr, qxparr, fyarr,
-                     srcQ, qaux, gdtempy, a2, vol, hdt, cdtdy);
+                      qaux, gdtempy, cdtdy);
 
 
 // ---------------- X|Z ------------------------------------------
         PeleC_transz1(i,j,k, qmxz, qpxz, qxmarr, qxparr, fzarr,
-                     srcQ, qaux, gdtempz, a3, vol, hdt, cdtdz);
+                      qaux, gdtempz, cdtdz);
 
    });
 
@@ -197,11 +194,11 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (tybx, i, j , k, {
 //--------------------- Y|X -------------------------------------
         PeleC_transx1(i,j,k, qmyx, qpyx, qymarr, qyparr, fxarr,
-                     srcQ, qaux, gdtempx, a1, vol, hdt, cdtdx); 
+                      qaux, gdtempx, cdtdx); 
 
 //--------------------- Y|Z ------------------------------------              
         PeleC_transz2(i,j,k, qmyz, qpyz, qymarr, qyparr, fzarr, 
-                     srcQ, qaux, gdtempz, a3, vol, hdt, cdtdz); 
+                      qaux, gdtempz, cdtdz); 
     }); 
 
 //===================== Riemann problem Y|X Y|Z  ====================
@@ -242,11 +239,11 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AMREX_PARALLEL_FOR_3D (tzbx, i, j , k, {
 //------------------- Z|X -------------------------------------
         PeleC_transx2(i,j,k, qmzx, qpzx, qzmarr, qzparr, fxarr,
-                     srcQ, qaux, gdtempx, a1, vol, hdt, cdtdx);
+                      qaux, gdtempx, cdtdx);
 
 //------------------- Z|Y -------------------------------------                
         PeleC_transy2(i,j,k, qmzy, qpzy, qzmarr, qzparr, fyarr, 
-                     srcQ, qaux, gdtempy, a2, vol, hdt, cdtdy); 
+                      qaux, gdtempy,cdtdy); 
     }); 
 //===================== Riemann problem Z|X Z|Y  ====================
     

@@ -750,11 +750,12 @@ void cmpTemp(const int i, const int j, const int k, amrex::Array4<amrex::Real> c
     amrex::Real rhoInv = 1.0/ rho; 
     eos_state.rho = rho; 
     eos_state.T = State(i,j,k,UTEMP); 
-    eos_state.e = State(i,j,k,UEINT)*rhoInv; 
+    eos_state.e = State(i,j,k,UEINT)*rhoInv;
+#pragma unroll  
     for(int n = 0; n < NUM_SPECIES; ++n){
          eos_state.massfrac[n] = State(i,j,k,UFS+n)*rhoInv;
     }
-     
+#pragma unroll      
     for(int n = 0; n < NUM_AUXILIARY; ++n) eos_state.aux[n] = State(i,j,k,UFX+n)*rhoInv; 
     
     eos_state.eos_re(); 
