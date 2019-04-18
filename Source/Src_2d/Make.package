@@ -5,6 +5,7 @@ else
 endif
 F90EXE_sources += grad_utils_$(DIM)d.F90
 
+ifeq ($(USE_CUDA), FALSE) 
 ifeq ($(HYP_TYPE), MOL)
   #F90EXE_sources += PeleC_mol_$(DIM)d.F90
   f90EXE_sources += slope_mol_$(DIM)d_EB.f90
@@ -21,6 +22,7 @@ endif
 
 F90EXE_sources += riemann_$(DIM)d.F90 
 F90EXE_sources += advection_util_$(DIM)d.F90 
+endif
 
 F90EXE_sources += impose_NSCBC_$(DIM)d.F90 
 f90EXE_sources += set_bc_mask_$(DIM)d.f90 

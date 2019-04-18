@@ -14,7 +14,10 @@ f90EXE_sources += sums_nd.f90
 F90EXE_sources += timestep.F90
 F90EXE_sources += Derive_nd.F90
 F90EXE_sources += problem_derive_nd.F90
+
+ifeq ($(USE_CUDA), FALSE) 
 F90EXE_sources += riemann_util.F90
+endif 
 
 F90EXE_sources += flatten_nd.F90
 
