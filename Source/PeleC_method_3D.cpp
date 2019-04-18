@@ -49,22 +49,59 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab slope(bxg2, QVAR);
     auto const& slarr = slope.array();
 
-//===================== X slopes ===================================
+//===================== X data  ===================================
+
     int cdir = 0; 
     const Box& xmbx = growHi(bxg2, cdir, 1); 
     AsyncFab qxm(xmbx, QVAR); 
     AsyncFab qxp(bxg2, QVAR);
     auto const& qxmarr = qxm.array(); 
-    auto const& qxparr = qxp.array(); 
-    AMREX_PARALLEL_FOR_3D (bxg2,i,j,k, { 
+    auto const& qxparr = qxp.array();
+
+//===================== Y data  ===================================
+
+    cdir = 1; 
+    const Box& yflxbx = surroundingNodes(grow(bxg2, cdir, -1) ,cdir); 
+    const Box& ymbx = growHi(bxg2, cdir, 1); 
+    AsyncFab qym(ymbx, QVAR);
+    AsyncFab qyp(bxg2, QVAR);
+    auto const& qymarr = qym.array(); 
+    auto const& qyparr = qyp.array();  
+
+//===================== Z data  ===================================
+
+    cdir = 2; 
+    const Box& zmbx = growHi(bxg2, cdir, 1); 
+    const Box& zflxbx = surroundingNodes(grow(bxg2,cdir, -1),cdir);
+    AsyncFab qzm(zmbx, QVAR); 
+    AsyncFab qzp(bxg2, QVAR);
+    auto const& qzmarr = qzm.array(); 
+    auto const& qzparr = qzp.array();
+
+
+    AMREX_PARALLEL_FOR_3D (bxg2,i,j,k, {
+//===================== X slopes ===================================
         for(int n = 0; n < QVAR; ++n) 
             PeleC_slope_x(i,j,k,n, slarr, q);
 //==================== X interp ====================================
         PeleC_plm_x(i, j, k, qxmarr, qxparr, slarr, q, qaux(i,j,k,QC), 
                   dx, dt);
+//==================== Y slopes ====================================
+        for(int n = 0; n < QVAR; n++) 
+            PeleC_slope_y(i, j, k, n, slarr, q);
+//==================== Y interp ====================================
+        PeleC_plm_y(i,j,k, qymarr, qyparr, slarr, q, qaux(i,j,k,QC), 
+                    dy, dt);
+//===================== Z slopes ===================================
+      for(int n = 0; n < QVAR; ++n) 
+        PeleC_slope_z(i,j,k,n, slarr, q);
+//==================== Z interp ====================================
+      PeleC_plm_z(i, j, k, qzmarr, qzparr, slarr, q, qaux(i,j,k,QC), 
+                   dz, dt);
     }); 
 
 //===================== X initial fluxes ===========================
+    cdir = 0; 
     const Box& xflxbx = surroundingNodes(grow(bxg2, cdir, -1), cdir); 
     AsyncFab fx(xflxbx, NVAR);
     auto const& fxarr = fx.array(); 
@@ -75,22 +112,9 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
         PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, gdtempx, qaux, cdir);
     });
 
-//==================== Y slopes ====================================
-    cdir = 1; 
-    const Box& yflxbx = surroundingNodes(grow(bxg2, cdir, -1) ,cdir); 
-    const Box& ymbx = growHi(bxg2, cdir, 1); 
-    AsyncFab qym(ymbx, QVAR);
-    AsyncFab qyp(bxg2, QVAR);
-    auto const& qymarr = qym.array(); 
-    auto const& qyparr = qyp.array();  
-    AMREX_PARALLEL_FOR_3D (bxg2, i, j, k,{
-        for(int n = 0; n < QVAR; n++) 
-            PeleC_slope_y(i, j, k, n, slarr, q);
-//==================== Y interp ====================================
-        PeleC_plm_y(i,j,k, qymarr, qyparr, slarr, q, qaux(i,j,k,QC), 
-                    dy, dt);
-    });  
 //===================== Y initial fluxes ===========================
+    cdir = 1; 
+
     AsyncFab fy(yflxbx, NVAR); 
     auto const& fyarr = fy.array();
     AsyncFab qgdy(yflxbx, NGDNV); 
@@ -99,25 +123,8 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
         PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qymarr, qyparr, fyarr, gdtempy, qaux, cdir); 
     }); 
 
-//===================== Z slopes ===================================
-    cdir = 2; 
-
-    const Box& zmbx = growHi(bxg2, cdir, 1); 
-    const Box& zflxbx = surroundingNodes(grow(bxg2,cdir, -1),cdir);
-    AsyncFab qzm(zmbx, QVAR); 
-    AsyncFab qzp(bxg2, QVAR);
-    auto const& qzmarr = qzm.array(); 
-    auto const& qzparr = qzp.array();
-
- 
-    AMREX_PARALLEL_FOR_3D (bxg2, i,j,k,{ 
-      for(int n = 0; n < QVAR; ++n) 
-        PeleC_slope_z(i,j,k,n, slarr, q);
-//==================== Z interp ====================================
-      PeleC_plm_z(i, j, k, qzmarr, qzparr, slarr, q, qaux(i,j,k,QC), 
-                   dz, dt);
-    }); 
 //===================== Z initial fluxes ===========================
+    cdir = 2; 
     AsyncFab fz(zflxbx, NVAR);
     auto const& fzarr = fz.array(); 
     AsyncFab qgdz(zflxbx, NGDNV); 
