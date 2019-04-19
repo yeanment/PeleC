@@ -92,7 +92,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	int is_finest_level = (level == finest_level) ? 1 : 0;
 	const int*  domain_lo = geom.Domain().loVect();
 	const int*  domain_hi = geom.Domain().hiVect();
-	for (MFIter mfi(S_new,hydro_tile_size); mfi.isValid(); ++mfi)
+    for (MFIter mfi(S_new,TilingIfNotGPU()); mfi.isValid(); ++mfi) 	
 	{
 
         BL_PROFILE_VAR("umdrv_alloc", ualloc); 
