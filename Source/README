@@ -23,3 +23,28 @@ An EOS object was constructed in PeleC to call Fuego Functions Directly.
 It is constructed assuming a LiDryer format. This will need to be generalized 
 to use other ChemKin models as well as Real Gases. This Object is defined and 
 implemented in PeleC_EOS.H and PeleC_EOS.cpp. 
+
+Many C++ routines use indexing data from PeleC_index_macros.H, this header contains 
+macros for the usual Fortran Indexes (i.e URHO, UMX, etc). 
+
+In the PeleC class, some routines were changed, including computeTemp, and estdt. 
+computeTemp now is launched via a kernel and estdt is done using MultiFab::reduce. 
+
+The hydro routines were converted to device functions and are launched using the 
+AMREX_PARALLEL_FOR_3D lambda function. Here is an example: 
+
+const box& = mfi.tilbox(); 
+Gpu::AsyncFab q(box, NVAR);  // Asynchronous FAB for GPU streams (is just regular FAB when USE_CUDA=FALSE)
+auto const& qarr = q.array(); // Returns a much simpler object than FAB, indexed like fortran i.e. qarr(i,j,k,n); 
+
+AMREX_PARALLEL_FOR_3D(box, i, j, k, 
+	{
+		My_device_function(i,j,k,qarr); 
+	}); 
+
+Here My_device_function is a AMREX_GPU_DEVICE function that manipulates data from q. 
+AMREX_PARALLEL_FOR_3D is a lambda that launches a kernel over box for indicies i, j, k. 
+My_device_function is called for each i,j,k when the kernel is launched. 
+When USE_CUDA=FALSE, this returns a regular for loop. 
+
+Using this method, we make My_device_function inline, reducing overhead and runtime.  
