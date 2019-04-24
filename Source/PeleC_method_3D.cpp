@@ -42,10 +42,6 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 //    auto const& bcMaskarr = bcMask.array();
     const Box& bxg1 = grow(bx, 1); 
     const Box& bxg2 = grow(bx, 2);
-    AsyncFab qmfab(bxg2, QVAR); 
-    AsyncFab qpfab(bxg1, QVAR);
-    auto const& qm = qmfab.array(); 
-    auto const& qp = qpfab.array();  
 
 //===================== X data  ===================================
 
@@ -76,7 +72,8 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     auto const& qzmarr = qzm.array(); 
     auto const& qzparr = qzp.array();
 
-
+/* Put the PLM and slopes in the same kernel launch to avoid unnecessary launch overhead */ 
+/* Pelec_Slope_* are SIMD as well as PeleC_plm_* which loop over the same box */
     AMREX_PARALLEL_FOR_3D (bxg2,i,j,k, {
         amrex::Real slope[QVAR];
 //===================== X slopes ===================================
@@ -94,9 +91,10 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
             slope[n] = PeleC_slope_z(i,j,k,n, q);
 //==================== Z interp ====================================
         PeleC_plm_z(i, j, k, qzmarr, qzparr, slope, q, qaux(i,j,k,QC), dz, dt);
-
     }); 
 
+
+/* These are the first flux estimates as per the corner-transport-upwind method */ 
 //===================== X initial fluxes ===========================
     cdir = 0; 
     const Box& xflxbx = surroundingNodes(grow(bxg2, cdir, -1), cdir); 
@@ -177,6 +175,13 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmxz, qpxz, flxz, qxz, qaux, cdir); 
     }); 
 
+/* Free first transverse states as they are no longer used */ 
+   qxym.clear(); 
+   qxyp.clear(); 
+   qxzm.clear(); 
+   qxzp.clear(); 
+/* ------------------------------------------------------- */ 
+
 //===================== Y interface corrections ====================
 
     cdir = 1; 
@@ -222,6 +227,13 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmyz , qpyz , flyz, qyz, qaux, cdir); 
     });
 
+/* Free first transverse states as they are no longer used */ 
+   qyxm.clear(); 
+   qyxp.clear(); 
+   qyzm.clear(); 
+   qyzp.clear(); 
+/* ------------------------------------------------------- */ 
+
 //===================== Z interface corrections ====================
 
     cdir = 2; 
@@ -265,6 +277,28 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_cmpflx(i,j,k, bclz, bchz, dlz, dhz, qmzy, qpzy, flzy, qzy, qaux, cdir); 
     });
 
+/* Free first transverse states as they are no longer used */ 
+   qzxm.clear(); 
+   qzxp.clear(); 
+   qzym.clear(); 
+   qzyp.clear(); 
+/* ------------------------------------------------------- */ 
+
+
+/* Clear First fluxes and Godunov AsyncFabs to free some GPU memory */ 
+    fx.clear(); 
+    fy.clear(); 
+    fz.clear(); 
+    qgdx.clear(); 
+    qgdy.clear(); 
+    qgdz.clear(); 
+/* -------------------------------------------------------- */ 
+
+    AsyncFab qmfab(bxg2, QVAR); 
+    AsyncFab qpfab(bxg1, QVAR);
+    auto const& qm = qmfab.array(); 
+    auto const& qp = qpfab.array();  
+
 //==================== X| Y&Z ======================================
     cdir = 0;   
     const Box& xfxbx = surroundingNodes(bx, cdir);
@@ -297,10 +331,6 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const Box& txybx = grow(bx, cdir, 1); 
     AMREX_PARALLEL_FOR_3D ( txybx, i, j, k, { 
         PeleC_transxy(i,j,k, qm, qp, qzmarr, qzparr, flxy, flyx, qxy, qyx, qaux, srcQ, hdt, hdtdx, hdtdy);
-/*        for(int n = 0; n < QVAR; n++){
-            qm(i,j,k+1,n) = qzmarr(i,j,k+1,n); 
-            qp(i,j,k,n) = qzparr(i,j,k,n);
-        }  */
     }); 
 
 //============== Final Z flux ======================================
