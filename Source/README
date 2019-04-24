@@ -1,0 +1,25 @@
+This is a README for GPU Changes and Hacks. 
+
+A most notable change has been the translation of Fortran to C++ for all hydro routines 
+(except the NSCBC). 
+
+Only certain functionality was retained, and there is much todo: 
+- PLM is implemented not PPM 
+- There is no option for hybrid Riemann Solver 
+- Riemann MD and Riemann US are implemented (Not HLLC) 
+- Pslope is not implemented 
+- PPM_TEMP_FIX is set to 0 
+- ppm_trace_sources is set to 0 
+- Density and rhoe are not reset in the transverse routines 
+- Transverse routines do not use EOS 
+- Flattening is not being used 
+- Fluxes are not limited on small dens 
+- Grid losses are not being tracked 
+The Hydro Routines are located in PeleC_meth_$(DIM)D.H/cpp. 
+Further umdrv functions are located in PeleC_K.H/cpp. 
+
+
+An EOS object was constructed in PeleC to call Fuego Functions Directly. 
+It is constructed assuming a LiDryer format. This will need to be generalized 
+to use other ChemKin models as well as Real Gases. This Object is defined and 
+implemented in PeleC_EOS.H and PeleC_EOS.cpp. 
