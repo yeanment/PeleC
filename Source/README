@@ -33,7 +33,7 @@ computeTemp now is launched via a kernel and estdt is done using MultiFab::reduc
 The hydro routines were converted to device functions and are launched using the 
 AMREX_PARALLEL_FOR_3D lambda function. Here is an example: 
 
-const box& = mfi.tilbox(); 
+const box& = mfi.tilebox(); 
 Gpu::AsyncFab q(box, NVAR);  // Asynchronous FAB for GPU streams (is just regular FAB when USE_CUDA=FALSE)
 auto const& qarr = q.array(); // Returns a much simpler object than FAB, indexed like fortran i.e. qarr(i,j,k,n); 
 
@@ -47,4 +47,22 @@ AMREX_PARALLEL_FOR_3D is a lambda that launches a kernel over box for indicies i
 My_device_function is called for each i,j,k when the kernel is launched. 
 When USE_CUDA=FALSE, this returns a regular for loop. 
 
-Using this method, we make My_device_function inline, reducing overhead and runtime.  
+Using this method, we make My_device_function inline, reducing overhead and runtime. 
+
+When functions are independent but loop over the same box, an effort has been made to combine launches.
+This reduces launch overhead. Suppose that we have two AMREX_GPU_DEVICE functions that use data from an 
+array, S, but produce two arrays that do not depend on eachother. Then the implementation would look like this: 
+
+const box& = mfi.tilebox(); 
+Gpu::AsyncFab sfab(box, NVAR);  
+auto const& s = sfab.array(); 
+Gpu::AsyncFab fab1(box, QVAR); 
+Gpu::AsyncFab fab2(box, QVAR); 
+auto const& q1 = fab1.array(); 
+auto const& q2 = fab2.array(); 
+
+AMREX_PARALLEL_FOR_3D(box, i, j, k,
+	{
+		dev_fun1(i,j,k,q1,s); 
+		dev_fun2(i,j,k,q2,s); 
+	}); 
