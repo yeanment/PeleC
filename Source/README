@@ -21,8 +21,14 @@ Further umdrv functions are located in PeleC_K.H/cpp.
 
 An EOS object was constructed in PeleC to call Fuego Functions Directly. 
 It is constructed assuming a LiDryer format. This will need to be generalized 
-to use other ChemKin models as well as Real Gases. This Object is defined and 
+to use other ChemKin models as well as Real Gases. This object is defined and 
 implemented in PeleC_EOS.H and PeleC_EOS.cpp. 
+
+The EOS object behaves much like the original eos_t in PelePhysics, and has member functions 
+such as EOS::eos_rp() and EOS::eos_re().These functions call CK functions directly, where the CK functions 
+have a modified declaration, as to be available both on the host and the device. 
+ This is not an exhaustive list of eos functions that will need to be implemented. 
+In the future, this EOS class may be removed from PeleC and merged into PelePhysics. 
 
 Many C++ routines use indexing data from PeleC_index_macros.H, this header contains 
 macros for the usual Fortran Indexes (i.e URHO, UMX, etc). 
@@ -65,4 +71,7 @@ AMREX_PARALLEL_FOR_3D(box, i, j, k,
 	{
 		dev_fun1(i,j,k,q1,s); 
 		dev_fun2(i,j,k,q2,s); 
-	}); 
+	});
+
+One can see the amrex/Tutorials/GPU/
+folder for more examples and Tutorials.  
