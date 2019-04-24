@@ -175,12 +175,6 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmxz, qpxz, flxz, qxz, qaux, cdir); 
     }); 
 
-/* Free first transverse states as they are no longer used */ 
-   qxym.clear(); 
-   qxyp.clear(); 
-   qxzm.clear(); 
-   qxzp.clear(); 
-/* ------------------------------------------------------- */ 
 
 //===================== Y interface corrections ====================
 
@@ -227,12 +221,6 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmyz , qpyz , flyz, qyz, qaux, cdir); 
     });
 
-/* Free first transverse states as they are no longer used */ 
-   qyxm.clear(); 
-   qyxp.clear(); 
-   qyzm.clear(); 
-   qyzp.clear(); 
-/* ------------------------------------------------------- */ 
 
 //===================== Z interface corrections ====================
 
@@ -277,22 +265,6 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_cmpflx(i,j,k, bclz, bchz, dlz, dhz, qmzy, qpzy, flzy, qzy, qaux, cdir); 
     });
 
-/* Free first transverse states as they are no longer used */ 
-   qzxm.clear(); 
-   qzxp.clear(); 
-   qzym.clear(); 
-   qzyp.clear(); 
-/* ------------------------------------------------------- */ 
-
-
-/* Clear First fluxes and Godunov AsyncFabs to free some GPU memory */ 
-    fx.clear(); 
-    fy.clear(); 
-    fz.clear(); 
-    qgdx.clear(); 
-    qgdy.clear(); 
-    qgdz.clear(); 
-/* -------------------------------------------------------- */ 
 
     AsyncFab qmfab(bxg2, QVAR); 
     AsyncFab qpfab(bxg1, QVAR);
