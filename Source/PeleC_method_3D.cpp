@@ -142,7 +142,10 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qxzm(txbxm, QVAR); 
     AsyncFab qxzp(txbx , QVAR);
     auto const& qmxz = qxzm.array();
-    auto const& qpxz = qxzp.array();  
+    auto const& qpxz = qxzp.array(); 
+
+/* The first interface corrections are grouped by direction, as they utilize the same box. This 
+ * helps reduce launch overhead. */  
     AMREX_PARALLEL_FOR_3D (txbx, i,j,k, {
 // ----------------- X|Y ------------------------------------------
         PeleC_transy1(i,j,k, qmxy, qpxy, qxmarr, qxparr, fyarr,
@@ -167,6 +170,8 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
    auto const& qxz = gdvxzfab.array();  
 
 //===================== Riemann problem X|Y X|Z ====================
+/* The Interface corrected fluxes are grouped in the same launch, this 
+ * helps reduce launch overhead. */  
 
     AMREX_PARALLEL_FOR_3D (txfxbx, i,j,k, {     
 // -----------------  X|Y ---------------------------------------------------       

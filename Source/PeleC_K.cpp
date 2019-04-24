@@ -55,128 +55,13 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 
     BL_PROFILE_VAR("PeleC::umeth()", umeth); 
 #if AMREX_SPACEDIM == 1
-    PeleC_umeth_1D(bx, bclo, bchi, domlo, domhi,  q,  qaux, src_q, 
-                   bcMask, flux1, q1, pdivu, dx, dt);  
+    Abort("No 1D implementation!"); 
+/*    PeleC_umeth_1D(bx, bclo, bchi, domlo, domhi,  q,  qaux, src_q, 
+                   bcMask, flux1, q1, pdivu, dx, dt);  */ 
 #elif AMREX_SPACEDIM==2 
-/*    PeleC_umeth_2D(bx, bclo, bchi, domlo, domhi,q,  qaux, src_q,// bcMask, 
+    PeleC_umeth_2D(bx, bclo, bchi, domlo, domhi,q,  qaux, src_q,// bcMask, 
                    flux1, flux2, dloga,
-                   q1.array(), q2.array(), a1, a2, pdivuarr, vol, dx, dt); */ 
-
-// ================================= UMETH 2D ====================================  
-    amrex::Real const dtdx  = dt/delx; 
-    amrex::Real const hdtdx = 0.5*dtdx; 
-    amrex::Real const hdtdy = 0.5*dt/dely; 
-    amrex::Real const hdt   = 0.5*dt; 
-
-    const int bclx = bclo[0]; 
-    const int bcly = bclo[1]; 
-    const int bchx = bchi[0]; 
-    const int bchy = bchi[1]; 
-    const int dlx  = domlo[0]; 
-    const int dly  = domlo[1];     
-    const int dhx  = domhi[0]; 
-    const int dhy  = domhi[1]; 
-    auto const& q1arr = q1.array(); 
-    auto const& q2arr = q2.array(); 
-//    auto const& bcMaskarr = bcMask.array();
-    const Box& bxg1 = grow(bx, 1); 
-//    const Box& bxg2 = grow(bx, 2);
-    AsyncFab slope(bxg2, QVAR);
-    auto const& slarr = slope.array();
-
-//===================== X slopes ===================================
-    int cdir = 0; 
-    const Box& xslpbx = grow(bxg1, cdir, 1);
-
-    const Box& xmbx = growHi(xslpbx,0, 1); 
-    const Box& xflxbx = surroundingNodes(bxg1,cdir);
-    AMREX_PARALLEL_FOR_4D (xslpbx, QVAR, i,j,k,n, { 
-        PeleC_slope_x(i,j,k,n, slarr, q);
-    }); 
-//==================== X interp ====================================
-    AsyncFab qxm(xmbx, QVAR); 
-    AsyncFab qxp(xslpbx, QVAR);
-    auto const& qxmarr = qxm.array(); 
-    auto const& qxparr = qxp.array(); 
-   
-    AMREX_PARALLEL_FOR_3D (xslpbx,i,j,k, {
-      PeleC_plm_x(i, j, k, qxmarr, qxparr, slarr, q, qaux(i,j,k,QC), 
-                   dloga, delx, dt);
-    }); 
-
-//===================== X initial fluxes ===========================
-    AsyncFab fx(xflxbx, NVAR);
-    auto const& fxarr = fx.array(); 
-    AsyncFab qgdx(bxg2, NGDNV); 
-    auto const& gdtemp = qgdx.array(); 
-
-    AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, gdtemp, qaux, 0);
-    });
-
-//==================== Y slopes ====================================
-    cdir = 1; 
-    const Box& yflxbx = surroundingNodes(bxg1,cdir); 
-    const Box& yslpbx = grow(bxg1, cdir, 1);
-    const Box& ymbx = growHi(yslpbx, 1, 1); 
-    AsyncFab qym(ymbx, QVAR);
-    AsyncFab qyp(yslpbx, QVAR);
-    auto const& qymarr = qym.array(); 
-    auto const& qyparr = qyp.array();  
-    AMREX_PARALLEL_FOR_4D (yslpbx, QVAR, i, j, k, n,{
-        PeleC_slope_y(i, j, k, n, slarr, q);
-    });
-
-//==================== Y interp ====================================
-    AMREX_PARALLEL_FOR_3D (yslpbx, i,j,k, {
-        PeleC_plm_y(i,j,k, qymarr, qyparr, slarr, q, qaux(i,j,k,QC), 
-                    dely, dt);
-    });
- 
-//===================== Y initial fluxes ===========================
-    AsyncFab fy(yflxbx, NVAR); 
-    auto const& fyarr = fy.array();
-    AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
-        PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qymarr, qyparr, fyarr, q2arr, qaux, 1); 
-    }); 
-
-//===================== X interface corrections ====================
-    cdir = 0;
-    AsyncFab qm(bxg2, QVAR); 
-    AsyncFab qp(bxg1, QVAR);
-    const Box& tybx = grow(bx, cdir, 1);
-    auto const& qmarr = qm.array();
-    auto const& qparr = qp.array();  
-    AMREX_PARALLEL_FOR_3D (tybx, i,j,k, {
-        PeleC_transy(i,j,k, qmarr, qparr, qxmarr, qxparr, fyarr,
-                     src_q, qaux, q2arr, a2, vol, hdt, hdtdy);
-   });
- 
-//===================== Final Riemann problem X ====================
-    const Box& xfxbx = surroundingNodes(bx, cdir);
-    AMREX_PARALLEL_FOR_3D (xfxbx, i,j,k, {      
-      PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmarr, qparr, flux1, q1arr, qaux,0); 
-    }); 
-
-//===================== Y interface corrections ====================
-    cdir = 1; 
-    const Box& txbx = grow(bx, cdir, 1);
-    AMREX_PARALLEL_FOR_3D (txbx, i, j , k, {
-        PeleC_transx(i,j,k, qmarr, qparr, qymarr, qyparr, fxarr,
-                     src_q, qaux, gdtemp, a1, vol, hdt, hdtdx);                
-    }); 
-//===================== Final Riemann problem Y ====================
-    
-    const Box& yfxbx = surroundingNodes(bx, cdir);
-    AMREX_PARALLEL_FOR_3D (yfxbx, i, j, k, {
-      PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmarr, qparr, flux2, q2arr, qaux, 1);
-    });
-
-//===================== Construct p div{U} =========================
-    AMREX_PARALLEL_FOR_3D (bx, i, j, k, {
-        PeleC_pdivu(i,j,k, pdivuarr, q1arr, q2arr, a1, a2, vol); 
-    });
-/* ======================== END UMETH2D =========================== */ 
+                   q1.array(), q2.array(), a1, a2, pdivuarr, vol, dx, dt); 
 #else
     auto const& q1arr = q1.array(); 
     auto const& q2arr = q2.array(); 
