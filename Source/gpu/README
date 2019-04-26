@@ -1,0 +1,81 @@
+This is a README for GPU Changes and Hacks. 
+
+A most notable change has been the translation of Fortran to C++ for all hydro routines 
+(except the NSCBC). 
+
+Only certain functionality was retained, and there is much todo: 
+- PLM is implemented not PPM 
+- There is no option for hybrid Riemann Solver 
+- Riemann MD and Riemann US are implemented (Not HLLC) 
+- Pslope is not implemented 
+- PPM_TEMP_FIX is set to 0 
+- ppm_trace_sources is set to 0 
+- Density and rhoe are not reset in the transverse routines 
+- Transverse routines do not use EOS 
+- Flattening is not being used 
+- Fluxes are not limited on small dens 
+- Grid losses are not being tracked 
+The Hydro Routines are located in PeleC_meth_$(DIM)D.H/cpp. 
+Further umdrv functions are located in PeleC_K.H/cpp. 
+
+
+An EOS object was constructed in PeleC to call Fuego Functions Directly. 
+It is constructed assuming a LiDryer format. This will need to be generalized 
+to use other ChemKin models as well as Real Gases. This object is defined and 
+implemented in PeleC_EOS.H and PeleC_EOS.cpp. 
+
+The EOS object behaves much like the original eos_t in PelePhysics, and has member functions 
+such as EOS::eos_rp() and EOS::eos_re().These functions call CK functions directly, where the CK functions 
+have a modified declaration, as to be available both on the host and the device. 
+ This is not an exhaustive list of eos functions that will need to be implemented. 
+In the future, this EOS class may be removed from PeleC and merged into PelePhysics. 
+
+Many C++ routines use indexing data from PeleC_index_macros.H, this header contains 
+macros for the usual Fortran Indexes (i.e URHO, UMX, etc). 
+
+In the PeleC class, some routines were changed, including computeTemp, and estdt. 
+computeTemp now is launched via a kernel and estdt is done using MultiFab::reduce. 
+
+The hydro routines were converted to device functions and are launched using the 
+AMREX_PARALLEL_FOR_3D lambda function. Here is an example: 
+
+const box& = mfi.tilebox(); 
+Gpu::AsyncFab q(box, NVAR);  // Asynchronous FAB for GPU streams (is just regular FAB when USE_CUDA=FALSE)
+auto const& qarr = q.array(); // Returns a much simpler object than FAB, indexed like fortran i.e. qarr(i,j,k,n); 
+//Using this object is less taxing for the GPU than passing the AsyncFab to the kernel.  
+
+AMREX_PARALLEL_FOR_3D(box, i, j, k, 
+	{
+		My_device_function(i,j,k,qarr); 
+	}); 
+
+Here My_device_function is a AMREX_GPU_DEVICE function that manipulates data from q. 
+AMREX_PARALLEL_FOR_3D is a lambda that launches a kernel over box for indicies i, j, k. 
+My_device_function is called for each i,j,k when the kernel is launched. 
+When USE_CUDA=FALSE, this returns a regular for loop. 
+
+We declare My_device_function as inline, reducing overhead and runtime. 
+
+When functions are concurrent but loop over the same box, an effort has been made to combine launches.
+This reduces launch overhead thus reducing run time. Suppose that we have two AMREX_GPU_DEVICE functions that 
+use data from an array, S, but produce two arrays that do not depend on eachother. 
+Then the implementation would look like this: 
+
+const box& = mfi.tilebox(); 
+Gpu::AsyncFab sfab(box, NVAR);  
+auto const& s = sfab.array(); 
+Gpu::AsyncFab fab1(box, QVAR); 
+Gpu::AsyncFab fab2(box, QVAR); 
+auto const& q1 = fab1.array(); 
+auto const& q2 = fab2.array(); 
+
+AMREX_PARALLEL_FOR_3D(box, i, j, k,
+	{
+		dev_fun1(i,j,k,q1,s); 
+		dev_fun2(i,j,k,q2,s); 
+	});
+
+This concept is used throughout PeleC_umeth, grouping many transverse correction routines. 
+
+One can see the amrex/Tutorials/GPU/
+folder for more examples and Tutorials.  
