@@ -116,7 +116,11 @@ INCLUDE_LOCATIONS += $(TOP)/Util/plot1d
 VPATH_LOCATIONS   += $(TOP)/Util/plot1d
 endif
 
-Bdirs   := Source Source/param_includes Source/Src_nd Source/Src_$(DIM)d Source/TurbInflow Source/gpu
+Bdirs   := Source Source/param_includes Source/Src_nd Source/Src_$(DIM)d Source/TurbInflow 
+
+ifeq ($(USE_CUDA), TRUE)
+  Bdirs += Source/gpu
+endif 
 
 ifeq ($(USE_EB), TRUE)
   Pdirs := Base EB Amr Boundary AmrCore F_Interfaces/Base
