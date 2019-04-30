@@ -454,7 +454,10 @@ PeleC::do_sdc_iteration (Real time,
   // Construct hydro source, will use old and current iterate of new sources.
   if (do_hydro)
   {
-    construct_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle);
+/*    if (do_gpu) 
+        construct_gpu_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycl, sub_iteration, sub_ncycle); 
+    else  */ 
+        construct_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle);
   }
 
   // Construct S_new with current iterate of all sources
