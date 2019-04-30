@@ -441,6 +441,11 @@ PeleC::do_sdc_iteration (Real time,
       BL_ASSERT(!do_mol_AD); // Currently this combo only managed through MOL integrator
       Real flux_factor_old = 0.5;
       getMOLSrcTerm(Sborder,*old_sources[diff_src],time,dt,flux_factor_old);
+/*
+      if (do_gpu){
+        getMOLSrcTerm(Sborder,*old_sources[diff_src],time,dt,flux_factor_old);
+      }
+*/  
     }
 
     // Initialize sources at t_new by copying from t_old

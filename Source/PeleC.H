@@ -440,7 +440,13 @@ public:
 
     void computeTemp (amrex::MultiFab& State, int ng);
 
-    void getMOLSrcTerm (const amrex::MultiFab& S,
+   void getMOLSrcTerm (const amrex::MultiFab& S,
+                        amrex::MultiFab&       MOLSrcTerm,
+                        amrex::Real time,
+                        amrex::Real                   dt,
+                        amrex::Real                   flux_factor);
+
+   void getMOLSrcTermGPU (const amrex::MultiFab& S,
                         amrex::MultiFab&       MOLSrcTerm,
                         amrex::Real time,
                         amrex::Real                   dt,
