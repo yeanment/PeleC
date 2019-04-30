@@ -41,6 +41,14 @@ use_reactions_work_estimate  int           0
 load_balance_verbosity       int           0
 
 #-----------------------------------------------------------------------------
+# category: Processor Type 
+#-----------------------------------------------------------------------------
+
+# this flag uses C++ based GPU routines instead of CPU 
+# If comiled with USE_CUDA FALSA, then uses C++ routines on CPU 
+do_gpu                       int           0
+
+#-----------------------------------------------------------------------------
 # category: hydrodynamics
 #-----------------------------------------------------------------------------
 

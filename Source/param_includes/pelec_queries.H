@@ -14,6 +14,7 @@ pp.query("do_reflux", do_reflux);
 pp.query("do_avg_down", do_avg_down);
 pp.query("use_reactions_work_estimate", use_reactions_work_estimate);
 pp.query("load_balance_verbosity", load_balance_verbosity);
+pp.query("do_gpu", do_gpu);
 pp.query("difmag", difmag);
 pp.query("small_dens", small_dens);
 pp.query("small_massfrac", small_massfrac);

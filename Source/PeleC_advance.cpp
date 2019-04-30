@@ -440,12 +440,13 @@ PeleC::do_sdc_iteration (Real time,
       }
       BL_ASSERT(!do_mol_AD); // Currently this combo only managed through MOL integrator
       Real flux_factor_old = 0.5;
-      getMOLSrcTerm(Sborder,*old_sources[diff_src],time,dt,flux_factor_old);
-/*
+
       if (do_gpu){
-        getMOLSrcTerm(Sborder,*old_sources[diff_src],time,dt,flux_factor_old);
+        getMOLSrcTermGPU(Sborder,*old_sources[diff_src],time,dt,flux_factor_old);
       }
-*/  
+        else
+          getMOLSrcTerm(Sborder,*old_sources[diff_src],time,dt,flux_factor_old);
+ 
     }
 
     // Initialize sources at t_new by copying from t_old
@@ -459,9 +460,9 @@ PeleC::do_sdc_iteration (Real time,
   // Construct hydro source, will use old and current iterate of new sources.
   if (do_hydro)
   {
-/*    if (do_gpu) 
+    if (do_gpu) 
         construct_gpu_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycl, sub_iteration, sub_ncycle); 
-    else  */ 
+    else  
         construct_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle);
   }
 
