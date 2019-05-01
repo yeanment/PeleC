@@ -461,7 +461,7 @@ PeleC::do_sdc_iteration (Real time,
   if (do_hydro)
   {
     if (do_gpu) 
-        construct_gpu_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycl, sub_iteration, sub_ncycle); 
+        construct_gpu_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle); 
     else  
         construct_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle);
   }

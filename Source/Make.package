@@ -2,9 +2,7 @@
 CEXE_sources += PeleC.cpp
 CEXE_sources += PeleC_advance.cpp
 
-ifneq ($(USE_CUDA), TRUE)
 CEXE_sources += PeleC_hydro.cpp
-endif
 
 CEXE_sources += PeleC_sources.cpp
 CEXE_sources += PeleC_setup.cpp

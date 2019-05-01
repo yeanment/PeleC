@@ -1,4 +1,5 @@
 #include <PeleC.H>
+#include <PeleC_F.H>
 
 using std::string;
 using namespace amrex;
@@ -12,10 +13,12 @@ using namespace amrex;
 #include <omp.h>
 #endif
 #include <PeleC_K.H>
+
 // **********************************************************************************************
 void
 PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
                      amrex::MultiFab&       MOLSrcTerm,
+                     amrex::Real            time,
                      amrex::Real            dt,
                      amrex::Real            flux_factor) {
   BL_PROFILE("PeleC::getMOLSrcTerm()");
@@ -111,13 +114,22 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #pragma omp parallel
 #endif
   {
-    FArrayBox coeff_cc, Dterm;
+    FArrayBox Qfab, Qaux, coeff_cc, Dterm;
+    IArrayBox bcMask[BL_SPACEDIM];
     FArrayBox coeff_ec[BL_SPACEDIM], flux_ec[BL_SPACEDIM],
       tander_ec[BL_SPACEDIM], flatn;
-    IArrayBox bcMask;
     FArrayBox dm_as_fine(Box::TheUnitBox(), NUM_STATE);
     FArrayBox fab_drho_as_crse(Box::TheUnitBox(), NUM_STATE);
     IArrayBox fab_rrflag_as_crse(Box::TheUnitBox());
+    
+
+    int flag_nscbc_isAnyPerio = (geom.isAnyPeriodic()) ? 1 : 0; 
+    int flag_nscbc_perio[BL_SPACEDIM]; // For 3D, we will know which corners have a periodicity
+    for (int d=0; d<BL_SPACEDIM; ++d) {
+        flag_nscbc_perio[d] = (Geometry::isPeriodic(d)) ? 1 : 0;
+    }
+	  const int*  domain_lo = geom.Domain().loVect();
+	  const int*  domain_hi = geom.Domain().hiVect();
 
     for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true));
          mfi.isValid(); ++mfi) {
@@ -130,9 +142,12 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       const Box  gbox = amrex::grow(vbox,ng);
       const Box  cbox = amrex::grow(vbox,ng-1);
       const Box& dbox = geom.Domain();
+      
+      const int* lo = vbox.loVect();
+	    const int* hi = vbox.hiVect();
 
 #ifdef PELE_USE_EB
-      const EBFArrayBox& Sfab = static_cast<const EBFArrayBox&>(&S[mfi]);
+      const EBFArrayBox& Sfab = static_cast<const EBFArrayBox&>(S[mfi]);
 
       const auto& flag_fab = Sfab.getEBCellFlagFab();
       FabType typ = flag_fab.getType(cbox);
@@ -142,7 +157,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         if (do_mol_load_balance) {
           wt = (ParallelDescriptor::second() - wt) / vbox.d_numPts();
 
-          (*cost[mfi]).plus(wt, vbox);
+          (*cost)[mfi].plus(wt, vbox);
         }
         continue;
       }
@@ -154,49 +169,76 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #endif
 
       BL_PROFILE_VAR_START(diff);
+      Qfab.resize(gbox, QVAR);
       int nqaux = NQAUX > 0 ? NQAUX : 1;
-
-      // Get primitives, Q, including (Y, T, p, rho) from conserved state
-      // required for D term
-
+      Qaux.resize(gbox, nqaux);
       Gpu::AsyncFab q(gbox, QVAR), qaux(gbox, nqaux); 
 
       auto const& s = S.array(mfi); 
       auto const& qar = q.array(); 
       auto const& qauxar = qaux.array(); 
 
-//      BL_PROFILE("PeleC::ctoprim call");
-      AMREX_PARALLEL_FOR_3D(gbox, i, j, k, 
-          {
-              PeleC_ctoprim(i,j,k, s, qar, qauxar);                  
-          });
-      Gpu::Device::streamSynchronize();
-
-      // Compute transport coefficients, coincident with Q
-      BL_PROFILE("PeleC::get_transport_coeffs call");
-      coeff_cc.resize(gbox, nCompTr);
-      get_transport_coeffs(ARLIM_3D(gbox.loVect()),
-                           ARLIM_3D(gbox.hiVect()),
-                           BL_TO_FORTRAN_N_3D(q.fab(), QFS),
-                           BL_TO_FORTRAN_N_3D(q.fab(), QTEMP),
-                           BL_TO_FORTRAN_N_3D(q.fab(), QRHO),
-                           BL_TO_FORTRAN_N_3D(coeff_cc, dComp_rhoD),
-                           BL_TO_FORTRAN_N_3D(coeff_cc, dComp_mu),
-                           BL_TO_FORTRAN_N_3D(coeff_cc, dComp_xi),
-                           BL_TO_FORTRAN_N_3D(coeff_cc, dComp_lambda));
+      // Get primitives, Q, including (Y, T, p, rho) from conserved state
+      // required for D term
+      {
+          BL_PROFILE("PeleC::ctoprim call");
+          AMREX_PARALLEL_FOR_3D(gbox, i, j, k, 
+              {
+                  PeleC_ctoprim(i,j,k, s, qar, qauxar);                  
+              });
+          Gpu::Device::streamSynchronize();
+      }
       
+      
+      
+      for (int i = 0; i < BL_SPACEDIM ; i++)  {
+		    const Box& bxtmp = amrex::surroundingNodes(vbox,i);
+        Box TestBox(bxtmp);
+        for(int d=0; d<BL_SPACEDIM; ++d) {
+          if (i!=d) TestBox.grow(d,1);
+        }
+        
+		    bcMask[i].resize(TestBox,1);
+        bcMask[i].setVal(0);
+	    }
+      
+      // Becase bcMask is read in the Riemann solver in any case,
+      // here we put physbc values in the appropriate faces for the non-nscbc case
+      set_bc_mask(lo, hi, domain_lo, domain_hi,
+                  D_DECL(BL_TO_FORTRAN(bcMask[0]),
+	                       BL_TO_FORTRAN(bcMask[1]),
+                         BL_TO_FORTRAN(bcMask[2])));
+
+      if (nscbc_diff == 1)
+      {
+        impose_NSCBC(lo, hi, domain_lo, domain_hi,
+                     BL_TO_FORTRAN(Sfab),
+                     BL_TO_FORTRAN(q.fab()),
+                     BL_TO_FORTRAN(qaux.fab()),
+                     D_DECL(BL_TO_FORTRAN(bcMask[0]),
+	                          BL_TO_FORTRAN(bcMask[1]),
+                            BL_TO_FORTRAN(bcMask[2])),
+                     &flag_nscbc_isAnyPerio, flag_nscbc_perio, 
+                     &time, dx, &dt);
+      }
+      
+      // Compute transport coefficients, coincident with Q
+      {
+        BL_PROFILE("PeleC::get_transport_coeffs call");
+        coeff_cc.resize(gbox, nCompTr);
+        get_transport_coeffs(ARLIM_3D(gbox.loVect()),
+                             ARLIM_3D(gbox.hiVect()),
+                             BL_TO_FORTRAN_N_3D(q.fab(), cQFS),
+                             BL_TO_FORTRAN_N_3D(q.fab(), cQTEMP),
+                             BL_TO_FORTRAN_N_3D(q.fab(), cQRHO),
+                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_rhoD),
+                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_mu),
+                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_xi),
+                             BL_TO_FORTRAN_N_3D(coeff_cc, dComp_lambda));
+      }
+
       // Container on grown region, for hybrid divergence & redistribution
       Dterm.resize(cbox, NUM_STATE);
-
-      // Pointwise mask for BC implementation
-      {
-        BL_PROFILE("PeleC::set_bc_mask call");
-        bcMask.resize(cbox, BL_SPACEDIM);
-        bcMask.setVal(0);
-        set_bc_mask(vbox.loVect(), vbox.hiVect(),
-                    dbox.loVect(), dbox.hiVect(),
-                    BL_TO_FORTRAN(bcMask));
-      }
 
       for (int d=0; d<BL_SPACEDIM; ++d) {
         Box ebox = amrex::surroundingNodes(cbox,d);
@@ -404,8 +446,8 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
           BL_PROFILE("PeleC::pc_hyp_mol_flux call");
           pc_hyp_mol_flux(vbox.loVect(), vbox.hiVect(),
                           geom.Domain().loVect(), geom.Domain().hiVect(),
-                          BL_TO_FORTRAN_3D(q.fab()),
-                          BL_TO_FORTRAN_3D(qaux.fab()),
+                          BL_TO_FORTRAN_3D(Qfab),
+                          BL_TO_FORTRAN_3D(Qaux),
                           BL_TO_FORTRAN_ANYD(area[0][mfi]),
                           BL_TO_FORTRAN_3D(flux_ec[0]),
 #if (BL_SPACEDIM > 1)
@@ -424,7 +466,6 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
                           sv_ebbg_ptr, &Ncut,
                           sv_eb_flux_ptr, &nFlux,
 #endif
-                          BL_TO_FORTRAN_ANYD(bcMask),
                           geom.CellSize());
         }
       }
@@ -518,7 +559,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
                                 dxDp, dt, vfrac[mfi],
                                 {&((*areafrac[0])[mfi]),
                                     &((*areafrac[1])[mfi]),
-                                    &((*areafrac[2])[mfi])};
+                                    &((*areafrac[2])[mfi])});
 #else
             // TODO: EBfluxregisters are designed only for 3D, need for 2D
             Print() << "WARNING:Re redistribution crseadd for EB not implemented\n";
@@ -546,9 +587,9 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       }
 #endif  //  PELEC_USE_EB ifdef
 
-        MOLSrcTerm[mfi].setVal(0, vbox, 0, NUM_STATE);
-        MOLSrcTerm[mfi].copy(Dterm, vbox, 0, vbox, 0, NUM_STATE);
-        
+      MOLSrcTerm[mfi].setVal(0, vbox, 0, NUM_STATE);
+      MOLSrcTerm[mfi].copy(Dterm, vbox, 0, vbox, 0, NUM_STATE);
+
 #ifdef PELEC_USE_EB
       // do regular flux reg ops
       if (do_reflux && flux_factor != 0 && typ == FabType::regular) 
@@ -576,7 +617,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #ifdef PELEC_USE_EB
       if (do_mol_load_balance) {
         wt = (ParallelDescriptor::second() - wt) / vbox.d_numPts();
-        (*cost[mfi]).plus(wt, vbox);
+        (*cost)[mfi].plus(wt, vbox);
       }
 #endif
     }  // End of MFIter scope

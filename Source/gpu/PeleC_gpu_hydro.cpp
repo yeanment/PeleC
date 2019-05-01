@@ -83,10 +83,7 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
     reduction(max:courno)
 #endif
     {
-#ifndef AMREX_USE_CUDA
 	FArrayBox pradial(Box::TheUnitBox(),1);
-	IArrayBox bcMask;
-#endif
 
 	Real cflLoc = -1.0e+200;
 	int is_finest_level = (level == finest_level) ? 1 : 0;
@@ -104,7 +101,6 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
 	    const FArrayBox *statein  = &S[mfi];
 #endif
 	    FArrayBox *stateout = &(S_new[mfi]);
-//	    FArrayBox *source_in  = &(sources_for_hydro[mfi]);
 	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
 
         const Box& xfbx = surroundingNodes(bx, 0); 
@@ -127,81 +123,30 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
         auto const& qauxar = qaux.array(); 
         auto const& srcqarr = src_q.array(); 
         BL_PROFILE_VAR_STOP(ualloc); 
-#ifndef AMREX_USE_CUDA
-        bcMask.resize(qbx,2); // The size is 2 and is not related to dimensions !
-                              // First integer is bc_type, second integer about slip/no-slip wall 
-        bcMask.setVal(0);     // Initialize with Interior (= 0) everywhere
-        set_bc_mask(lo, hi, domain_lo, domain_hi, BL_TO_FORTRAN(bcMask));
-#endif 
 
         BL_PROFILE_VAR("PeleC::ctoprim()", ctop); 
         AMREX_PARALLEL_FOR_3D(qbx, i, j, k, 
             {
-                 PeleC_ctoprim(i,j,k, s, qarr, qauxar);                  
+                 PeleC_ctoprim(i,j,k, s, qarr, qauxar);                 
+/*                 amrex::Print()<<qarr(i,j,k,QFS)<< std::endl; 
+                 std::cin.get(); */
+
              });
         BL_PROFILE_VAR_STOP(ctop); 
 
        
 
-            // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if i_nscbc is on
-            // See Motheau et al. AIAA J. (In Press) for the theory. 
-            //
-            // The user should provide the proper bc_fill_module
-            // to temporary fill ghost-cells for EXT_DIR and to provide target BC values.
-            // See the COVO test case for an example.
-            // Here we test periodicity in the domain to choose the proper routine.
-
-#ifndef AMREX_USE_CUDA
-#if (BL_SPACEDIM == 1)
-            if (i_nscbc == 1)
-            {
-              impose_NSCBC(lo, hi, domain_lo, domain_hi,
-                           BL_TO_FORTRAN(statein),
-                           BL_TO_FORTRAN(q.fab()),
-                           BL_TO_FORTRAN(qaux.fab()),
-                           BL_TO_FORTRAN(bcMask),
-                           &time, dx, &dt);
-
-            }
-#elif (BL_SPACEDIM == 2)
-	    if (geom.isAnyPeriodic() && i_nscbc == 1)
-	    {
-	      impose_NSCBC_with_perio(lo, hi, domain_lo, domain_hi,
-				      BL_TO_FORTRAN(*statein),
-				      BL_TO_FORTRAN(q.fab()),
-				      BL_TO_FORTRAN(qaux.fab()),
-				      BL_TO_FORTRAN(bcMask),
-				      &time, dx, &dt);
-        
-	    } else if (!geom.isAnyPeriodic() && i_nscbc == 1){
-	      impose_NSCBC_mixed_BC(lo, hi, domain_lo, domain_hi,
-				    BL_TO_FORTRAN(*statein),
-				    BL_TO_FORTRAN(q.fab()),
-				    BL_TO_FORTRAN(qaux.fab()),
-				    BL_TO_FORTRAN(bcMask),
-				    &time, dx, &dt);
-	    }
-#else
-	    if (i_nscbc == 1)
-	    {
-	      amrex::Abort("GC_NSCBC not yet implemented in 3D");
-	    }
-#endif
-#endif
         BL_PROFILE_VAR("PeleC::srctoprim()", srctop);  
-        const auto & src_in  = sources_for_hydro.array(mfi);
+        const auto& src_in  = sources_for_hydro.array(mfi);
                 AMREX_PARALLEL_FOR_3D(qbx,i, j, k,{
                       PeleC_srctoprim(i, j, k, qarr, qauxar, src_in, srcqarr); 
                 });
         BL_PROFILE_VAR_STOP(srctop); 
 
-#ifndef AMREX_USE_CUDA
         if (!Geometry::IsCartesian()) {
             pradial.resize(amrex::surroundingNodes(bx,0),1);
         }
 
-        amrex::IArrayBox *bcMa = &bcMask; 
-#endif 
 //#if (AMREX_SPACEDIM < 3)
 //                amrex::FArrayBox *prad = &pradial; 
 //#endif
@@ -214,14 +159,10 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                          phys_bc.lo(), phys_bc.hi(), 
                          s, hyd_src, qarr,
                          qauxar, srcqarr,
-//                         *bcMa,
                          dx, dt,
                          D_DECL( flx1.array(),
                                  flx2.array(), 
                                  flx3.array()), 
-                #if (BL_SPACEDIM < 3)
-        //                 *prad,
-                #endif
                          D_DECL(area[0].array(mfi),
                                 area[1].array(mfi),
                                 area[2].array(mfi)),
@@ -230,41 +171,6 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                 #endif
                          volume.array(mfi),
                          cflLoc); 
-        /*/
-
-                        pc_umdrv
-                (&is_finest_level, &time,
-                 lo, hi, domain_lo, domain_hi,
-                 BL_TO_FORTRAN(*statein), 
-                 BL_TO_FORTRAN(*stateout),
-                 BL_TO_FORTRAN(q.fab()),
-                 BL_TO_FORTRAN(qaux.fab()),
-                 BL_TO_FORTRAN(src_q.fab()),
-                 BL_TO_FORTRAN(*source_out),
-                 BL_TO_FORTRAN(bcMask),
-                 dx, &dt,
-                 D_DECL(BL_TO_FORTRAN(flx1.fab()),
-                    BL_TO_FORTRAN(flx2.fab()),
-                    BL_TO_FORTRAN(flx3.fab())),
-        #if (BL_SPACEDIM < 3)
-                 BL_TO_FORTRAN(pradial),
-        #endif
-                 D_DECL(BL_TO_FORTRAN(area[0][mfi]),
-                    BL_TO_FORTRAN(area[1][mfi]),
-                    BL_TO_FORTRAN(area[2][mfi])),
-        #if (BL_SPACEDIM < 3)
-                 BL_TO_FORTRAN(dLogArea[0][mfi]),
-        #endif
-                 BL_TO_FORTRAN(volume[mfi]),
-                 &cflLoc, verbose,
-                 mass_added_flux,
-                 xmom_added_flux,
-                 ymom_added_flux,
-                 zmom_added_flux,
-                 E_added_flux,
-                 mass_lost, xmom_lost, ymom_lost, zmom_lost,
-                 eden_lost, xang_lost, yang_lost, zang_lost); //  */
-//                 (Qout[mfi]).copy(q.fab()); 
             BL_PROFILE_VAR_STOP(purm); 
             
             BL_PROFILE_VAR("courno + flux reg", crno); 
@@ -305,8 +211,6 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
 
     // Flush Fortran output
 
-    if (verbose)
-	flush_output();
 
     if (track_grid_losses)
     {

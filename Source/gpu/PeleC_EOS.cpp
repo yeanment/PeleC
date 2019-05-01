@@ -7,12 +7,14 @@
 
 extern "C" {
 AMREX_GPU_HOST_DEVICE void get_imw(double* neww); 
-AMREX_GPU_HOST_DEVICE void CKPY(double*  rho,double*  T,double*  y, int * iwrk,double*  rwrk, double *  P);
-AMREX_GPU_HOST_DEVICE void CKCVMS(double*  T, int * iwrk,double*  rwrk,double*  cvms);
-AMREX_GPU_HOST_DEVICE void CKCPMS(double*  T, int * iwrk,double*  rwrk,double*  cvms);
-AMREX_GPU_HOST_DEVICE void CKUMS(double*  T, int * iwrk,double*  rwrk,double*  ums);
-AMREX_GPU_HOST_DEVICE void CKHMS(double*  T, int * iwrk,double*  rwrk,double*  ums);
-AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double*  e,double*  y, int * iwrk,double*  rwrk,double*  t, int *ierr);
+AMREX_GPU_HOST_DEVICE void ckpy_(double*  rho,double*  T,double*  y,double *  P);
+AMREX_GPU_HOST_DEVICE void ckcvms_(double*  T, double*  cvms);
+AMREX_GPU_HOST_DEVICE void ckcpms_(double*  T, double*  cvms);
+AMREX_GPU_HOST_DEVICE void ckums_(double*  T,double*  ums);
+AMREX_GPU_HOST_DEVICE void ckhms_(double*  T,double*  ums);
+AMREX_GPU_HOST_DEVICE void get_t_given_ey_(double*  e,double*  y, double*  t, int *ierr);
+
+
 }
 
 AMREX_GPU_HOST_DEVICE EOS::EOS()
@@ -24,9 +26,9 @@ AMREX_GPU_HOST_DEVICE EOS::~EOS()
 AMREX_GPU_HOST_DEVICE 
 void EOS::eos_bottom()
 {
-    CKCVMS(&T, &iwrk, &rwrk, cvi);
-    CKCPMS(&T, &iwrk, &rwrk, cpi); 
-    CKHMS( &T, &iwrk, &rwrk,  hi);
+    ckcvms_(&T,  cvi);
+    ckcpms_(&T,  cpi); 
+    ckhms_( &T,   hi);
     cv = 0.e0, cp = 0.e0, h = 0.e0; 
     for(int i = 0; i < NUM_SPECIES; ++i){
          cv+=massfrac[i]*cvi[i];
@@ -39,7 +41,7 @@ void EOS::eos_bottom()
     dpdr_e = p/rho;
     dpde = (gam1 - 1.0)*rho; 
     s = 1.e0; 
-    dpdr = 0.e0; 
+    dpdr = 0.e0;
 }
 
 
@@ -60,10 +62,10 @@ void EOS::eos_re()
 {
     int lierr=0; 
     eos_wb();
-    GET_T_GIVEN_EY(&e, massfrac, &iwrk, &rwrk, &T, &lierr);
+    get_t_given_ey_(&e, massfrac, &T, &lierr);
 //    T = amrex::max(T, smallT); //*/
-    CKUMS(&T, &iwrk, &rwrk, ei); 
-    CKPY(&rho, &T, massfrac, &iwrk, &rwrk, &p);
+    ckums_(&T,  ei); 
+    ckpy_(&rho, &T, massfrac, &p);
 
     eos_bottom(); 
 }
@@ -73,7 +75,7 @@ void EOS::eos_rp()
 {
     eos_wb(); 
     T = p*wbar/(rho*Ru);
-    CKUMS(&T, &iwrk, &rwrk, ei);
+    ckums_(&T,  ei);
     e = 0.0;  
 #pragma unroll
     for(int i = 0; i < NUM_SPECIES; ++i) e += massfrac[i]*ei[i]; 

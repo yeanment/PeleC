@@ -15,9 +15,6 @@ public:
    AMREX_GPU_HOST_DEVICE EOS(); 
    AMREX_GPU_HOST_DEVICE ~EOS(); 
 
-//TODO Stupid Vars we don't actually need but are arguments to functions 
-    int iwrk = 0; 
-    amrex::Real rwrk = 1.e0; 
 // variables 
     amrex::Real rho, T, p, e, h, s, f;
     amrex::Real massfrac[NUM_SPECIES], molefrac[NUM_SPECIES], aux[naux]; 
