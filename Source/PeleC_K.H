@@ -86,8 +86,6 @@ void PeleC_ctoprim(const int i, const int j, const int k,
                    amrex::Array4<amrex::Real> const& q,
                    amrex::Array4<amrex::Real> const& qa)
 {
-    const amrex::Real smallr = 1.e-19; 
-    const amrex::Real smallp = 1.e-10; 
     amrex::Real R = k_B*n_A; 
     EOS eos_state; 
 

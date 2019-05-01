@@ -1593,7 +1593,7 @@ PeleC_transxy(const int i, const int j, const int k,
          const amrex::Real hdt, const amrex::Real cdtdx, 
          const amrex::Real cdtdy)
 {
-        amrex::Real compn, rr, rrnew, compo, rwr, c;        
+        amrex::Real compn, compo, rwr, c;        
         amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr;
         amrex::Real runewr, rvnewr, rwnewr, renewr, rhoekinr ;
         amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl,rwnewl, renewl;
@@ -1720,7 +1720,7 @@ PeleC_transxz(const int i, const int j, const int k,
          const amrex::Real hdt, const amrex::Real cdtdx, 
          const amrex::Real cdtdz)
 {
-        amrex::Real compn, rr, rrnew, compo, rwr, c;
+        amrex::Real compn, compo, rwr, c;
         amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr;
         amrex::Real runewr, rvnewr, rwnewr, renewr, rhoekinr ;
         amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl,rwnewl, renewl;
@@ -1848,7 +1848,7 @@ PeleC_transyz(const int i, const int j, const int k,
          const amrex::Real hdt, const amrex::Real cdtdy, 
          const amrex::Real cdtdz)
 {
-        amrex::Real compn, rr, rrnew, compo, rwr, c;
+        amrex::Real compn,  compo, rwr, c;
         amrex::Real rrr, rur, rvr, ekinr, rer, rrnewr;
         amrex::Real runewr, rvnewr, rwnewr, renewr, rhoekinr ;
         amrex::Real rrl, rul, rvl, ekinl, rel, rrnewl, runewl, rvnewl,rwnewl, renewl;
