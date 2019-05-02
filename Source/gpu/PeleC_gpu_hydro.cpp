@@ -1,4 +1,8 @@
 #include "PeleC.H"
+/* This is for the NSCBC stuff, TODO C++ it */ 
+#include "PeleC_F.H" 
+
+
 #include "PeleC_K.H"
 #include <AMReX_Gpu.H>
 using namespace amrex;
@@ -84,9 +88,16 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
 #endif
     {
 	FArrayBox pradial(Box::TheUnitBox(),1);
+	IArrayBox bcMask[BL_SPACEDIM];
 
 	Real cflLoc = -1.0e+200;
 	int is_finest_level = (level == finest_level) ? 1 : 0;
+    int flag_nscbc_isAnyPerio = (geom.isAnyPeriodic()) ? 1 : 0; 
+    int flag_nscbc_perio[BL_SPACEDIM]; // For 3D, we will know which corners have a periodicity
+    for (int d=0; d<BL_SPACEDIM; ++d) {
+        flag_nscbc_perio[d] = (Geometry::isPeriodic(d)) ? 1 : 0;
+    }
+
 	const int*  domain_lo = geom.Domain().loVect();
 	const int*  domain_hi = geom.Domain().hiVect();
     for (MFIter mfi(S_new,TilingIfNotGPU()); mfi.isValid(); ++mfi) 	
@@ -132,7 +143,47 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                  std::cin.get(); */
 
              });
-        BL_PROFILE_VAR_STOP(ctop); 
+        BL_PROFILE_VAR_STOP(ctop);
+
+//TODO GPUize NCSCBC 
+      // Imposing Ghost-Cells Navier-Stokes Characteristic BCs if "UserBC" are used
+      // For the theory, see Motheau et al. AIAA J. Vol. 55, No. 10 : pp. 3399-3408, 2017. 
+      //
+      // The user should provide a bcnormal routine in bc_fill_module with additional optional arguments
+      // to temporary fill ghost-cells for EXT_DIR and to provide target BC values.
+      // See the examples.
+      
+      // Allocate fabs for bcMask. Note that we grow in the opposite direction
+      // because the Riemann solver wants a face value in a ghost-cell
+      for (int i = 0; i < BL_SPACEDIM ; i++)  {
+        const Box& bxtmp = amrex::surroundingNodes(bx,i);
+        Box TestBox(bxtmp);
+        for(int d=0; d<BL_SPACEDIM; ++d) {
+          if (i!=d) TestBox.grow(d,1);
+        }
+        bcMask[i].resize(TestBox,1);
+        bcMask[i].setVal(0);
+      }
+      
+      // Becase bcMask is read in the Riemann solver in any case,
+      // here we put physbc values in the appropriate faces for the non-nscbc case
+      set_bc_mask(lo, hi, domain_lo, domain_hi,
+                  D_DECL(BL_TO_FORTRAN(bcMask[0]),
+	                       BL_TO_FORTRAN(bcMask[1]),
+                         BL_TO_FORTRAN(bcMask[2])));
+
+      if (nscbc_adv == 1)
+      {
+        impose_NSCBC(lo, hi, domain_lo, domain_hi,
+                     BL_TO_FORTRAN(*statein),
+                     BL_TO_FORTRAN(q.fab()),
+                     BL_TO_FORTRAN(qaux.fab()),
+                     D_DECL(BL_TO_FORTRAN(bcMask[0]),
+                            BL_TO_FORTRAN(bcMask[1]),
+                            BL_TO_FORTRAN(bcMask[2])),
+                     &flag_nscbc_isAnyPerio, flag_nscbc_perio, 
+                     &time, dx, &dt);
+      }
 
        
 
