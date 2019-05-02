@@ -185,8 +185,6 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                      &time, dx, &dt);
       }
 
-       
-
         BL_PROFILE_VAR("PeleC::srctoprim()", srctop);  
         const auto& src_in  = sources_for_hydro.array(mfi);
                 AMREX_PARALLEL_FOR_3D(qbx,i, j, k,{
