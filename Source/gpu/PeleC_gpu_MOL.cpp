@@ -181,6 +181,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
       {
+        Gpu::Device::synchronize(); 
           BL_PROFILE("PeleC::ctoprim call");
           AMREX_PARALLEL_FOR_3D(gbox, i, j, k, 
               {
