@@ -106,11 +106,9 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
         BL_PROFILE_VAR("umdrv_alloc", ualloc); 
 	    const Box& bx  = mfi.tilebox();
 	    const Box& qbx = amrex::grow(bx, NUM_GROW);
-#ifndef AMREX_USE_CUDA
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
 	    const FArrayBox *statein  = &S[mfi];
-#endif
 	    FArrayBox *stateout = &(S_new[mfi]);
 	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
 

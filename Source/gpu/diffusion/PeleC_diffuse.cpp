@@ -181,8 +181,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
       {
-        Gpu::Device::synchronize(); 
-          BL_PROFILE("PeleC::ctoprim call");
+          BL_PROFILE("PeleC::ctoprim");
           AMREX_PARALLEL_FOR_3D(gbox, i, j, k, 
               {
                   PeleC_ctoprim(i,j,k, s, qar, qauxar);                  
@@ -422,55 +421,6 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #endif
 
       BL_PROFILE_VAR_STOP(diff);
-
-#ifdef PELEC_USE_MOL
-      /* At this point flux_ec contains the diffusive fluxes in each direction
-         at face centers for the (potentially partially covered) grid-aligned 
-         faces and sv_eb_flux contains the flux for the cut faces. Before 
-         computing hybrid divergence, comptue and add in the hydro fluxes. 
-         Also, Dterm currently contains the divergence of the face-centered
-         diffusion fluxes.  Increment this with the divergence of the 
-         face-centered hyperbloic fluxes.
-      */
-      if (do_hydro && do_mol_AD) 
-      {
-        flatn.resize(cbox,1);
-        flatn.setVal(1.0);  // Set flattening to 1.0
-#ifdef PELEC_USE_EB
-        int nFlux = sv_eb_flux.size()==0 ? 0 : sv_eb_flux[local_i].numPts();
-        const EBBndryGeom* sv_ebbg_ptr = (Ncut>0 ? sv_eb_bndry_geom[local_i].data() : 0);
-        Real* sv_eb_flux_ptr = (nFlux>0 ? sv_eb_flux[local_i].dataPtr() : 0);
-#endif
-
-        { // Get face-centered hyperbolic fluxes and their divergences.
-          // Get hyp flux at EB wall
-          BL_PROFILE("PeleC::pc_hyp_mol_flux call");
-          pc_hyp_mol_flux(vbox.loVect(), vbox.hiVect(),
-                          geom.Domain().loVect(), geom.Domain().hiVect(),
-                          BL_TO_FORTRAN_3D(Qfab),
-                          BL_TO_FORTRAN_3D(Qaux),
-                          BL_TO_FORTRAN_ANYD(area[0][mfi]),
-                          BL_TO_FORTRAN_3D(flux_ec[0]),
-#if (BL_SPACEDIM > 1)
-                          BL_TO_FORTRAN_ANYD(area[1][mfi]),
-                          BL_TO_FORTRAN_3D(flux_ec[1]),
-#if (BL_SPACEDIM > 2)
-                          BL_TO_FORTRAN_ANYD(area[2][mfi]),
-                          BL_TO_FORTRAN_3D(flux_ec[2]),
-#endif
-#endif
-                          BL_TO_FORTRAN_3D(flatn),
-                          BL_TO_FORTRAN_ANYD(volume[mfi]),
-                          BL_TO_FORTRAN_3D(Dterm),
-#ifdef PELEC_USE_EB
-                          BL_TO_FORTRAN_ANYD(flag_fab),
-                          sv_ebbg_ptr, &Ncut,
-                          sv_eb_flux_ptr, &nFlux,
-#endif
-                          geom.CellSize());
-        }
-      }
-#endif
 
 #ifdef PELEC_USE_EB
       if (typ == FabType::singlevalued) {

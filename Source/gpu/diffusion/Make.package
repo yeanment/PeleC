@@ -1,0 +1,3 @@
+CEXE_sources += PeleC_diffuse.cpp 
+
+CEXE_headers += PeleC_diffuse.H

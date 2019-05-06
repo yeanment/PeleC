@@ -118,7 +118,7 @@ endif
 
 Bdirs   := Source Source/param_includes Source/Src_nd Source/Src_$(DIM)d Source/TurbInflow 
 
-Bdirs += Source/gpu
+Bdirs += Source/gpu Source/gpu/hydro Source/gpu/diffusion 
 
 ifeq ($(USE_EB), TRUE)
   Pdirs := Base EB Amr Boundary AmrCore F_Interfaces/Base

@@ -1,0 +1,6 @@
+CEXE_sources += PeleC_method_$(DIM)D.cpp 
+CEXE_sources += PeleC_K.cpp
+CEXE_sources += PeleC_gpu_hydro.cpp 
+
+CEXE_headers += PeleC_method_$(DIM)D.H
+CEXE_headers += PeleC_K.H
