@@ -13,6 +13,12 @@ using namespace amrex;
 #include <omp.h>
 #endif
 #include <PeleC_K.H>
+#if AMREX_SPACEDIM=2 
+#include "PeleC_gradutil_2D.H" 
+#elif AMREX_SPACEDIM=3
+#include "PeleC_gradutil_3D.H"
+#endif 
+
 
 // **********************************************************************************************
 void

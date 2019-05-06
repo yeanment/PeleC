@@ -7,6 +7,9 @@
 #include "PeleC_EOS.H" 
 #include <cmath> 
 
+/*This header file contains functions and declarations for the 2D hydro portion of PeleC gpu. 
+  As per the convention of AMReX, inlined functions are defined here. Where as non-inline functions 
+  are declared here. */ 
 
 AMREX_GPU_DEVICE
 inline

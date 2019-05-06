@@ -1,6 +1,10 @@
 #ifndef PeleC_diffuse_H 
 #define PeleC_diffuse_H
 #include <AMReX_FArrayBox.H>
+/*This header file contains functions and declarations for the diffusion portion of PeleC GPU. 
+  As per the convention of AMReX, inlined functions are defined here. Where as non-inline functions 
+  are declared here. */ 
+
 
 
 AMREX_GPU_DEVICE 

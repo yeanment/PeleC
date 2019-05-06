@@ -5,7 +5,6 @@
 #include <AMReX_Geometry.H>
 #include "PeleC_index_macros.H" 
 #include "PeleC_EOS.H"
-#include <iomanip>
 #if AMREX_SPACEDIM == 1
 #include "PeleC_method_1D.H" 
 #elif AMREX_SPACEDIM == 2
@@ -13,6 +12,11 @@
 #else
 #include "PeleC_method_3D.H"
 #endif 
+
+/*This header file contains functions and declarations for miscellaneous utilities and hydro portion 
+  of PeleC gpu. 
+  As per the convention of AMReX, inlined functions are defined here. Where as non-inline functions 
+  are declared here. */ 
 
 //TODO Add more fuctions! 
 struct Real3{
