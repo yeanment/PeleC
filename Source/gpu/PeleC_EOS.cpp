@@ -13,7 +13,7 @@ AMREX_GPU_HOST_DEVICE void ckcpms_(double*  T, double*  cvms);
 AMREX_GPU_HOST_DEVICE void ckums_(double*  T,double*  ums);
 AMREX_GPU_HOST_DEVICE void ckhms_(double*  T,double*  ums);
 AMREX_GPU_HOST_DEVICE void get_t_given_ey_(double*  e,double*  y, double*  t, int *ierr);
-
+AMREX_GPU_HOST_DEVICE void ckytx_(double* massfrac, double* molefrac); 
 
 }
 
@@ -80,6 +80,18 @@ void EOS::eos_rp()
 #pragma unroll
     for(int i = 0; i < NUM_SPECIES; ++i) e += massfrac[i]*ei[i]; 
     eos_bottom();     
+}
+
+AMREX_GPU_HOST_DEVICE
+void EOS::eos_ytx()
+{
+    ckytx_(massfrac, molefrac); 
+}
+
+AMREX_GPU_HOST_DEVICE
+void EOS::eos_hi()
+{
+   ckhms_( &T,   hi);
 }
 
 /* THESE ASSUME THE ONLY PASSIVE VARS ARE THE SPECIES AND NON-USED VELOCITIES. TODO add additional passive vars*/
