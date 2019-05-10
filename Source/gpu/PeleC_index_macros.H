@@ -72,7 +72,11 @@
 #define GDGAME    6
 #endif
 
-
+#define dComp_rhoD 0 
+#define dComp_mu dComp_rhoD + NUM_SPECIES
+#define dComp_xi dComp_mu + 1 
+#define dComp_lambda dComp_xi + 1
+ 
 #define NTHERM    7
 #define QTHERM    8
 

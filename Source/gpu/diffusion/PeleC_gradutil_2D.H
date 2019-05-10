@@ -18,13 +18,13 @@ void PeleC_compute_tangential_vel_derivs(const int i, const int j, const int k,
     //This is because it is a tangential velocity derivative.  
     if(dir == 0)
     {
-        td(i,j,k,0) = 0.25e0*dxinv(q(i,j+1,k,QU) + q(i-1,j+1,QU) - q(i,j-1,k,QU) -q(i-1,j-1,k,QU));
-        td(i,j,k,1) = 0.25e0*dxinv(q(i,j+1,k,QV) + q(i-1,j+1,QV) - q(i,j-1,k,QV) -q(i-1,j-1,k,QV)); 
+        td(i,j,k,0) = 0.25e0*dxinv*(q(i,j+1,k,QU) + q(i-1,j+1,QU) - q(i,j-1,k,QU) -q(i-1,j-1,k,QU));
+        td(i,j,k,1) = 0.25e0*dxinv*(q(i,j+1,k,QV) + q(i-1,j+1,QV) - q(i,j-1,k,QV) -q(i-1,j-1,k,QV)); 
     }
     if(dir == 1)
     {
-        td(i,j,k,0) = 0.25e0*dxinv(q(i+1,j,k,QU) + q(i+1,j-1,QU) - q(i-1,j,k,QU) -q(i-1,j-1,k,QU));
-        td(i,j,k,1) = 0.25e0*dxinv(q(i+1,j,k,QV) + q(i+1,j-1,QV) - q(i-1,j,k,QV) -q(i-1,j-1,k,QV)); 
+        td(i,j,k,0) = 0.25e0*dxinv*(q(i+1,j,k,QU) + q(i+1,j-1,QU) - q(i-1,j,k,QU) -q(i-1,j-1,k,QU));
+        td(i,j,k,1) = 0.25e0*dxinv*(q(i+1,j,k,QV) + q(i+1,j-1,QV) - q(i-1,j,k,QV) -q(i-1,j-1,k,QV)); 
     }
 }
 

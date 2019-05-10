@@ -1,3 +1,6 @@
-CEXE_sources += PeleC_diffuse.cpp 
+CEXE_sources += PeleC_diffusion.cpp 
 
-CEXE_headers += PeleC_diffuse.H
+CEXE_headers += PeleC_diffusion.H
+CEXE_headers += PeleC_diffterm_$(DIM)D.H 
+CEXE_headers += PeleC_gradutil_$(DIM)D.H 
+
