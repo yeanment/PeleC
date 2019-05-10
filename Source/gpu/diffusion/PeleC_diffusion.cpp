@@ -191,9 +191,9 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         {
             Gpu::AsyncFab(amrex::surroundingNodes(cbox,0), NUM_STATE)
 #if AMREX_SPACEDIM > 1 
-           , Gpu::AsyncFab(amrex::surroundingNodes(cbox,0), NUM_STATE)
+           , Gpu::AsyncFab(amrex::surroundingNodes(cbox,1), NUM_STATE)
 #if AMREX_SPACEDIM > 2 
-           , Gpu::AsyncFab(amrex::surroundingNodes(cbox,0), NUM_STATE)
+           , Gpu::AsyncFab(amrex::surroundingNodes(cbox,2), NUM_STATE)
 #endif
 #endif
         }; 
@@ -201,7 +201,8 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       // Container on grown region, for hybrid divergence & redistribution
       Gpu::AsyncFab Dterm(cbox, NUM_STATE); 
       auto const &coecc = coeff_cc.array(); 
-      for (int d=0; d<BL_SPACEDIM; ++d) { 
+      for (int d=0; d<BL_SPACEDIM; ++d) {
+        (flux_ec[d].fab()).setVal(0.); 
         Box ebox = amrex::surroundingNodes(cbox,d);
         Gpu::AsyncFab coeff_ec(ebox, nCompTr); 
         auto const &coeec = coeff_ec.array();
@@ -216,7 +217,8 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         }
 #if (BL_SPACEDIM > 1)
         int nCompTan = AMREX_D_PICK(1, 2, 6);
-        Gpu::AsyncFab tander_ec(ebox, nCompTan); 
+        Gpu::AsyncFab tander_ec(ebox, nCompTan);
+        (tander_ec.fab()).setVal(0.);          
         auto const &td = tander_ec.array(); 
         // Tangential derivatives on faces only needed for velocity diffusion
         if (diffuse_vel == 0) {
@@ -225,28 +227,30 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         else {
           {
             BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs call");
+#if (AMREX_SPACEDIM == 2) 
+            amrex::Real del2 = (d == 0)? dx[1] : dx[0]; 
+#endif            
             AMREX_PARALLEL_FOR_3D(cbox, i, j, k, {
-                PeleC_compute_tangential_vel_derivs(i,j,k,td, qar, d, del); 
+                PeleC_compute_tangential_vel_derivs(i,j,k,td, qar, d, del2); 
             }); 
           }
         }  // diffuse_vel
         //Compute Extensive diffusion fluxes and flux divergence 
         auto const& a1 = (area[d]).array(mfi); 
+        BL_PROFILE("PeleC::diffusion_flux()"); 
         AMREX_PARALLEL_FOR_3D(ebox, i, j, k, {
             PeleC_diffusion_flux(i,j,k, qar, coeec, td, a1, flxec, del, d); 
         }); 
-
-            
 #endif
       }  // loop over dimension
 
       // Compute extensive diffusion fluxes, F.A and (1/Vol).Div(F.A)
       {
-        BL_PROFILE("PeleC::pc_diffterm()");
+        BL_PROFILE("PeleC::pc_diffup()");
         auto const D_DECL(&flx1 = flux_ec[0].array(), &flx2 = flux_ec[1].array(), &flx3 = flux_ec[2].array());  
         auto const &vol = volume.array(mfi); 
         auto const &Dif = Dterm.array(); 
-        AMREX_PARALLEL_FOR_4D(cbox, NVAR, i , j, k ,n, { 
+        AMREX_PARALLEL_FOR_4D(cbox, NVAR, i , j, k ,n, {
             PeleC_diffup(i,j,k,n, D_DECL(flx1, flx1, flx3), vol, Dif); 
         }); 
       }  
