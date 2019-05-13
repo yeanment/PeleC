@@ -16,25 +16,29 @@ void PeleC_move_transcoefs_to_ec(const int i,const int j, const int k, const int
 
 {
     if(do_harmonic==0){
-        if(dir==0) earr(i,j,k,n) = 0.5e0*(carr(i,j,k,n) - carr(i-1,j,k,n)); 
-        else if(dir==1) earr(i,j,k,n) = 0.5e0*(carr(i,j,k,n) - carr(i,j-1,k,n)); 
-        else earr(i,j,k,n) = 0.5e0*(carr(i,j,k,n) - carr(i,j,k-1,n));         
+        if(dir==0) earr(i,j,k,n) = 0.5e0*(carr(i,j,k,n) + carr(i-1,j,k,n)); 
+        else if(dir==1) earr(i,j,k,n) = 0.5e0*(carr(i,j,k,n) + carr(i,j-1,k,n)); 
+        else earr(i,j,k,n) = 0.5e0*(carr(i,j,k,n) + carr(i,j,k-1,n));         
     }
     else{
+         amrex::Real a = carr(i,j,k,n); 
         if(dir==0){
-            if(carr(i,j,k,n)*carr(i-1,j,k,n) > 0) 
-                earr(i,j,k,n) = 2.e0*(carr(i,j,k,n)*carr(i-1,j,k,n))/(carr(i,j,k,n) + carr(i-1,j,k,n)); 
-            else earr(i,j,k,n) = 0; 
+            amrex::Real b = carr(i-1,j,k,n); 
+            if(a*b > 0.e0) 
+                earr(i,j,k,n) = 2.e0*(a*b)/(a+b); 
+            else earr(i,j,k,n) = 0.e0; 
         }
         else if(dir==1){
-            if(carr(i,j,k,n)*carr(i,j-1,k,n) > 0) 
-                earr(i,j,k,n) = 2.e0*(carr(i,j,k,n)*carr(i,j-1,k,n))/(carr(i,j,k,n) + carr(i,j-1,k,n)); 
-            else earr(i,j,k,n) = 0; 
+            amrex::Real b = carr(i,j-1,k,n); 
+            if(a*b > 0.e0) 
+                earr(i,j,k,n) = 2.e0*(a*b)/(a+b); 
+            else earr(i,j,k,n) = 0.e0; 
         }
         else{
-            if(carr(i,j,k,n)*carr(i,j,k-1,n) > 0) 
-                earr(i,j,k,n) = 2.e0*(carr(i,j,k,n)*carr(i,j,k-1,n))/(carr(i,j,k,n) + carr(i,j,k-1,n)); 
-            else earr(i,j,k,n) = 0; 
+            amrex::Real b = carr(i,j,k-1,n); 
+            if(a*b > 0.e0) 
+                earr(i,j,k,n) = 2.e0*(a*b)/(a+b); 
+            else earr(i,j,k,n) = 0.e0; 
         }
     }
 }                                    

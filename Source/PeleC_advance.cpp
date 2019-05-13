@@ -480,7 +480,8 @@ PeleC::do_sdc_iteration (Real time,
     }
     FillPatch(*this, Sborder, nGrowTr, time + dt, State_Type, 0, NUM_STATE);
     Real flux_factor_new = sub_iteration==sub_ncycle-1 ? 0.5 : 0;
-    getMOLSrcTerm(Sborder,*new_sources[diff_src],time,dt,flux_factor_new);
+    if(do_gpu) getMOLSrcTermGPU(Sborder, *new_sources[diff_src],time,dt,flux_factor_new); 
+    else getMOLSrcTerm(Sborder,*new_sources[diff_src],time,dt,flux_factor_new);
   }
 
   // Build other (neither spray nor diffusion) sources at t_new

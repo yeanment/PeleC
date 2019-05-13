@@ -27,7 +27,7 @@ void EOS::eos_bottom()
 {
     ckcvms_(&T,  cvi);
     ckcpms_(&T,  cpi); 
-    ckhms_( &T,   hi);
+    ckhms_(&T,   hi);
     cv = 0.e0, cp = 0.e0, h = 0.e0; 
     for(int i = 0; i < NUM_SPECIES; ++i){
          cv+=massfrac[i]*cvi[i];
@@ -84,8 +84,6 @@ void EOS::eos_rp()
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_ytx()
 {
-    for(int i = 0; i < NUM_SPECIES; ++i) std::cout<< massfrac[i] << std::endl; 
-    std::cin.get(); 
     ckytx_(massfrac, molefrac); 
 }
 
