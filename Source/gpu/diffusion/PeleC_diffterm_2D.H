@@ -26,7 +26,7 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
     //Here "x" is the normal direction and "y" is the transverse 
     if(dir ==0){
         amrex::Real dTdx = dxinv*(q(i,j,k,QTEMP) - q(i-1,j,k,QTEMP)); 
-        amrex::Real dudx = dxinv*(q(i,j,k,QU) - q(i-1,j,k,QU)); 
+        amrex::Real dudx = dxinv*(q(i,j,k,QU) - q(i-1,j,k,QU));
         amrex::Real dvdx = dxinv*(q(i,j,k,QV) - q(i-1,j,k,QV)); 
         amrex::Real dudy = t(i,j,k,0); 
         amrex::Real dvdy = t(i,j,k,1); 
@@ -169,7 +169,6 @@ PeleC_diffup(const int i, const int j, const int k, const int n,
        
         D(i,j,k,n) = -(fx(i+1,j,k,n) - fx(i,j,k,n)  
                      + fy(i,j+1,k,n) - fy(i,j,k,n))/V(i,j,k); 
-
 }
 
 
