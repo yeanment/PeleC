@@ -587,8 +587,16 @@ contains
              sum_kappa = sum(nbr(-1:1,-1:1,-1:1) * vf(i-1:i+1,j-1:j+1,k-1:k+1))
              sum_div =   sum(nbr(-1:1,-1:1,-1:1) * vf(i-1:i+1,j-1:j+1,k-1:k+1) * DC(i-1:i+1,j-1:j+1,k-1:k+1,n))
              DNC = sum_div / sum_kappa
-             dM(L) = vf(i,j,k)*(1.d0 - vf(i,j,k))*(DC(i,j,k,n) - DNC)
-             HD(L) = vf(i,j,k)*DC(i,j,k,n) + (1.d0 - vf(i,j,k))*DNC
+             if(DC(i,j,k,n) .gt. 0.d0 .and. DNC .lt. 0.d0) then 
+                dM(L) = vf(i,j,k)*(1.d0 - vf(i,j,k))*DC(i,j,k,n)
+                HD(L) = vf(i,j,k)*DC(i,j,k,n) 
+             else
+                dM(L) = vf(i,j,k)*(1.d0 - vf(i,j,k))*(DC(i,j,k,n) - DNC)
+                HD(L) = vf(i,j,k)*DC(i,j,k,n) + (1.d0 - vf(i,j,k))*DNC
+             endif
+             if(vf(i,j,k) .lt. 1e-3) then 
+                HD(L) = 0.0d0
+             end if
           endif
        enddo
 
@@ -615,6 +623,18 @@ contains
 
              call get_neighbor_cells(flag(i,j,k),nbr)
              nbr(0,0,0) = 0.d0 ! redistribute to all neighbors but me
+             do kk = -1, 1
+                do jj = -1, 1
+                   do ii = -1, 1
+
+                      if(vf(i+ii,j+jj,k+kk) .lt. 1e-3) then 
+                         nbr(ii,jj,kk) = 0.d0
+                      end if
+
+                   end do
+                end do
+             end do
+
              sum_kappa = sum(nbr(-1:1,-1:1,-1:1) * vf(i-1:i+1,j-1:j+1,k-1:k+1) * W(i-1:i+1,j-1:j+1,k-1:k+1))
              sum_kappa_inv = 1.d0 / sum_kappa
              DC(i-1:i+1,j-1:j+1,k-1:k+1,n) = DC(i-1:i+1,j-1:j+1,k-1:k+1,n) &
