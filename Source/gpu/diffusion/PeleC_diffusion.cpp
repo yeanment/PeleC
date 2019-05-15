@@ -107,8 +107,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 	  const int*  domain_lo = geom.Domain().loVect();
 	  const int*  domain_hi = geom.Domain().hiVect();
 
-    for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true));
-         mfi.isValid(); ++mfi) {
+    for (MFIter mfi(S,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
       const Box  vbox = mfi.tilebox();
       int ng = S.nGrow();
@@ -185,18 +184,33 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
                              BL_TO_FORTRAN_N_3D(coeff_cc.fab(), dComp_rhoD),
                              BL_TO_FORTRAN_N_3D(coeff_cc.fab(), dComp_mu),
                              BL_TO_FORTRAN_N_3D(coeff_cc.fab(), dComp_xi),
-                             BL_TO_FORTRAN_N_3D(coeff_cc.fab(), dComp_lambda));
+                             BL_TO_FORTRAN_N_3D(coeff_cc.fab(), dComp_lambda));       
       }
-        Gpu::AsyncFab flux_ec[AMREX_SPACEDIM] = 
-        {  D_DECL(Gpu::AsyncFab(amrex::surroundingNodes(cbox,0), NUM_STATE),
-                  Gpu::AsyncFab(amrex::surroundingNodes(cbox,1), NUM_STATE),
-                  Gpu::AsyncFab(amrex::surroundingNodes(cbox,2), NUM_STATE))
-        }; 
 
+     Gpu::AsyncFab flux_ecx(amrex::surroundingNodes(cbox,0), NUM_STATE);
+//     (flux_ecx.fab()).setVal(0.);
+     auto const &flx1 = flux_ecx.array(); 
+#if AMREX_SPACEDIM > 1 
+     Gpu::AsyncFab flux_ecy(amrex::surroundingNodes(cbox,1), NUM_STATE);
+//     (flux_ecy.fab()).setVal(0.);
+     auto const &flx2 = flux_ecy.array(); 
+#if AMREX_SPACEDIM > 2 
+     Gpu::AsyncFab flux_ecz(amrex::surroundingNodes(cbox,2), NUM_STATE);
+//     (flux_ecz.fab()).setVal(0.);
+     auto const &flx3 = flux_ecz.array(); 
+#endif 
+#endif
+      
+    std::cout<<       flx1(0,12,0,URHO) << std::endl; 
+      auto const D_DECL(&a1 = (area[0]).array(mfi),  &a2 = (area[1]).array(mfi), &a3 = (area[2]).array(mfi)); 
       // Container on grown region, for hybrid divergence & redistribution
       Gpu::AsyncFab Dterm(cbox, NUM_STATE); 
       auto const &coe_cc = coeff_cc.array(); 
-      for (int d=0; d<BL_SPACEDIM; ++d) {
+      PeleC_compute_diffusion_flux(cbox, qar, coe_cc, D_DECL(flx1, flx2, flx3),
+                                   D_DECL(a1, a2, a3),  nCompTr, dx, do_harmonic, diffuse_vel); 
+
+
+/*      for (int d=0; d<BL_SPACEDIM; ++d) {
         (flux_ec[d].fab()).setVal(0.); 
         Box ebox = amrex::surroundingNodes(cbox,d);
         Gpu::AsyncFab coeff_ec(ebox, nCompTr); 
@@ -208,7 +222,8 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
           BL_PROFILE("PeleC::pc_move_transport_coeffs_to_ec call");
           AMREX_PARALLEL_FOR_4D (cbox, nCompTr, i, j, k, n, { 
                 PeleC_move_transcoefs_to_ec(i,j,k,n, coe_cc, coe_ec, d, do_harmonic); 
-          });  
+          }); 
+          Gpu::Device::streamSynchronize();
         }
 #if (BL_SPACEDIM > 1)
         int nCompTan = AMREX_D_PICK(1, 2, 6);
@@ -227,7 +242,8 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #endif            
             AMREX_PARALLEL_FOR_3D(ebox, i, j, k, {
                 PeleC_compute_tangential_vel_derivs(i,j,k,td, qar, d, del2); 
-            }); 
+            });
+            Gpu::Device::streamSynchronize();
           }
         }  // diffuse_vel
         //Compute Extensive diffusion fluxes
@@ -235,19 +251,23 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         BL_PROFILE("PeleC::diffusion_flux()"); 
         AMREX_PARALLEL_FOR_3D(ebox, i, j, k,  {
             PeleC_diffusion_flux(i,j,k, qar, coe_ec, td, a1, flxec, del, d); 
-        }); 
+        });
+        Gpu::Device::streamSynchronize();
 #endif
       }  // loop over dimension
+*/ 
+
 
       // Compute flux divergence (1/Vol).Div(F.A)
       {
+        Gpu::Device::synchronize(); 
         BL_PROFILE("PeleC::pc_diffup()");
-        auto const D_DECL(&flx1 = flux_ec[0].array(), &flx2 = flux_ec[1].array(), &flx3 = flux_ec[2].array());  
         auto const &vol = volume.array(mfi); 
         auto const &Dif = Dterm.array(); 
         AMREX_PARALLEL_FOR_4D(cbox, NVAR, i , j, k ,n, {
             PeleC_diffup(i,j,k,n, D_DECL(flx1, flx2, flx3), vol, Dif); 
-        }); 
+        });
+        Gpu::Device::streamSynchronize();
       }  
 
       // Shut off unwanted diffusion after the fact
@@ -260,23 +280,37 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       if (diffuse_temp == 0 && diffuse_enth == 0) {
         (Dterm.fab()).setVal(0, Eden);
         (Dterm.fab()).setVal(0, Eint);
-        for (int d = 0; d < BL_SPACEDIM; d++) {
-          (flux_ec[d].fab()).setVal(0, Eden);
-          (flux_ec[d].fab()).setVal(0, Eint);
-        }
+        (flux_ecx.fab()).setVal(0, Eden);
+        (flux_ecx.fab()).setVal(0, Eint);
+#if AMREX_SPACEDIM > 1 
+        (flux_ecy.fab()).setVal(0, Eden);
+        (flux_ecy.fab()).setVal(0, Eint);
+#if AMREX_SPACEDIM > 2 
+        (flux_ecz.fab()).setVal(0, Eden);
+        (flux_ecz.fab()).setVal(0, Eint);
+#endif
+#endif
       }
       if (diffuse_spec == 0) {
         (Dterm.fab()).setVal(0, (Dterm.fab()).box(), FirstSpec, NumSpec);
-        for (int d = 0; d < BL_SPACEDIM ; d++) {
-          (flux_ec[d].fab()).setVal(0, (flux_ec[d].fab()).box(), FirstSpec, NumSpec);
-        }
+        (flux_ecx.fab()).setVal(0, (flux_ecx.fab()).box(), FirstSpec, NumSpec);
+#if AMREX_SPACEDIM > 1 
+        (flux_ecy.fab()).setVal(0, (flux_ecy.fab()).box(), FirstSpec, NumSpec);
+#if AMREX_SPACEDIM > 2 
+        (flux_ecz.fab()).setVal(0, (flux_ecz.fab()).box(), FirstSpec, NumSpec);
+#endif
+#endif
       }
 
       if (diffuse_vel  == 0) {
         (Dterm.fab()).setVal(0, (Dterm.fab()).box(), Xmom, 3);
-        for (int d = 0; d < BL_SPACEDIM; d++) {
-          (flux_ec[d].fab()).setVal(0, (flux_ec[d].fab()).box(), Xmom, 3);
-        }
+        (flux_ecx.fab()).setVal(0, (flux_ecx.fab()).box(), Xmom, 3);
+#if AMREX_SPACEDIM > 1 
+        (flux_ecy.fab()).setVal(0, (flux_ecy.fab()).box(), Xmom, 3);
+#if AMREX_SPACEDIM > 2 
+        (flux_ecz.fab()).setVal(0, (flux_ecz.fab()).box(), Xmom, 3);
+#endif
+#endif
       }
 
 
@@ -288,19 +322,22 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 
         if (do_reflux && flux_factor != 0)  // no eb in problem
         {
-          for (int d = 0; d < BL_SPACEDIM ; d++) {
-            (flux_ec[d].fab()).mult(flux_factor);
-          }
-
+            (flux_ecx.fab()).mult(flux_factor);
+#if AMREX_SPACEDIM > 1 
+            (flux_ecy.fab()).mult(flux_factor);
+#if AMREX_SPACEDIM > 2 
+            (flux_ecz.fab()).mult(flux_factor);
+#endif
+#endif
           if (level < parent->finestLevel()) {
             getFluxReg(level+1).CrseAdd(mfi,
-                                       {D_DECL(&flux_ec[0].fab(), &flux_ec[1].fab(), &flux_ec[2].fab())},
+                                       {D_DECL(&flux_ecx.fab(), &flux_ecy.fab(), &flux_ecz.fab())},
                                         dxDp, dt);
           }
 
           if (level > 0) {
             getFluxReg(level).FineAdd(mfi,
-                                     {D_DECL(&flux_ec[0].fab(), &flux_ec[1].fab(), &flux_ec[2].fab())},
+                                     {D_DECL(&flux_ecx.fab(), &flux_ecy.fab(), &flux_ecz.fab())},
                                       dxDp, dt);
           }
         }

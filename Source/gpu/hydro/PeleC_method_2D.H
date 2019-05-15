@@ -142,11 +142,148 @@ PeleC_shock(const int i, const int j, const int k,
         else shk(i,j,k) = 0.0e0; 
 } */ 
 
+//Unsplit Riemann 
+AMREX_GPU_DEVICE
+inline
+void
+riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
+ const amrex::Real v2l, const amrex::Real pl, const amrex::Real rel, 
+ const amrex::Real gamcl, const amrex::Real *spl, 
+ const amrex::Real rr, const amrex::Real ur, const amrex::Real vr,
+ const amrex::Real v2r, const amrex::Real pr, const amrex::Real rer, 
+ const amrex::Real gamcr,  const amrex::Real *spr,
+ EOS &gdnv_state, 
+ amrex::Real &uflx_rho, amrex::Real &uflx_u, 
+ amrex::Real &uflx_v, amrex::Real &uflx_w,
+ amrex::Real &uflx_eden, amrex::Real &uflx_eint,
+ amrex::Real &qint_iu, amrex::Real &qint_iv1, amrex::Real &qint_iv2, 
+ amrex::Real &qint_gdpres, amrex::Real &qint_gdgame,
+ amrex::Real &ustar, const int idir, const amrex::Real csmall,
+ const amrex::Real cav)
+//TODO consider making a uflx array instead of passing each in. 
+{ 
+    amrex::Real wl, wr; 
+    wl = std::sqrt(std::abs(gamcl*pl*rl)); 
+    wr = std::sqrt(std::abs(gamcr*pr*rr)); 
+    
+    amrex::Real wwinv = 1.e0/(wl + wr); 
+    amrex::Real pstar = ((wr*pl + wl*pr) + wl*wr*(ul -ur))*wwinv; 
+    ustar = ((wl*ul + wr*ur) + (pl - pr))*wwinv; 
+
+    if(std::abs(ustar) < smallu*0.5e0*(std::abs(ul) + std::abs(ur))) ustar = 0.e0; 
+    amrex::Real ro, uo, po, reo, gamco; 
+    if(ustar > 0.e0){
+        ro    = rl; 
+        uo    = ul; 
+        po    = pl; 
+        reo   = rel; 
+        gamco = gamcl; 
+    }
+    else if(ustar < 0.e0){
+        ro    = rr; 
+        uo    = ur; 
+        po    = pr; 
+        reo   = rer; 
+        gamco = gamcr; 
+    }
+    else
+    {
+        ro    = 0.5e0*(rl + rr); 
+        uo    = 0.5e0*(ul + ur); 
+        po    = 0.5e0*(pl + pr); 
+        reo   = 0.5e0*(rel + rer); 
+        gamco = 0.5e0*(gamcl + gamcr); 
+    }
+    
+    ro = amrex::max(small_dens, ro); 
+    amrex::Real roinv = 1.e0/ro; 
+    amrex::Real co = std::sqrt(std::abs(gamco*po*roinv)); 
+    co = amrex::max(csmall, co); 
+    amrex::Real co2inv = 1.e0/(co*co); 
+    amrex::Real drho = (pstar - po)*co2inv; 
+    amrex::Real rstar = ro + drho;
+    rstar = amrex::max(small_dens, rstar);  
+    amrex::Real entho = (reo + po)*roinv*co2inv; 
+    amrex::Real estar = reo + (pstar -po)*entho; 
+    amrex::Real cstar = std::sqrt(std::abs(gamco*pstar/rstar)); 
+    
+    amrex::Real sgnm = std::copysign(1.e0, ustar); 
+    amrex::Real spout = co - sgnm*uo; 
+    amrex::Real spin  = cstar - sgnm*ustar; 
+    amrex::Real ushock = 0.5e0*(spin + spout); 
+    
+    if (pstar-po > 0.e0){
+        spin = ushock; 
+        spout = ushock; 
+    }
+    amrex::Real scr; 
+    if(spout-spin == 0.e0) scr = small*cav; 
+    else scr = spout-spin; 
+    
+    amrex::Real frac = (1.e0 + (spout + spin)/scr)*0.5e0; 
+    frac = amrex::max(0.e0, amrex::min(1.e0, frac)); 
+
+    if(ustar > 0.e0){
+        qint_iv1 = vl; 
+        qint_iv2 = v2l; 
+    }
+    else if(ustar < 0.e0)
+    {
+        qint_iv1 = vr; 
+        qint_iv2 = v2r; 
+    }
+    else{
+        qint_iv1 = 0.5e0*(vl + vr); 
+        qint_iv2 = 0.5e0*(v2l + v2r); 
+    }
+    amrex::Real qint_rho = frac*rstar + (1.e0 - frac)*ro; 
+    qint_iu = frac*ustar + (1.e0 - frac)*uo; 
+    qint_gdpres = frac*pstar + (1.e0 - frac)*po; 
+    amrex::Real regdnv = frac*estar + (1.e0 - frac)*reo; 
+    if(spout < 0.e0){
+        qint_rho = ro; 
+        qint_iu = uo; 
+        qint_gdpres = po; 
+        regdnv = reo; 
+    }
+    if (spin >= 0.e0){
+        qint_rho = rstar; 
+        qint_iu = ustar; 
+        qint_gdpres = pstar; 
+        regdnv = estar; 
+    }
+    qint_gdgame = qint_gdpres/regdnv + 1.e0; 
+    qint_gdpres = amrex::max(small_pres, qint_gdpres); 
+//    amrex::Real u_adv = qint_iu; 
+    
+    //compute fluxes! 
+    uflx_rho = qint_rho*qint_iu; 
+    if( idir == 0){
+         uflx_u = uflx_rho*qint_iu + qint_gdpres; 
+         uflx_v = uflx_rho*qint_iv1; 
+         uflx_w = uflx_rho*qint_iv2; 
+    }
+    else if(idir == 1){
+         uflx_u = uflx_rho*qint_iv1; 
+         uflx_v = uflx_rho*qint_iu + qint_gdpres; 
+         uflx_w = uflx_rho*qint_iv2; 
+    }
+    else{
+         uflx_u = uflx_rho*qint_iv1; 
+         uflx_v = uflx_rho*qint_iv2; 
+         uflx_w = uflx_rho*qint_iu + qint_gdpres; 
+    }
+    amrex::Real rhoetot = regdnv + 0.5e0*qint_rho*(qint_iu*qint_iu + qint_iv1*qint_iv1 + qint_iv2*qint_iv2); 
+    uflx_eden = qint_iu*(rhoetot + qint_gdpres); 
+    uflx_eint = qint_iu*regdnv; 
+}
+
+
 //Riemann_md 
 AMREX_GPU_DEVICE
 inline
 void
-riemann (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
+riemann_md (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
  const amrex::Real v2l, const amrex::Real pl, const amrex::Real rel, 
  const amrex::Real gamcl, const amrex::Real *spl, 
  const amrex::Real rr, const amrex::Real ur, const amrex::Real vr,
@@ -388,7 +525,7 @@ PeleC_cmpflx(const int i, const int j, const int k,
             rer = rel;         
          } 
 //*/
-          riemann(ql(i,j,k,QRHO), ul, vl, v2l, 
+          riemannus(ql(i,j,k,QRHO), ul, vl, v2l, 
                  ql(i,j,k,QPRES), rel, gamcl, spl,   
                  qr(i,j,k,QRHO), ur, vr, v2r, 
                  qr(i,j,k,QPRES), rer, gamcr, spr,

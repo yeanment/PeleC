@@ -60,7 +60,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qgdx(bxg2, NGDNV); 
     auto const& gdtemp = qgdx.array(); 
 
-    AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
+   AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, gdtemp, qaux, 0);
     });
 
@@ -72,7 +72,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
     AsyncFab qym(ymbx, QVAR);
     AsyncFab qyp(yslpbx, QVAR);
     auto const& qymarr = qym.array(); 
-    auto const& qyparr = qyp.array();  
+    auto const& qyparr = qyp.array(); 
     AMREX_PARALLEL_FOR_4D (yslpbx, QVAR, i, j, k, n,{
         PeleC_slope_y(i, j, k, n, slarr, q);
     });
@@ -86,7 +86,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
 //===================== Y initial fluxes ===========================
     AsyncFab fy(yflxbx, NVAR); 
     auto const& fyarr = fy.array();
-    AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
+   AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qymarr, qyparr, fyarr, q2, qaux, 1); 
     }); 
 
@@ -104,7 +104,7 @@ void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi,
  
 //===================== Final Riemann problem X ====================
     const Box& xfxbx = surroundingNodes(bx, cdir);
-    AMREX_PARALLEL_FOR_3D (xfxbx, i,j,k, {      
+   AMREX_PARALLEL_FOR_3D (xfxbx, i,j,k, {      
       PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmarr, qparr, flx1, q1, qaux,0); 
     }); 
 

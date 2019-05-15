@@ -171,5 +171,12 @@ PeleC_diffup(const int i, const int j, const int k, const int n,
                      + fy(i,j+1,k,n) - fy(i,j,k,n))/V(i,j,k); 
 }
 
+//Host Driver Function for generating diffusive fluxes. 
+
+void 
+PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Real> &q, const amrex::Array4<const amrex::Real> &coef, 
+                             const amrex::Array4<amrex::Real> &flx1, const amrex::Array4<amrex::Real> &flx2, 
+                             const amrex::Array4<const amrex::Real> &a1, const amrex::Array4<const amrex::Real> &a2, 
+                             const int nCompTr, const amrex::Real del[], const int do_harmonic, const int diffuse_vel); 
 
 #endif 
