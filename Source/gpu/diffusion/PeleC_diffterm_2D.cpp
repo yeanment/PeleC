@@ -30,13 +30,7 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
                PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cx, 0, do_harmonic); 
                PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cy, 1, do_harmonic); 
         });       
-        Gpu::Device::streamSynchronize(); 
-        std::cout<< cx(0,12, 0, URHO) << std::endl; 
-        std::cout<< cy(0,12, 0, URHO) << std::endl; 
-        std::cin.get(); 
 
- 
- 
         int nCompTan = 2;
         Gpu::AsyncFab tx_der(exbox, nCompTan);
         Gpu::AsyncFab ty_der(eybox, nCompTan); 
@@ -59,7 +53,6 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
             AMREX_PARALLEL_FOR_3D(eybox, i, j, k, {
                 PeleC_compute_tangential_vel_derivs(i,j,k,ty, q, 1, dx); 
             });
-           Gpu::Device::streamSynchronize(); 
         }  // diffuse_vel
 
         //Compute Extensive diffusion fluxes
@@ -67,10 +60,7 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
         AMREX_PARALLEL_FOR_3D(exbox, i, j, k,  {
             PeleC_diffusion_flux(i,j,k, q, cx, tx, a1, flx1, dx, 0); 
         });
-        std::cout<< flx1(0,12, 0, URHO) << std::endl; 
-        std::cin.get(); 
         AMREX_PARALLEL_FOR_3D(eybox, i, j, k,  {
             PeleC_diffusion_flux(i,j,k, q, cy, ty, a2, flx2, dy, 1);
         });
-       Gpu::Device::streamSynchronize(); 
 }

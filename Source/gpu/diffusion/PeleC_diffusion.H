@@ -43,6 +43,23 @@ void PeleC_move_transcoefs_to_ec(const int i,const int j, const int k, const int
     }
 }                                    
 
+inline
+void setV(const Box box, const int Ncomp, const amrex::Array4<amrex::Real> array, const amrex::Real val)
+{
+    AMREX_PARALLEL_FOR_4D(box, Ncomp, i, j, k, n, { 
+        array(i,j,k,n) = val; 
+    }); 
+}
+
+inline
+void setC(const Box box,const int Nstart, const int Nend, const amrex::Array4<amrex::Real> array, const amrex::Real val)
+{
+    AMREX_PARALLEL_FOR_3D(box, i, j, k, 
+      { 
+        for(int n = Nstart; n < Nend; n++) array(i,j,k,n) = val;
+    }); 
+}
+
 
 AMREX_GPU_DEVICE
 inline
