@@ -45,7 +45,7 @@ load_balance_verbosity       int           0
 #-----------------------------------------------------------------------------
 
 # this flag uses C++ based GPU routines instead of CPU 
-# If comiled with USE_CUDA FALSA, then uses C++ routines on CPU 
+# If comiled with USE_CUDA FALSE, then uses C++ routines on CPU 
 do_gpu                       int           0
 
 #-----------------------------------------------------------------------------
@@ -251,7 +251,8 @@ zr_ext_bc_type               string        ""                 y
 eb_boundary_T                Real         1.0
 eb_isothermal                int          1
 eb_noslip                    int          1
-
+# Small vfrac - values below this will be pseudo-merged
+eb_small_vfrac               Real         1.0e-2            y
 #-----------------------------------------------------------------------------
 # category: method of manufactured solution
 #-----------------------------------------------------------------------------
