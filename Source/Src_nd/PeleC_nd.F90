@@ -68,7 +68,7 @@ end subroutine pc_extern_init
 #ifdef REACTIONS
 subroutine pc_reactor_init() bind(C, name="pc_reactor_init")
 
-#ifdef USE_SUNDIALS_3x4x 
+#ifdef AMREX_USE_SUNDIALS_3x4x 
     use pphys_cvode       , only : reactor_init
     call reactor_init(1,1)
 #else
@@ -84,7 +84,7 @@ end subroutine pc_reactor_init
 
 subroutine pc_reactor_close() bind(C, name="pc_reactor_close")
 
-#ifdef USE_SUNDIALS_3x4x 
+#ifdef AMREX_USE_SUNDIALS_3x4x 
     use pphys_cvode       , only : reactor_close
 #else
     use reactor_module    , only : reactor_close

@@ -15,7 +15,7 @@ contains
                             IR,IR_lo,IR_hi, &
                             time,dt_react,do_update) bind(C, name="pc_react_state")
 
-#ifdef USE_SUNDIALS_3x4x 
+#ifdef AMREX_USE_SUNDIALS_3x4x 
     use pphys_cvode       , only : react
 #else
     use reactor_module    , only : react
@@ -80,7 +80,7 @@ contains
 
                 pressure         = 1013250.d0
 
-#ifdef USE_SUNDIALS_3x4x 
+#ifdef AMREX_USE_SUNDIALS_3x4x 
                 cost(i,j,k) = react(rY, rY_src,&
                                     rEnergy, energy_src,&
                                     pressure,dt_react,time,1)
@@ -92,7 +92,7 @@ contains
 
                 rho_new = sum(rY(1:nspec))
                 mom_new = uold(i,j,k,UMX:UMZ) + dt_react*asrc(i,j,k,UMX:UMZ)
-#ifdef USE_SUNDIALS_3x4x 
+#ifdef AMREX_USE_SUNDIALS_3x4x 
                 rhoe_new = rEnergy(1)
 #else
                 rhoe_new = rho_new  *  energy(1)
