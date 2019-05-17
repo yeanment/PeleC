@@ -15,11 +15,15 @@ contains
                             IR,IR_lo,IR_hi, &
                             time,dt_react,do_update) bind(C, name="pc_react_state")
 
+#ifdef USE_SUNDIALS_3x4x 
+    use pphys_cvode       , only : react
+#else
+    use reactor_module    , only : react
+#endif
     use network           , only : nspec
     use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UEINT, UTEMP, &
                                    UFS
-    use reactor_module, only : react
-    use amrex_fort_module, only : amrex_real
+    use amrex_fort_module , only : amrex_real
     use amrex_constants_module, only : HALF
 
     implicit none
@@ -44,7 +48,9 @@ contains
     double precision :: rho_e_K_old,rho_e_K_new, rhoE_old, rhoE_new, rho_new, mom_new(3)
 
     real(amrex_real) ::    rY(nspec+1), rY_src(nspec)
-    real(amrex_real) ::    energy, energy_src, pressure, rho
+    real(amrex_real) ::    energy(1), energy_src(1)
+    real(amrex_real) ::    rEnergy(1)
+    real(amrex_real) ::    pressure, rho
 
 
     do k = lo(3), hi(3)
@@ -57,14 +63,15 @@ contains
                 rho_e_K_old                     = HALF * sum(uold(i,j,k,UMX:UMZ)**2) / uold(i,j,k,URHO)
                 rho                             = sum(uold(i,j,k,UFS:UFS+nspec-1))
 
-                energy           = (rhoE_old - rho_e_K_old) / uold(i,j,k,URHO)
+                energy(1)        = (rhoE_old - rho_e_K_old) / uold(i,j,k,URHO)
+                rEnergy(1)       = (rhoE_old - rho_e_K_old)
                 rY(nspec+1)      = uold(i,j,k,UTEMP)
                 rY(1:nspec)      = uold(i,j,k,UFS:UFS+nspec-1)
 
                 ! rho.e source term computed using (rho.E,rho.u,rho)_new rather than pulling from UEINT comp of asrc
                 rho_e_K_new = HALF * sum(unew(i,j,k,UMX:UMZ)**2) / unew(i,j,k,URHO)
-                energy_src       = ( (unew(i,j,k,UEDEN) - rho_e_K_new) &
-                       -                (rho  *  energy) ) / dt_react
+                energy_src(1)      = ( (unew(i,j,k,UEDEN) - rho_e_K_new) &
+                       -                (rho  *  energy(1)) ) / dt_react
 
                 rY_src(1:nspec)  = asrc(i,j,k,UFS:UFS+nspec-1)
                 !react_state_in % i = i
@@ -73,13 +80,23 @@ contains
 
                 pressure         = 1013250.d0
 
+#ifdef USE_SUNDIALS_3x4x 
                 cost(i,j,k) = react(rY, rY_src,&
-                                    energy, energy_src,&
+                                    rEnergy, energy_src,&
+                                    pressure,dt_react,time,1)
+#else
+                cost(i,j,k) = react(rY, rY_src,&
+                                    energy(1), energy_src(1),&
                                     pressure,dt_react,time,0)
+#endif
 
                 rho_new = sum(rY(1:nspec))
                 mom_new = uold(i,j,k,UMX:UMZ) + dt_react*asrc(i,j,k,UMX:UMZ)
-                rhoe_new = rho_new  *  energy
+#ifdef USE_SUNDIALS_3x4x 
+                rhoe_new = rEnergy(1)
+#else
+                rhoe_new = rho_new  *  energy(1)
+#endif
                 rho_e_K_new = HALF * sum(mom_new**2) / rho_new
                 rhoE_new    = rhoe_new + rho_e_K_new
                 

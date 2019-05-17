@@ -19,6 +19,15 @@ USE_REACT  = TRUE
 # define the location of the PELE top directory
 PELE_HOME  := ../../..
 
+#######################
+USE_SUNDIALS_3x4x = TRUE
+
+USE_KLU = FALSE
+ifeq ($(USE_KLU), TRUE)
+	DEFINES  += -DUSE_KLU
+endif
+#######################
+
 # This sets the EOS directory in $(PELE_PHYSICS_HOME)/Eos
 #Eos_dir     := Soave-Redlich-Kwong
 Eos_dir     := Fuego
