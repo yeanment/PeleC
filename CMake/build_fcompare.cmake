@@ -23,9 +23,10 @@ function(build_fcompare)
   target_compile_definitions(fcompare PRIVATE AMREX_FORT_USE_UNDERSCORE)
   target_compile_definitions(fcompare PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:BL_LANG_FORT>)
   target_compile_definitions(fcompare PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:AMREX_LANG_FORT>)
-  if(${CMAKE_BUILD_TYPE} MATCHES "Release")
-    target_compile_definitions(fcompare PRIVATE NDEBUG)
-  endif()
+  # CMake BUILD_TYPE should already define this for us
+  #if(${CMAKE_BUILD_TYPE} MATCHES "Release")
+  #  target_compile_definitions(fcompare PRIVATE NDEBUG)
+  #endif()
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     target_compile_definitions(fcompare PRIVATE BL_Darwin)
     target_compile_definitions(fcompare PRIVATE AMREX_Darwin)
@@ -44,7 +45,7 @@ function(build_fcompare)
  
   #Keep our Fortran module files confined to a unique directory for each executable 
   set_target_properties(fcompare PROPERTIES Fortran_MODULE_DIRECTORY
-                       "${CMAKE_BINARY_DIR}/fcompare_fortran_modules")
+                       "${CMAKE_BINARY_DIR}/fortran_modules/fcompare_fortran_modules")
 
   #Define what we want to be installed during a make install 
   install(TARGETS fcompare
