@@ -76,6 +76,10 @@
 #define dComp_mu dComp_rhoD + NUM_SPECIES
 #define dComp_xi dComp_mu + 1 
 #define dComp_lambda dComp_xi + 1
+
+#define SlipWall 4 
+#define NoSlipWall 5 
+
  
 #define NTHERM    7
 #define QTHERM    8
