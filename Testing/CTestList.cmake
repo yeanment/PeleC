@@ -72,7 +72,7 @@ function(add_test_v1 TEST_NAME TEST_DEPENDENCY NP)
     # Define our test options
     include(${EXE_OPTIONS_FILE})
     # Define our main run command
-    set(RUN_COMMAND "${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${NP} ${MPIEXEC_PREFLAGS} ${TEST_DEPENDENCY_BINARY_DIR}/PeleC-${TEST_DEPENDENCY} ${MPIEXEC_POSTFLAGS} ${CURRENT_TEST_BINARY_DIR}/${TEST_NAME}.i")
+    set(RUN_COMMAND "rm mmslog datlog || true && ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${NP} ${MPIEXEC_PREFLAGS} ${TEST_DEPENDENCY_BINARY_DIR}/PeleC-${TEST_DEPENDENCY} ${MPIEXEC_POSTFLAGS} ${CURRENT_TEST_BINARY_DIR}/${TEST_NAME}.i")
     # Set some default runtime options for all tests in this category
     set(RUNTIME_OPTIONS "amr.checkpoint_files_output=0 amr.plot_files_output=1 amr.probin_file=${TEST_NAME}.probin")
     # Add test and actual test commands to CTest database
@@ -83,8 +83,6 @@ endfunction(add_test_v1)
 
 # Verification test with multiple resolutions (each test runs on maximum number of processes on node)
 function(add_test_v2 TEST_NAME TEST_DEPENDENCY)
-    # Create list of resolutions we want to test with
-    set(RESOLUTION_LIST 8 12 16 20)
     # Make sure run command is cleared before we construct it
     unset(MASTER_RUN_COMMAND)
     # Set variables for respective binary and source directories for the test
@@ -98,6 +96,11 @@ function(add_test_v2 TEST_NAME TEST_DEPENDENCY)
     set(EXE_OPTIONS_FILE ${TEST_DEPENDENCY_SOURCE_DIR}/exe_options.cmake)
     # Define our test options
     include(${EXE_OPTIONS_FILE})
+    # Create list of resolutions we want to test with
+    set(RESOLUTION_LIST 8 12 16 20)
+    if(${PELEC_DIM} EQUAL 1)
+      set(RESOLUTION_LIST 8 16 32 64)
+    endif()
     # Get last item in resolution list so we can find out when we are on the last item in our loop
     list(GET RESOLUTION_LIST -1 LAST_RESOLUTION_IN_LIST)
     # Create the commands to run for each resolution
@@ -116,12 +119,16 @@ function(add_test_v2 TEST_NAME TEST_DEPENDENCY)
       elseif(${PELEC_DIM} EQUAL 1)
         set(NCELLS "${RESOLUTION}")
       endif()
+      # Set the command to delete files from previous test runs in each resolution
+      set(DELETE_PREVIOUS_FILES_COMMAND "rm mmslog datlog || true")
       # Set the run command for this resolution
       set(RUN_COMMAND_${RESOLUTION} "${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${PROCESSES} ${MPIEXEC_PREFLAGS} ${TEST_DEPENDENCY_BINARY_DIR}/PeleC-${TEST_DEPENDENCY} ${MPIEXEC_POSTFLAGS} ${CURRENT_TEST_BINARY_DIR}/${RESOLUTION}/${TEST_NAME}.i")
       # Set some runtime options for each resolution
       set(RUNTIME_OPTIONS_${RESOLUTION} "amr.checkpoint_files_output=0 amr.plot_files_output=1 amr.probin_file=${TEST_NAME}.probin amr.n_cell=${NCELLS}")
       # Construct our large run command with everything &&'d together
       string(APPEND MASTER_RUN_COMMAND "cd ${CURRENT_TEST_BINARY_DIR}/${RESOLUTION}")
+      string(APPEND MASTER_RUN_COMMAND " && ")
+      string(APPEND MASTER_RUN_COMMAND "${DELETE_PREVIOUS_FILES_COMMAND}")
       string(APPEND MASTER_RUN_COMMAND " && ")
       string(APPEND MASTER_RUN_COMMAND "${RUN_COMMAND_${RESOLUTION}} ${RUNTIME_OPTIONS_${RESOLUTION}}")
       # Add another " && " unless we are on the last resolution in the list

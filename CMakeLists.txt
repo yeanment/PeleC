@@ -31,6 +31,9 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+#Options for libraries we build
+#SET(BUILD_SHARED_LIBS OFF)
+
 ########################### MASA #####################################
 
 if(ENABLE_TESTS)
@@ -55,26 +58,61 @@ if(ENABLE_VERIFICATION)
   message(STATUS "Warning: Verification tests expect a specific Python environment and take a long time to run")
 endif()
 
-message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
-message(STATUS "CMAKE_CXX_COMPILER_ID = ${CMAKE_CXX_COMPILER_ID}")
-message(STATUS "CMAKE_CXX_COMPILER_VERSION = ${CMAKE_CXX_COMPILER_VERSION}")
-message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
-
 include(${CMAKE_SOURCE_DIR}/CMake/set_compile_flags.cmake)
 set_compile_flags()
 
 find_package(PythonInterp REQUIRED)
 
+include(${CMAKE_SOURCE_DIR}/CMake/build_amrex.cmake)
 include(${CMAKE_SOURCE_DIR}/CMake/build_fcompare.cmake)
 include(${CMAKE_SOURCE_DIR}/CMake/build_pelec.cmake)
 
+# General information about machine, compiler, and build type
+message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
+message(STATUS "CMAKE_CXX_COMPILER_ID = ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "CMAKE_CXX_COMPILER_VERSION = ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+
+# Regular flags we have added
+message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
+message(STATUS "CMAKE_C_FLAGS = ${CMAKE_C_FLAGS}")
+message(STATUS "CMAKE_Fortran_FLAGS = ${CMAKE_Fortran_FLAGS}")
+
+# User can set CMAKE_BUILD_TYPE case insensitively but we want it uppercase
+string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
+
+# Build type flags in which CMake adds for us
+message(STATUS "CMAKE_CXX_FLAGS_${BUILD_TYPE} = ${CMAKE_CXX_FLAGS_${BUILD_TYPE}}")
+message(STATUS "CMAKE_C_FLAGS_${BUILD_TYPE} = ${CMAKE_C_FLAGS_${BUILD_TYPE}}")
+message(STATUS "CMAKE_Fortran_FLAGS_${BUILD_TYPE} = ${CMAKE_Fortran_FLAGS_${BUILD_TYPE}}")
+
+# Use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+# When building, don't use the install RPATH already (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# Add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# The RPATH to be used when installing, but only if it's not a system directory
+LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+IF("${isSystemDir}" STREQUAL "-1")
+   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+ENDIF("${isSystemDir}" STREQUAL "-1")
+
 if(ENABLE_TESTS)
-  set(PELEC_ENABLE_MPI ON)
-  set(ENABLE_FCOMPARE ON)
   enable_testing()
   include(CTest)
+  set(PELEC_ENABLE_MPI ON)
   find_package(MPI REQUIRED)
-  build_fcompare()
+  if(TEST_WITH_FCOMPARE)
+    set(ENABLE_FCOMPARE ON)
+    build_fcompare()
+  endif()
+  build_amrex()
   add_subdirectory(Testing)
 else()
   include(${CMAKE_BINARY_DIR}/exe_options.cmake)
@@ -84,10 +122,11 @@ else()
   #if(PELEC_ENABLE_OPENMP)
   #  find_package(OPENMP REQUIRED)
   #endif()
-  build_pelec(PeleC-${PELEC_DIM}D ${CMAKE_BINARY_DIR}/exe_options.cmake)
   if(ENABLE_FCOMPARE)
     build_fcompare()
   endif()
+  build_amrex()
+  build_pelec(PeleC-${PELEC_DIM}D ${CMAKE_BINARY_DIR}/exe_options.cmake)
 endif()
 
 if(ENABLE_DOCUMENTATION)
