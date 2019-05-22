@@ -48,7 +48,7 @@ inline void PeleC_normal_deriv(const int i, const int j, const int k, const int 
             drho = ((threehalves)*q(i,j,k,QRHO) - 2.e0*q(i,j-1,k,QRHO) + 0.5e0*q(i,j-2,k,QRHO))*dinv; 
         }
     }
-}
+} //end normal_deriv 
 
 AMREX_GPU_DEVICE
 inline void PeleC_tang_deriv(const int i , const int j, const int k, const int idir, 
@@ -70,6 +70,36 @@ inline void PeleC_tang_deriv(const int i , const int j, const int k, const int i
         du = (q(i+1,j,k, QU) - q(i-1,j,k,QU))*dinv;
         dv = (q(i+1,j,k, QV) - q(i-1,j,k,QV))*dinv; 
         drho = (q(i+1,j,k, QRHO) - q(i-1,j,k,QRHO))*dinv; 
+    }
+} // end tang_deriv
+
+
+AMREX_GPU_DEVICE
+inline void PeleC_compute_trans_terms(const int i, const int j, const int k, const int idir, 
+                                      amrex::Real &T[4], const amrex::Real dp, const amrex::Real du,
+                                      const amrex::Real dv, const amrex::Real drho,
+                                      const amrex::Array4<const amrex::Real> &q, 
+                                      const amrex::Array4<const amrex::Real> &qaux)
+{
+    amrex::Real c     = qaux(i,j,k,QC); 
+    amrex::Real gamc  = qaux(i,j,k,QGAMC); 
+    amrex::Real qrho  = q(i,j,k,QRHO); 
+    amrex::Real qpres = q(i,j,k,QPRES); 
+    if(idir == 0)
+    {
+        amrex::Real qv = q(i,j,k,QV); 
+        T[0] = (qv*(dp - qrho*c*du)) + (gamc*qpres*dv); 
+        T[1] = (qv*((c*c*drho) - dp)) + (c*c*qrho*dv) - (gamc*qpres*dv); 
+        T[2] = (qv*dv) + (dp/qrho); 
+        T[3] = (qv*(dp + qrho*c*du)) + (gamc*qpres*dv); 
+    }
+    else(idir == 1) 
+    {
+        amrex::Real qu = q(i,j,k,QU); 
+        T[0] = (qu*(dp - qrho*c*dv)) + (gamc*qpres*du); 
+        T[1] = (qu*du) + (dp/qrho);
+        T[2] = (qu*((c*c*drho) - dp)) + (c*c*qrho*du) - (gamc*qpres*du);
+        T[3] = (qu*(dp + qrho*c*dv)) + (gamc*qpres*du); 
     }
 }
 
@@ -322,7 +352,8 @@ inline void PeleC_update_gc(const int i,const int j, const int k, const int bc_t
                 u(i, hop, k, UMY) = q(i, hop, k, QV)*eos.rho; 
                 u(i, hop, k, UMZ) = 0.e0; 
                 u(i, hop, k, UEINT) = eos.rho*eos.e; 
-                u(i, hop, k, UEDEN) = eos.rho *(eoe.e + 0.5e0*(q(i,hop,k,QU)*q(i,hop,k,QU) + q(i,hop,k,QV)*q(i,hop,k,QV)); 
+                u(i, hop, k, UEDEN) = eos.rho *(eoe.e + 0.5e0*(q(i,hop,k,QU)*q(i,hop,k,QU)
+                                    + q(i,hop,k,QV)*q(i,hop,k,QV))); 
                 u(i, hop, k, UTEMP) = eos.T; 
                 for(int n = 0; n < NUM_SPECIES; n++) 
                     u(i, hop, k, UFS + n) = eos.rho*eos.massfrac[n]; 
@@ -351,7 +382,8 @@ inline void PeleC_update_gc(const int i,const int j, const int k, const int bc_t
                 u(i, hop, k, UMY) = q(i, hop, k, QV)*eos.rho; 
                 u(i, hop, k, UMZ) = 0.e0; 
                 u(i, hop, k, UEINT) = eos.rho*eos.e; 
-                u(i, hop, k, UEDEN) = eos.rho *(eoe.e + 0.5e0*(q(i,hop,k,QU)*q(i,hop,k,QU) + q(i,hop,k,QV)*q(i,hop,k,QV)); 
+                u(i, hop, k, UEDEN) = eos.rho *(eoe.e + 0.5e0*(q(i,hop,k,QU)*q(i,hop,k,QU)
+                                    + q(i,hop,k,QV)*q(i,hop,k,QV))); 
                 u(i, hop, k, UTEMP) = eos.T; 
                 for(int n = 0; n < NUM_SPECIES; n++) 
                     u(i, hop, k, UFS + n) = eos.rho*eos.massfrac[n]; 
@@ -359,12 +391,113 @@ inline void PeleC_update_gc(const int i,const int j, const int k, const int bc_t
             }
         }                           
     }
-}
+}//end update_gc
 
 
+//Maybe put L and T in an array. 
 AMREX_GPU_DEVICE 
 inline void PeleC_compute_waves(const int i, const int j, const int k, const int idir, const int isgn, 
-                                const int bc_type); 
+                                const int bc_type, const amrex::Real probhi, 
+                                const amrex::Real T[4], amrex::Real &L[4],
+                                const amrex::Real bc_params[6], const amrex::Real bc_target[5], 
+                                const amrex::Real dp, const amrex::Real du const amrex::Real dv, 
+                                const amrex::Real drho, const amrex::Array4<const amrex::Real> &q, 
+                                const amrex::Array4<const amrex::Real> &qaux) 
+{
+    amrex::Real mach_local, beta, relax_T, relax_U, relax_V, sigma out, Kout;
+//Load these into local memory in order to prevent slow reads from global memory
+    amrex::Real qu = q(i,j,k,QU); 
+    amrex::Real qv = q(i,j,k,QV); 
+    amrex::Real qp = q(i,j,k,QPRES); 
+    amrex::Real qrho = q(i,j,k,QRHO); 
+    amrex::Real c = qaux(i,j,k,QC); 
 
+    mach_local = std::sqrt(qu*qu + qv*qv)/c;
+    amrex::Real beta = (bc_params[4]<0.e0) ? mach_local : bc_params[4]; 
+
+// Compute known numerical LODI waves 
+    if(idir == 0){ //LODI along X
+        L[0] = (qu - c)*(dp - (qrho*c)*du); 
+        L[1] =  qu*((c*c)*drho - dp); 
+        L[2] =  qu*dv; 
+        L[3] = (qu + c)*(dp + (qrho*c)*du); 
+    }
+    else if(idir ==1){ // LODI along Y 
+        L[0] = (qv - c)*(dp - (qrho*c)*dv); 
+        L[1] =  qv*du; 
+        L[2] =  qv*((c*c)*drho - dp); 
+        L[3] = (qv + c)*(qp + (qrho*c)*dv); 
+    }    
+
+//Compute missing waves from BC model 
+    if(bc_type==Inflow){
+        if(idir == 0){ 
+            if(isgn == 1) 
+                L[3] = bc_params[1]*((qrho*c*c)*(1.e0 - mach_local*mach_local)/probhi)
+                     * (qu - bc_target[0]) - ((1.e0 - beta)*T[3]);
+            else if(isgn==-1) 
+                L[0] = bc_params[1]*((qrho*c*c)*(1.e0 - mach_local*mach_local)/probhi)
+                     * (qu - bc_target[0]) - ((1.e0 - beta)*T[0]); 
+
+            L[1] = bc_params[0]*(qrho*c*qaux(i,j,k, QRSPEC)/probhi)
+                 * (q(i,j,k,QTEMP) - bc_target[3]) - ((1.e0 - beta)*T[1]); 
+            L[2] = bc_params[2]*(c/probhi)*(qv - bc_target[1]) - ((1.e0 - beta)*T[2]); 
+        } 
+        else if(idir == 1){
+            if(isgn == 1) 
+                L[3] = bc_params[2]*((qrho*c*c)*(1.e0 - mach_local*mach_local)/probhi) 
+                     * (qv - bc_target[1]) - ((1.e0 - beta)*T[3]); 
+            else if(isgn == -1) 
+                L[0] = bc_params[2]*((qrho*c*c)*(1.e0 - mach_local*mach_local)/probhi) 
+                     * (qv - bc_target[1]) - ((1.e0 - beta)*T[0]; 
+
+            L[1] = bc_params[1]*(c/probhi)*(qu - bc_target[0]) - ((1.e0 - beta)*T[1]); 
+            L[2] = bc_params[0]*(qrho*c*qauc(i,j,k,QRSPEC)/probhi)
+                 * (q(i,j,k,QTEMP) - bc_target[3]) - ((1.e0 - beta)*T[2]; 
+        }
+    }
+    else if((bc_type == SlipWall) || (bc_type == NoSlipWall)){
+        L[0] = 0.e0; 
+        L[1] = 0.e0; 
+        L[2] = 0.e0; 
+        L[3] = 0.e0; 
+    }
+    else if(bc_type == Outflow){ 
+
+        amrex::Real Kout = bc_params[5]*(1.e0 - (mach_local*mach_local))*(c/probhi); 
+        if(isgn == 1) L[3] = (Kout*qpres - bc_target[4]) - ((1.e0 - beta)*T[3]); 
+        else if(isgn==-1) L[0] = (Kout*qpres -bc_target[4]) - ((1.e0 - beta)*T[0]); 
+    }
+    //Shaping Waves per dimension 
+    if(idir == 0){
+        L[0] /= (qu-c); 
+        L[3] /= (qu+c); 
+        if(qu == 0.e0) L[1] = L[2] = 0.e0; 
+        else{ 
+            L[1] /= qu; 
+            L[2] /= qu; 
+        }        
+    }
+    else if(idir == 1){
+        L[0] /= (qv-c); 
+        L[3] /= (qv+c); 
+        if(qv == 0.e0) L[1] = L[2] = 0.e0; 
+        else{ 
+            L[1] /= qv; 
+            L[2] /= qv; 
+        }        
+    }
+}// end compute waves
+
+
+//Declaration for host function impose_NSCBC 
+void impose_NSCBC(Box box, const amrex::Array4<amrex::Real> &u, 
+                  const amrex::Array4<amrex::Real> &q, 
+                  const amrex::Array4<amrex::Real> &qaux, 
+                  const amrex::Array4<const int> x_bcMask, 
+                  const amrex::Array4<const int> y_bcMask, 
+                  const int nscbc_isAnyPerio, const int nscbc_perio, 
+                  const amrex::Real time, const amrex::Real *delta, 
+                  const amrex::Real dt); 
 
 #endif //End of header 
