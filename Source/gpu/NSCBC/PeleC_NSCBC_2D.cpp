@@ -91,9 +91,86 @@ void impose_NSCBC(Box box, const amrex::Array4<amrex::Real> &u,
         amrex::ParallelFor(box, 
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
-                
+                //Low X 
+                if(i == domlox){
+                    amrex::Real  x = (i + 0.5e0)*dx; 
+                    amrex::Real  y = (j + 0.5e0)*dy; 
 
+                    //normal deriv along x
+                    PeleC_normal_deriv(i, j, k, 0, 1, dx, dpdx, dudx, dvdx, drhodx, q); 
+                    //Tangential to x, derivative along y 
+                    PeleC_tang_deriv(i, j, k, 0, dy, dpdy, dudy, dvdy, drhody, q);
+                    //Compute Transverse Terms 
+                    PeleC_compute_trans_terms(i,j,k,0,Tx, dpdy, dudy, dvdy, drhody, q, qaux); 
+                    // Call BC normal; 
+                    // bcnormal(args....); 
+                    x_bcMask(i,j,k) = x_bc_type; 
+                    //Compute the LODI System 
+                    PeleC_compute_waves(i,j,k,0,1, x_bc_type, bc_params, bc_target, Tx, Lx,
+                                        dpdx, dudx, dvdx, drhodx, q, qaux); 
+                    //Compute Ghost Cells using LODI system 
+                    PeleC_upgdate_gc(i, j, k, x_bc_type, 0, 1, dx, domlox, domhix, Lx, u, q, qaux); 
+                }
+                //high X 
+                if(i == domhix){
+                    amrex::Real  x = (i + 0.5e0)*dx; 
+                    amrex::Real  y = (j + 0.5e0)*dy; 
 
+                    //normal deriv along x
+                    PeleC_normal_deriv(i, j, k, 0, -1, dx, dpdx, dudx, dvdx, drhodx, q); 
+                    //Tangential to x, derivative along y 
+                    PeleC_tang_deriv(i, j, k, 0, dy, dpdy, dudy, dvdy, drhody, q);
+                    //Compute Transverse Terms 
+                    PeleC_compute_trans_terms(i,j,k,0,Tx, dpdy, dudy, dvdy, drhody, q, qaux); 
+                    // Call BC normal; 
+                    // bcnormal(args....); 
+                    x_bcMask(i,j,k) = x_bc_type; 
+                    //Compute the LODI System 
+                    PeleC_compute_waves(i,j,k,0,-1, x_bc_type, bc_params, bc_target, Tx, Lx,
+                                        dpdx, dudx, dvdx, drhodx, q, qaux); 
+                    //Compute Ghost Cells using LODI system 
+                    PeleC_upgdate_gc(i, j, k, x_bc_type, 0, -1, dx, domlox, domhix, Lx, u, q, qaux); 
+                }
+                //low Y 
+                if(j == domloy){ 
+                    amrex::Real  x = (i + 0.5e0)*dx; 
+                    amrex::Real  y = (j + 0.5e0)*dy; 
+
+                    //normal deriv along y
+                    PeleC_normal_deriv(i, j, k, 1, 1, dy, dpdy, dudy, dvdy, drhody, q); 
+                    //Tangential to y, derivative along x 
+                    PeleC_tang_deriv(i, j, k, 1, dx, dpdx, dudx, dvdx, drhodx, q);
+                    //Compute Transverse Terms 
+                    PeleC_compute_trans_terms(i,j,k,1,Ty, dpdx, dudx, dvdx, drhodx, q, qaux); 
+                    // Call BC normal; 
+                    // bcnormal(args....); 
+                    y_bcMask(i,j,k) = y_bc_type; 
+                    //Compute the LODI System 
+                    PeleC_compute_waves(i,j,k,1,1, y_bc_type, bc_params, bc_target, Ty, Ly,
+                                        dpdy, dudy, dvdy, drhody, q, qaux); 
+                    //Compute Ghost Cells using LODI system 
+                    PeleC_upgdate_gc(i, j, k, y_bc_type, 1, 1, dy, domloy, domhiy, Ly, u, q, qaux); 
+
+                }
+                //high Y 
+                if(j == domhiy){
+                    amrex::Real  x = (i + 0.5e0)*dx; 
+                    amrex::Real  y = (j + 0.5e0)*dy; 
+
+                    //normal deriv along y
+                    PeleC_normal_deriv(i, j, k, 1,-1, dy, dpdy, dudy, dvdy, drhody, q); 
+                    //Tangential to y, derivative along x 
+                    PeleC_tang_deriv(i, j, k, 1, dx, dpdx, dudx, dvdx, drhodx, q);
+                    //Compute Transverse Terms 
+                    PeleC_compute_trans_terms(i,j,k,1,Ty, dpdx, dudx, dvdx, drhodx, q, qaux); 
+                    // Call BC normal; 
+                    // bcnormal(args....); 
+                    y_bcMask(i,j,k) = y_bc_type; 
+                    //Compute the LODI System 
+                    PeleC_compute_waves(i,j,k,1,-1, y_bc_type, bc_params, bc_target, Ty, Ly,
+                                        dpdy, dudy, dvdy, drhody, q, qaux); 
+                    //Compute Ghost Cells using LODI system 
+                    PeleC_upgdate_gc(i, j, k, y_bc_type, 1, -1, dy, domloy, domhiy, Ly, u, q, qaux); 
+                }                
             }); 
-
 }
