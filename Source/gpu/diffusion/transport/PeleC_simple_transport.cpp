@@ -1,8 +1,8 @@
-#include "actual_transport.H"
+#include "PeleC_simple_transport.H"
 #include "mechanism.h"
 #include <AMReX.H>
 #include <AMReX_Gpu.H>
-#include "trans_params.H"
+#include "PeleC_trans_params.H"
 #include <cmath>
 
 #if defined(BL_FORT_USE_UPPERCASE)
@@ -20,8 +20,9 @@ void ckcvms(amrex::Real* Tloc, amrex::Real* cvk );
 
 using namespace amrex;
 using namespace trans_params;
- 
-void  actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_get_lam, bool wtr_get_Ddiag, amrex::Real& Tloc,
+
+AMREX_GPU_HOST_DEVICE 
+inline void  PeleC_actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_get_lam, bool wtr_get_Ddiag, amrex::Real& Tloc,
               amrex::Real& rholoc, amrex::Real* Yloc,
               amrex::Real* Ddiag, amrex::Real& mu, amrex::Real& xi, amrex::Real& lam)
 
@@ -105,7 +106,7 @@ void  actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_get_lam, bool 
 
     if (wtr_get_xi == true) {
 
-       comp_pure_bulk(Tloc, muloc.data(), xiloc.data());
+       PeleC_comp_pure_bulk(Tloc, muloc.data(), xiloc.data());
 
        xi = 0.0;
 
@@ -201,7 +202,8 @@ void  actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_get_lam, bool 
 
 }
 
-  void comp_pure_bulk(amrex::Real Tloc,  amrex::Real* muloc,
+AMREX_GPU_HOST_DEVICE
+inline void PeleC_comp_pure_bulk(amrex::Real Tloc,  amrex::Real* muloc,
           amrex::Real* xiloc )
 
 {

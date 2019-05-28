@@ -84,6 +84,11 @@
 #define NTHERM    7
 #define QTHERM    8
 
+#ifndef PELEC_USE_AUX 
+    #define NUM_ADVECT 0 
+    #define NUM_AUXILIARY 0 
+#endif
+
 #define UFS       UFA   + NUM_ADVECT
 #define UFX       UFS   + NUM_SPECIES
 #define NVAR      NTHERM + NUM_ADVECT + NUM_SPECIES + NUM_AUXILIARY

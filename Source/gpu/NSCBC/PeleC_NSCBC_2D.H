@@ -490,6 +490,17 @@ inline void PeleC_compute_waves(const int i, const int j, const int k, const int
 }// end compute waves
 
 
+//defined by the user 
+AMREX_GPU_DEVICE
+void PeleC_bcnormal(const amrex::Real x[3], amrex::Real u_dum[NVAR], 
+                           amrex::Real u_ext[NVAR], const int dir, const int sgn, 
+                           cosnt amrex::Real time, 
+                           int bc_type = -1,
+                           amrex::Real bc_params[] = nullptr,
+                           amrex::Real bc_target[] = nullptr); 
+
+
+
 //Declaration for host function impose_NSCBC 
 void impose_NSCBC(Box box, const amrex::Array4<amrex::Real> &u, 
                   const amrex::Array4<amrex::Real> &q, 

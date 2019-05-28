@@ -1,5 +1,5 @@
 #include "mechanism.h"
-#include "trans_params.H"
+#include "PeleC_trans_params.H"
 #include <AMReX_Arena.H>
 #include <cstdio>
 

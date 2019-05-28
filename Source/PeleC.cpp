@@ -30,6 +30,7 @@ using std::string;
 #include <AMReX_ParmParse.H>
 
 #include <PeleC_error_F.H>
+#include <PeleC_transport.H>
 
 #ifdef AMREX_USE_EB
 #include <AMReX_EBMultiFabUtil.H>
@@ -1911,13 +1912,19 @@ PeleC::close_reactor ()
 void
 PeleC::init_transport ()
 {
-  pc_transport_init();
+  if(do_gpu)
+      PeleC_transport_init(); 
+  else
+      pc_transport_init();
 }
 
 void
 PeleC::close_transport ()
 {
-  pc_transport_close();
+  if(do_gpu) 
+      PeleC_transport_close();
+  else
+      pc_transport_close();
 }
 
 #ifdef USE_MASA

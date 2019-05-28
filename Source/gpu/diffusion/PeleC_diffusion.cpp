@@ -140,8 +140,8 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
           Gpu::Device::streamSynchronize();
       }
       
-      
-      
+// TODO deal with NSCBC      
+#if 0       
       for (int i = 0; i < BL_SPACEDIM ; i++)  {
         const Box& bxtmp = amrex::surroundingNodes(vbox,i);
         Box TestBox(bxtmp);
@@ -172,20 +172,19 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
                      &flag_nscbc_isAnyPerio, flag_nscbc_perio, 
                      &time, dx, &dt);
       }
+#endif 
       
       // Compute transport coefficients, coincident with Q
+      auto const &coe_cc = coeff_cc.array(); 
       {
-        BL_PROFILE("PeleC::get_transport_coeffs call");        
-        get_transport_coeffs(ARLIM_3D(gbox.loVect()),
-                             ARLIM_3D(gbox.hiVect()),
-                             BL_TO_FORTRAN_N_3D(q.fab(), cQFS),
-                             BL_TO_FORTRAN_N_3D(q.fab(), cQTEMP),
-                             BL_TO_FORTRAN_N_3D(q.fab(), cQRHO),
-                             BL_TO_FORTRAN_N_3D(coeff_cc.fab(), dComp_rhoD),
-                             BL_TO_FORTRAN_N_3D(coeff_cc.fab(), dComp_mu),
-                             BL_TO_FORTRAN_N_3D(coeff_cc.fab(), dComp_xi),
-                             BL_TO_FORTRAN_N_3D(coeff_cc.fab(), dComp_lambda));       
-      }
+        BL_PROFILE("PeleC::get_transport_coeffs call");       
+        //Get Transport coefs on GPU.  
+        amrex::launch(gbox, 
+        [=] AMREX_GPU_DEVICE(Box const& tbx)
+        {
+            PeleC_get_trans_coefs(tbx, qar, coe_cc); 
+        }
+      } 
 
      Gpu::AsyncFab flux_ecx(amrex::surroundingNodes(cbox,0), NUM_STATE);
      auto const &flx1 = flux_ecx.array();
@@ -203,7 +202,6 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       auto const D_DECL(&a1 = (area[0]).array(mfi),  &a2 = (area[1]).array(mfi), &a3 = (area[2]).array(mfi)); 
       // Container on grown region, for hybrid divergence & redistribution
       Gpu::AsyncFab Dterm(cbox, NUM_STATE); 
-      auto const &coe_cc = coeff_cc.array(); 
       PeleC_compute_diffusion_flux(cbox, qar, coe_cc, D_DECL(flx1, flx2, flx3),
                                    D_DECL(a1, a2, a3),  nCompTr, dx, do_harmonic, diffuse_vel); 
 
