@@ -17,6 +17,7 @@ using namespace amrex;
 #include "PeleC_gradutil_3D.H"
 #include "PeleC_diffterm_3D.H" 
 #endif 
+#include <PeleC_transport.H>
 
 
 // **********************************************************************************************
@@ -180,10 +181,10 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         BL_PROFILE("PeleC::get_transport_coeffs call");       
         //Get Transport coefs on GPU.  
         amrex::launch(gbox, 
-        [=] AMREX_GPU_DEVICE(Box const& tbx)
+        [=] AMREX_GPU_DEVICE (Box const& tbx)
         {
-            PeleC_get_trans_coefs(tbx, qar, coe_cc); 
-        }
+            PeleC_get_transport_coeffs(tbx, qar, coe_cc); 
+        }); 
       } 
 
      Gpu::AsyncFab flux_ecx(amrex::surroundingNodes(cbox,0), NUM_STATE);

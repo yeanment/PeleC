@@ -1,7 +1,8 @@
 #ifndef actual_transport_H_
 #define actual_transport_H_
 
-#include "mechanism.h"
+#include <mechanism.h> 
+#include <chemistry_file.H> 
 
 #include <AMReX_REAL.H>
 #include <AMReX_Array.H>

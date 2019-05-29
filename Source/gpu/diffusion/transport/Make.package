@@ -1,5 +1,6 @@
 CEXE_sources += PeleC_simple_transport.cpp
 CEXE_sources += PeleC_trans_params.cpp
+CEXE_sources += PeleC_transport.cpp 
 
 CEXE_headers += PeleC_simple_transport.H 
 CEXE_headers += PeleC_transport.H
