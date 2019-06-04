@@ -1,4 +1,3 @@
-AMREX_HOME = /home/steven/amrex
 USE_EB = FALSE
 
 PRECISION  = DOUBLE
@@ -6,14 +5,14 @@ PRECISION  = DOUBLE
 PROFILE    = FALSE
 
 DEBUG      = FALSE
+#DEBUG      = TRUE
 
 #DIM        = 1
 DIM        = 2
-DIM        = 3
 
 COMP	   = gcc
 
-USE_MPI    = FALSE
+#USE_MPI    = TRUE
 
 USE_REACT  = TRUE
 
@@ -40,4 +39,4 @@ Transport_dir := EGLib
 Bpack   := ./Make.package
 Blocs   := .
 
-include ../../Make.PeleC
+include ${PELEC_HOME}/Exec/Make.PeleC
