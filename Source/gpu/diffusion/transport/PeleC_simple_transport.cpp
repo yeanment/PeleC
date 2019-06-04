@@ -5,24 +5,26 @@
 #include "PeleC_trans_params.H"
 #include <cmath>
 
-#if defined(BL_FORT_USE_UPPERCASE)
+/*#if defined(BL_FORT_USE_UPPERCASE)
 #define ckcvms CKCVMS
 #elif defined(BL_FORT_USE_LOWERCASE)
 #define ckcvms ckcvms
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define ckcvms ckcvms_
-#endif
+#endif */ 
 
 
-extern "C" {
-void ckcvms(amrex::Real* Tloc, amrex::Real* cvk );
+extern "C" 
+{
+AMREX_GPU_HOST_DEVICE
+void CKCVMS(amrex::Real* Tloc, amrex::Real* cvk );
 }
 
 using namespace amrex;
 using namespace trans_params;
 
-AMREX_GPU_HOST_DEVICE 
-inline void  PeleC_actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_get_lam, bool wtr_get_Ddiag, amrex::Real& Tloc,
+AMREX_GPU_DEVICE 
+void  PeleC_actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_get_lam, bool wtr_get_Ddiag, amrex::Real& Tloc,
               amrex::Real& rholoc, amrex::Real* Yloc,
               amrex::Real* Ddiag, amrex::Real& mu, amrex::Real& xi, amrex::Real& lam)
 
@@ -202,8 +204,8 @@ inline void  PeleC_actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_g
 
 }
 
-AMREX_GPU_HOST_DEVICE
-inline void PeleC_comp_pure_bulk(amrex::Real Tloc,  amrex::Real* muloc,
+AMREX_GPU_DEVICE
+void PeleC_comp_pure_bulk(amrex::Real Tloc,  amrex::Real* muloc,
           amrex::Real* xiloc )
 
 {
@@ -219,7 +221,7 @@ inline void PeleC_comp_pure_bulk(amrex::Real Tloc,  amrex::Real* muloc,
 
 
   amrex::Real Ru =  8.31451e+07;
-  ckcvms(  &Tloc, cvk.data() );
+  CKCVMS(  &Tloc, cvk.data() );
 
   for (int i = 0 ; i < NUM_SPECIES; ++i){
  
