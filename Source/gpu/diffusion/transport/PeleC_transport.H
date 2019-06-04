@@ -10,7 +10,7 @@
 void PeleC_transport_init();
 void PeleC_transport_close();
 
-AMREX_GPU_HOST_DEVICE
+AMREX_GPU_DEVICE
 void PeleC_get_transport_coeffs(amrex::Box const& bx, amrex::Array4<const amrex::Real> const& q,
        amrex::Array4<amrex::Real> const& D); 
 
