@@ -1,3 +1,4 @@
+AMREX_HOME = /home/steven/amrex
 USE_EB = FALSE
 
 PRECISION  = DOUBLE
