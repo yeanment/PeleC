@@ -1,19 +1,19 @@
 #include "PeleC_EOS.H"
 #include "mechanism.h"
-#include "PeleC_index_macros.H"
 #include "PeleC_Parameters.H"
+#include "chemistry_file.H" 
 #include <cmath>
 
 
 extern "C" {
 AMREX_GPU_HOST_DEVICE void get_imw(double* neww); 
-AMREX_GPU_HOST_DEVICE void ckpy_(double*  rho,double*  T,double*  y,double *  P);
-AMREX_GPU_HOST_DEVICE void ckcvms_(double*  T, double*  cvms);
-AMREX_GPU_HOST_DEVICE void ckcpms_(double*  T, double*  cvms);
-AMREX_GPU_HOST_DEVICE void ckums_(double*  T,double*  ums);
-AMREX_GPU_HOST_DEVICE void ckhms_(double*  T,double*  ums);
-AMREX_GPU_HOST_DEVICE void get_t_given_ey_(double*  e,double*  y, double*  t, int *ierr);
-AMREX_GPU_HOST_DEVICE void ckytx_(double massfrac[], double molefrac[]); 
+AMREX_GPU_HOST_DEVICE void CKPY(double*  rho,double*  T,double*  y,double *  P);
+AMREX_GPU_HOST_DEVICE void CKCVMS(double*  T, double*  cvms);
+AMREX_GPU_HOST_DEVICE void CKCPMS(double*  T, double*  cvms);
+AMREX_GPU_HOST_DEVICE void CKUMS(double*  T,double*  ums);
+AMREX_GPU_HOST_DEVICE void CKHMS(double*  T,double*  ums);
+AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double*  e,double*  y, double*  t, int *ierr);
+AMREX_GPU_HOST_DEVICE void CKYTX(double massfrac[], double molefrac[]); 
 }
 
 AMREX_GPU_HOST_DEVICE EOS::EOS()
@@ -25,9 +25,9 @@ AMREX_GPU_HOST_DEVICE EOS::~EOS()
 AMREX_GPU_HOST_DEVICE 
 void EOS::eos_bottom()
 {
-    ckcvms_(&T,  cvi);
-    ckcpms_(&T,  cpi); 
-    ckhms_(&T,   hi);
+    CKCVMS(&T,  cvi);
+    CKCPMS(&T,  cpi); 
+    CKHMS(&T,   hi);
     cv = 0.e0, cp = 0.e0, h = 0.e0; 
     for(int i = 0; i < NUM_SPECIES; ++i){
          cv+=massfrac[i]*cvi[i];
@@ -61,10 +61,10 @@ void EOS::eos_re()
 {
     int lierr=0; 
     eos_wb();
-    get_t_given_ey_(&e, massfrac, &T, &lierr);
+    GET_T_GIVEN_EY(&e, massfrac, &T, &lierr);
 //    T = amrex::max(T, smallT); //*/
-    ckums_(&T,  ei); 
-    ckpy_(&rho, &T, massfrac, &p);
+    CKUMS(&T,  ei); 
+    CKPY(&rho, &T, massfrac, &p);
 
     eos_bottom(); 
 }
@@ -74,7 +74,7 @@ void EOS::eos_rp()
 {
     eos_wb(); 
     T = p*wbar/(rho*Ru);
-    ckums_(&T,  ei);
+    CKUMS(&T,  ei);
     e = 0.0;  
 #pragma unroll
     for(int i = 0; i < NUM_SPECIES; ++i) e += massfrac[i]*ei[i]; 
@@ -84,16 +84,19 @@ void EOS::eos_rp()
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_ytx()
 {
-    ckytx_(massfrac, molefrac); 
+    CKYTX(massfrac, molefrac); 
 }
 
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_hi()
 {
-   ckhms_( &T,   hi);
+   CKHMS( &T,   hi);
 }
 
-/* THESE ASSUME THE ONLY PASSIVE VARS ARE THE SPECIES AND NON-USED VELOCITIES. TODO add additional passive vars*/
+
+//Hydro -> Advected -> Species -> Aux 
+//If num_adv == 0 -> QFA = QFS and UFA = UFS, see PeleC_index_macros.H 
+//For explicit definitions. 
 AMREX_GPU_HOST_DEVICE
 int EOS::upass_map(const int i)
 {
@@ -102,15 +105,15 @@ int EOS::upass_map(const int i)
     if(i <=1); 
         return i+2; 
     else 
-        return (i-2) + UFS;
+        return (i-2) + UFA;
 /*UMZ is passive*/
 #elif (AMREX_SPACEDIM==2)
     if(i == 0)
         return 3; 
     else 
-        return (i-1) + UFS;
+        return (i-1) + UFA;
 #else 
-    return i + UFS;
+    return i + UFA;
 #endif
 }
 
@@ -122,15 +125,15 @@ int EOS::qpass_map(const int i)
     if(i <=1); 
         return i+2; 
     else 
-        return (i-2) + QFS; 
+        return (i-2) + QFA; 
 /*W is passive*/
 #elif(AMREX_SPACEDIM==2)
     if(i==0) 
         return 3; 
     else
-        return (i-1) + QFS;
+        return (i-1) + QFA;
 #else 
-    return i + QFS;  
+    return i + QFA;  
 #endif
 }
 

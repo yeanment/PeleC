@@ -1,0 +1,2 @@
+CEXE_sources += PeleC_NSCBC_$(DIM)D.cpp 
+CEXE_headers += PeleC_NSCBC_$(DIM)D.H

@@ -76,9 +76,18 @@
 #define dComp_mu dComp_rhoD + NUM_SPECIES
 #define dComp_xi dComp_mu + 1 
 #define dComp_lambda dComp_xi + 1
+
+#define SlipWall 4 
+#define NoSlipWall 5 
+
  
 #define NTHERM    7
 #define QTHERM    8
+
+#ifndef PELEC_USE_AUX 
+    #define NUM_ADVECT 0 
+    #define NUM_AUXILIARY 0 
+#endif
 
 #define UFS       UFA   + NUM_ADVECT
 #define UFX       UFS   + NUM_SPECIES

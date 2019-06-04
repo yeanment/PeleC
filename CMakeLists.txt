@@ -19,7 +19,9 @@ option(ENABLE_ALL_WARNINGS "Show most warnings for most compilers" OFF)
 option(ENABLE_TESTS "Enable testing suite" OFF)
 option(ENABLE_VERIFICATION "Enable verification suite" OFF)
 option(ENABLE_FCOMPARE "Enable building fcompare when not testing" OFF)
+option(ENABLE_FEXTREMA "Enable building fextrema when not testing" OFF)
 option(TEST_WITH_FCOMPARE "Check test plots against gold files" OFF)
+option(TEST_WITH_FEXTREMA "Check test plots against maxima and minima files" OFF)
 
 #Options for the executable in a single build dir
 option(PELEC_ENABLE_MPI "Enable MPI" OFF)
@@ -64,8 +66,8 @@ set_compile_flags()
 find_package(PythonInterp REQUIRED)
 
 include(${CMAKE_SOURCE_DIR}/CMake/build_amrex.cmake)
-include(${CMAKE_SOURCE_DIR}/CMake/build_fcompare.cmake)
 include(${CMAKE_SOURCE_DIR}/CMake/build_pelec.cmake)
+include(${CMAKE_SOURCE_DIR}/CMake/build_plot_tool.cmake)
 
 # General information about machine, compiler, and build type
 message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
@@ -78,8 +80,10 @@ message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_C_FLAGS = ${CMAKE_C_FLAGS}")
 message(STATUS "CMAKE_Fortran_FLAGS = ${CMAKE_Fortran_FLAGS}")
 
-# Build type flags in which CMake adds for us
+# User can set CMAKE_BUILD_TYPE case insensitively but we want it uppercase
 string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
+
+# Build type flags in which CMake adds for us
 message(STATUS "CMAKE_CXX_FLAGS_${BUILD_TYPE} = ${CMAKE_CXX_FLAGS_${BUILD_TYPE}}")
 message(STATUS "CMAKE_C_FLAGS_${BUILD_TYPE} = ${CMAKE_C_FLAGS_${BUILD_TYPE}}")
 message(STATUS "CMAKE_Fortran_FLAGS_${BUILD_TYPE} = ${CMAKE_Fortran_FLAGS_${BUILD_TYPE}}")
@@ -87,8 +91,7 @@ message(STATUS "CMAKE_Fortran_FLAGS_${BUILD_TYPE} = ${CMAKE_Fortran_FLAGS_${BUIL
 # Use, i.e. don't skip the full RPATH for the build tree
 SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
 
-# When building, don't use the install RPATH already
-# (but later on when installing)
+# When building, don't use the install RPATH already (but later on when installing)
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
@@ -103,13 +106,19 @@ IF("${isSystemDir}" STREQUAL "-1")
 ENDIF("${isSystemDir}" STREQUAL "-1")
 
 if(ENABLE_TESTS)
-  set(PELEC_ENABLE_MPI ON)
-  set(ENABLE_FCOMPARE ON)
   enable_testing()
   include(CTest)
+  set(PELEC_ENABLE_MPI ON)
   find_package(MPI REQUIRED)
+  if(TEST_WITH_FCOMPARE)
+    set(ENABLE_FCOMPARE ON)
+    build_plot_tool(fcompare)
+  endif()
+  if(TEST_WITH_FEXTREMA)
+    set(ENABLE_FEXTREMA ON)
+    build_plot_tool(fextrema)
+  endif()
   build_amrex()
-  build_fcompare()
   add_subdirectory(Testing)
 else()
   include(${CMAKE_BINARY_DIR}/exe_options.cmake)
@@ -119,11 +128,14 @@ else()
   #if(PELEC_ENABLE_OPENMP)
   #  find_package(OPENMP REQUIRED)
   #endif()
+  if(ENABLE_FCOMPARE)
+    build_plot_tool(fcompare)
+  endif()
+  if(ENABLE_FEXTREMA)
+    build_plot_tool(fextrema)
+  endif()
   build_amrex()
   build_pelec(PeleC-${PELEC_DIM}D ${CMAKE_BINARY_DIR}/exe_options.cmake)
-  if(ENABLE_FCOMPARE)
-    build_fcompare()
-  endif()
 endif()
 
 if(ENABLE_DOCUMENTATION)

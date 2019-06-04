@@ -3,7 +3,8 @@
 
 #include <AMReX.H>
 #include <AMReX_REAL.H> 
-#include <AMReX_Utility.H> 
+#include <AMReX_Utility.H>
+#include <PeleC_index_macros.H>  
 #include "mechanism.h"
 #define naux 0
  

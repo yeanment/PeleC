@@ -18,6 +18,10 @@ ifeq ($(DIM), 1)
   USE_EB = FALSE
 endif
 
+ifeq ($(USE_AUX), TRUE)
+  DEFINES += -DPELEC_USE_AUX
+endif 
+
 ifeq ($(USE_EB), TRUE)
   DEFINES += -DPELE_USE_EB -DPELEC_USE_EB
 endif
@@ -120,7 +124,7 @@ endif
 
 Bdirs   := Source Source/param_includes Source/Src_nd Source/Src_$(DIM)d Source/TurbInflow 
 
-Bdirs += Source/gpu Source/gpu/hydro Source/gpu/diffusion 
+Bdirs += Source/gpu Source/gpu/hydro Source/gpu/diffusion Source/gpu/diffusion/transport  
 
 ifeq ($(USE_EB), TRUE)
   Pdirs := Base EB Amr Boundary AmrCore LinearSolvers/MLMG LinearSolvers/C_CellMG/
