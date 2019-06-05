@@ -1,8 +1,6 @@
 #include "PeleC.H"
 /* This is for the NSCBC stuff, TODO C++ it */ 
 #include "PeleC_F.H" 
-
-
 #include "PeleC_K.H"
 #include <AMReX_Gpu.H>
 using namespace amrex;
@@ -95,7 +93,7 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
     int flag_nscbc_isAnyPerio = (geom.isAnyPeriodic()) ? 1 : 0; 
     int flag_nscbc_perio[BL_SPACEDIM]; // For 3D, we will know which corners have a periodicity
     for (int d=0; d<BL_SPACEDIM; ++d) {
-        flag_nscbc_perio[d] = (Geometry::isPeriodic(d)) ? 1 : 0;
+        flag_nscbc_perio[d] = (DefaultGeometry().isPeriodic(d)) ? 1 : 0;
     }
 
 	const int*  domain_lo = geom.Domain().loVect();
@@ -190,14 +188,18 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                 });
         BL_PROFILE_VAR_STOP(srctop); 
 
-        if (!Geometry::IsCartesian()) {
+        if (!DefaultGeometry().IsCartesian()) {
             pradial.resize(amrex::surroundingNodes(bx,0),1);
         }
 
 //#if (AMREX_SPACEDIM < 3)
 //                amrex::FArrayBox *prad = &pradial; 
 //#endif
-
+#ifdef AMREX_USE_CUDA        
+    auto run = RunOn::Gpu; 
+#else
+    auto run = RunOn::Cpu;
+#endif
             BL_PROFILE_VAR("PeleC::umdrv()", purm); 
                          PeleC_umdrv
                         (is_finest_level, time,
@@ -229,9 +231,9 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                         getFluxReg(level+1).CrseAdd(mfi,
                         {D_DECL(&(flx1.fab()),
                                 &(flx2.fab()),
-                                &(flx3.fab()))}, dxDp,dt);
+                                &(flx3.fab()))}, dxDp,dt, run);
 
-                        if (!Geometry::IsCartesian()) {
+                        if (!DefaultGeometry().IsCartesian()) {
                             amrex::Abort("Flux registers not r-z compatible yet");
                             //getPresReg(level+1).CrseAdd(mfi,pradial, dx,dt);
                         }
@@ -242,9 +244,9 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                         getFluxReg(level).FineAdd(mfi, 
                         {D_DECL(&(flx1.fab()),
                                 &(flx2.fab()),
-                                &(flx3.fab()))}, dxDp,dt);
+                                &(flx3.fab()))}, dxDp,dt, run);
 
-                        if (!Geometry::IsCartesian()) {
+                        if (!DefaultGeometry().IsCartesian()) {
                             amrex::Abort("Flux registers not r-z compatible yet");
                             //getPresReg(level).FineAdd(mfi,pradial, dx,dt);
                         }

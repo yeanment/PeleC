@@ -1,5 +1,7 @@
 CEXE_sources += PeleC_EOS.cpp 
+CEXE_sources += PeleC_timestep.cpp
 
 CEXE_headers += PeleC_EOS.H
 CEXE_headers += PeleC_Parameters.H
 CEXE_headers += PeleC_index_macros.H
+CEXE_headers += PeleC_timestep.H

@@ -6,7 +6,6 @@
   are declared here. */ 
 
 
-
 AMREX_GPU_DEVICE 
 inline 
 void PeleC_move_transcoefs_to_ec(const int i,const int j, const int k, const int n, 
@@ -58,40 +57,6 @@ void setC(const Box box,const int Nstart, const int Nend, const amrex::Array4<am
       { 
         for(int n = Nstart; n < Nend; n++) array(i,j,k,n) = val;
     }); 
-}
-
-/* EstDt routines! */ 
-AMREX_GPU_DEVICE 
-inline 
-void PeleC_estdt_veldif(Box const box, amrex::FArrayBox const& statefab,
-             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz)) noexcept 
-{
-    const auto lo = amrex::lbound(bx);
-    const auto hi = amrex::ubound(bx);
-    const auto u = statefab.array(); 
-#if !defined(__CUDACC__) || (__CUDACC_VER_MAJOR__ !=9) || (__CUDACC_VER_MINOR__ != 2) 
-    amrex::Real dt = std::numeric_limits<amrex::Real>::max();
-#else 
-    amrex::Real dt = 1.e37;
-#endif
-    EOS state;  
-    amrex::Real rhoInv;  
-    amrex::Real ux, dt1, c;
-#if AMREX_SPACEDIM > 1
-    amrex::Real uy, dt2;
-#if AMREX_SPACEDIM > 2
-    amrex::Real uz, dt3;
-#endif
-#endif
-    
-    for         (int k = lo.z; k <= hi.z; ++k){
-        for     (int j = lo.y; j <= hi.y; ++j){
-            for (int i = lo.x; i <= hi.x; ++i){
-           }
-        }
-    }
-            
-    return dt;
 }
 
 

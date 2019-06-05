@@ -17,8 +17,7 @@ using namespace amrex;
 #include "PeleC_gradutil_3D.H"
 #include "PeleC_diffterm_3D.H" 
 #endif 
-#include <PeleC_transport.H>
-
+#include <PeleC_transport.H> 
 
 // **********************************************************************************************
 void
@@ -103,7 +102,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
     int flag_nscbc_isAnyPerio = (geom.isAnyPeriodic()) ? 1 : 0; 
     int flag_nscbc_perio[BL_SPACEDIM]; // For 3D, we will know which corners have a periodicity
     for (int d=0; d<BL_SPACEDIM; ++d) {
-        flag_nscbc_perio[d] = (Geometry::isPeriodic(d)) ? 1 : 0;
+        flag_nscbc_perio[d] = (DefaultGeometry().isPeriodic(d)) ? 1 : 0;
     }
 	  const int*  domain_lo = geom.Domain().loVect();
 	  const int*  domain_hi = geom.Domain().hiVect();
@@ -258,6 +257,11 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       BL_PROFILE_VAR_STOP(diff);
       MOLSrcTerm[mfi].setVal(0, vbox, 0, NUM_STATE);
       MOLSrcTerm[mfi].copy(Dterm.fab(), vbox, 0, vbox, 0, NUM_STATE);
+#ifdef AMREX_USE_CUDA 
+    auto run = RunOn::Gpu;
+#else 
+    auto run = RunOn::Cpu;
+#endif 
 
         if (do_reflux && flux_factor != 0)  // no eb in problem
         {
@@ -271,13 +275,13 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
           if (level < parent->finestLevel()) {
             getFluxReg(level+1).CrseAdd(mfi,
                                        {D_DECL(&flux_ecx.fab(), &flux_ecy.fab(), &flux_ecz.fab())},
-                                        dxDp, dt);
+                                        dxDp, dt, run);
           }
 
           if (level > 0) {
             getFluxReg(level).FineAdd(mfi,
                                      {D_DECL(&flux_ecx.fab(), &flux_ecy.fab(), &flux_ecz.fab())},
-                                      dxDp, dt);
+                                      dxDp, dt, run);
           }
         }
 
