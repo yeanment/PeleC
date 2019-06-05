@@ -28,7 +28,7 @@ struct Real3{
 AMREX_GPU_HOST_DEVICE
 inline 
 amrex::Real 
-PeleC_estdt ( amrex::Box const& bx, amrex::FArrayBox const& statefab, 
+PeleC_estdt_hydro ( amrex::Box const& bx, amrex::FArrayBox const& statefab, 
              D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz)) noexcept 
 {
     const auto lo = amrex::lbound(bx); 
