@@ -911,6 +911,55 @@ PeleC::estTimeStep (Real dt_old)
     auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
+    if(do_gpu){
+        amrex::Real D_DECL(dx1 = dx[0], dx2 = dx[1], dx3 = dx[2]); 
+        if(do_hydro){
+           Real dt = amrex::ReduceMin(stateMF, 0, 
+           [=] AMREX_GPU_HOST_DEVICE( Box const  bx, FArrayBox const& fab) noexcept -> Real 
+           {
+               return PeleC_estdt_hydro(bx, fab, D_DECL(dx1, dx2, dx3)); 
+           });
+           estdt_hydro = amrex::min(estdt_hydro, dt);
+        }
+        if (diffuse_vel)
+        {
+          Real dt = amrex::ReduceMin(stateMF, 0, 
+          [=] AMREX_GPU_HOST_DEVICE( Box const bx, FArrayBox const& fab) noexcept -> Real
+          {
+              return PeleC_estdt_veldif(bx, fab, D_DECL(dx1,dx2,dx3)); 
+          }); 
+/*          pc_estdt_vel_diffusion(ARLIM_3D(box.loVect()), ARLIM_3D(box.hiVect()),
+                                 BL_TO_FORTRAN_3D(Sfab),ZFILL(dx),&dt); */ 
+          estdt_hydro = std::min(estdt_hydro,dt);
+        }
+
+        if (diffuse_temp)
+        {
+          Real dt = amrex::ReduceMin(stateMF, 0, 
+          [=] AMREX_GPU_HOST_DEVICE( Box const bx, FArrayBox const& fab) noexcept -> Real
+          {
+              return PeleC_estdt_tempdif(bx, fab, D_DECL(dx1,dx2,dx3)); 
+          }); 
+
+/*          pc_estdt_temp_diffusion(ARLIM_3D(box.loVect()), ARLIM_3D(box.hiVect()),
+                                  BL_TO_FORTRAN_3D(Sfab),ZFILL(dx),&dt); */ 
+          estdt_hydro = std::min(estdt_hydro,dt);
+        }
+
+        if (diffuse_enth)
+        {
+          Real dt = amrex::ReduceMin(stateMF, 0, 
+          [=] AMREX_GPU_HOST_DEVICE( Box const bx, FArrayBox const& fab) noexcept -> Real
+          {
+              return PeleC_estdt_enthdif(bx, fab, D_DECL(dx1,dx2,dx3)); 
+          }); 
+/*          pc_estdt_enth_diffusion(ARLIM_3D(box.loVect()), ARLIM_3D(box.hiVect()),
+                                  BL_TO_FORTRAN_3D(Sfab),ZFILL(dx),&dt); */ 
+          estdt_hydro = std::min(estdt_hydro,dt);
+        }
+        
+    }
+    else{
 #ifdef _OPENMP
 #pragma omp parallel reduction(min:estdt_hydro)
 #endif
@@ -962,6 +1011,7 @@ PeleC::estTimeStep (Real dt_old)
           estdt_hydro = std::min(estdt_hydro,dt);
         }
       }
+    }
     }
 
     ParallelDescriptor::ReduceRealMin(estdt_hydro);
