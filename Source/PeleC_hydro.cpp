@@ -234,8 +234,7 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 
               if (level > 0)
               {
-                getFluxReg(level).FineAdd(mfi, {D_DECL(&flux[0],&flux[1],&flux[2])}, dxDp,dt,RunOn::Cpu);
-
+                getFluxReg(level).FineAdd(mfi, {D_DECL(&flux[0],&flux[1],&flux[2])}, dxDp,dt, RunOn::Cpu);
                 if (!DefaultGeometry().IsCartesian()) {
                     amrex::Abort("Flux registers not r-z compatible yet");
                     //getPresReg(level).FineAdd(mfi,pradial, dx,dt);
