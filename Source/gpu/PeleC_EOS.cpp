@@ -9,6 +9,7 @@ extern "C" {
 AMREX_GPU_HOST_DEVICE void get_imw(double* neww); 
 AMREX_GPU_HOST_DEVICE void CKPY(double*  rho,double*  T,double*  y,double *  P);
 AMREX_GPU_HOST_DEVICE void CKCVMS(double*  T, double*  cvms);
+AMREX_GPU_HOST_DEVICE void CKCVBS(double*  T, double* massfrac, double* cv); 
 AMREX_GPU_HOST_DEVICE void CKCPMS(double*  T, double*  cvms);
 AMREX_GPU_HOST_DEVICE void CKUMS(double*  T,double*  ums);
 AMREX_GPU_HOST_DEVICE void CKHMS(double*  T,double*  ums);
@@ -92,7 +93,11 @@ void EOS::eos_hi()
 {
    CKHMS( &T,   hi);
 }
-
+AMREX_GPU_HOST_DEVICE
+void EOS::eos_cv()
+{
+    CKCVBS(&T, massfrac, &cv); 
+}
 
 //Hydro -> Advected -> Species -> Aux 
 //If num_adv == 0 -> QFA = QFS and UFA = UFS, see PeleC_index_macros.H 

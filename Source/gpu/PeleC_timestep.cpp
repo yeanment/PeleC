@@ -163,6 +163,7 @@ amrex::Real PeleC_estdt_tempdif(amrex::Box const bx, amrex::FArrayBox const& sta
                 for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
                 eos.T = u(i,j,k,UTEMP); 
                 PeleC_trans4dt(which_trans, eos, D);
+                eos.eos_cv(); 
                 D *= rhoInv/eos.cv; 
                 dt1 = 0.5e0*dx*dx/(AMREX_SPACEDIM*D);
                 dt  = amrex::min(dt, dt1);  
