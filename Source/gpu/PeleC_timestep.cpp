@@ -9,7 +9,7 @@
 AMREX_GPU_HOST_DEVICE
 amrex::Real 
 PeleC_estdt_hydro ( amrex::Box const& bx, amrex::FArrayBox const& statefab, 
-             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz)) 
+             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz)) noexcept 
 {
     const auto lo = amrex::lbound(bx); 
     const auto hi = amrex::ubound(bx); 
@@ -57,12 +57,10 @@ PeleC_estdt_hydro ( amrex::Box const& bx, amrex::FArrayBox const& statefab,
            }
         }
     }
-            
     return dt; 
-
 }
 
-AMREX_GPU_DEVICE
+AMREX_GPU_HOST_DEVICE
 void PeleC_trans4dt(const int which_trans,EOS eos, amrex::Real &D)
 {
     bool get_xi = false, get_mu = false, get_lam = false, get_Ddiag = false; 
@@ -81,9 +79,9 @@ void PeleC_trans4dt(const int which_trans,EOS eos, amrex::Real &D)
 }
 
 /*Diffusion Velocity */ 
-AMREX_GPU_DEVICE 
+AMREX_GPU_HOST_DEVICE 
 amrex::Real PeleC_estdt_veldif(amrex::Box const box, amrex::FArrayBox const& statefab,
-             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz))
+             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz)) noexcept
 {
     const auto lo = amrex::lbound(box);
     const auto hi = amrex::ubound(box);
@@ -107,7 +105,7 @@ amrex::Real PeleC_estdt_veldif(amrex::Box const box, amrex::FArrayBox const& sta
         for     (int j = lo.y; j <= hi.y; ++j){
             for (int i = lo.x; i <= hi.x; ++i){
                 eos.rho = u(i,j,k,URHO); 
-                amrex::Real rhoInv = 1.e0/eos.rho;         
+                rhoInv = 1.e0/eos.rho;         
                 #pragma unroll 
                 for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
                 eos.T = u(i,j,k,UTEMP); 
@@ -131,9 +129,9 @@ amrex::Real PeleC_estdt_veldif(amrex::Box const box, amrex::FArrayBox const& sta
 }
 
 /*Diffusion Temperature */ 
-AMREX_GPU_DEVICE 
+AMREX_GPU_HOST_DEVICE 
 amrex::Real PeleC_estdt_tempdif(amrex::Box const bx, amrex::FArrayBox const& statefab,
-             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz))
+             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz)) noexcept
 {
     const auto lo = amrex::lbound(bx);
     const auto hi = amrex::ubound(bx);
@@ -157,7 +155,7 @@ amrex::Real PeleC_estdt_tempdif(amrex::Box const bx, amrex::FArrayBox const& sta
         for     (int j = lo.y; j <= hi.y; ++j){
             for (int i = lo.x; i <= hi.x; ++i){
                 eos.rho = u(i,j,k,URHO); 
-                amrex::Real rhoInv = 1.e0/eos.rho;         
+                rhoInv = 1.e0/eos.rho;         
                 #pragma unroll 
                 for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
                 eos.T = u(i,j,k,UTEMP); 
@@ -181,9 +179,9 @@ amrex::Real PeleC_estdt_tempdif(amrex::Box const bx, amrex::FArrayBox const& sta
 }
 
 /* Diffusion Enthalpy */ 
-AMREX_GPU_DEVICE 
+AMREX_GPU_HOST_DEVICE 
 amrex::Real PeleC_estdt_enthdif(amrex::Box const bx, amrex::FArrayBox const& statefab,
-             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz))
+             D_DECL(const amrex::Real& dx, const amrex::Real& dy, const amrex::Real& dz)) noexcept
 {
     const auto lo = amrex::lbound(bx);
     const auto hi = amrex::ubound(bx);
@@ -207,7 +205,7 @@ amrex::Real PeleC_estdt_enthdif(amrex::Box const bx, amrex::FArrayBox const& sta
         for     (int j = lo.y; j <= hi.y; ++j){
             for (int i = lo.x; i <= hi.x; ++i){
                 eos.rho = u(i,j,k,URHO); 
-                amrex::Real rhoInv = 1.e0/eos.rho;         
+                rhoInv = 1.e0/eos.rho;         
                 #pragma unroll 
                 for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
                 eos.e = u(i,j,k,UEINT)*rhoInv; 

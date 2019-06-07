@@ -35,10 +35,10 @@ void PeleC_get_transport_coeffs(amrex::Box const& bx, amrex::Array4<const amrex:
 
     amrex::Real T;
     amrex::Real rho;
-    amrex::GpuArray<amrex::Real,NUM_SPECIES>  massloc;
+    amrex::Real  massloc[NUM_SPECIES];
 
     amrex::Real muloc,xiloc,lamloc;
-    amrex::GpuArray<amrex::Real,NUM_SPECIES>  Ddiag;
+    amrex::Real  Ddiag[NUM_SPECIES];
 
 
 
@@ -55,7 +55,7 @@ void PeleC_get_transport_coeffs(amrex::Box const& bx, amrex::Array4<const amrex:
                 }
 
                 PeleC_actual_transport(wtr_get_xi, wtr_get_mu, wtr_get_lam, wtr_get_Ddiag,
-                                       T, rho, massloc.data(), Ddiag.data(), muloc, xiloc, lamloc);
+                                       T, rho, massloc, Ddiag, muloc, xiloc, lamloc);
 
                 //   mu, xi and lambda are stored after D in the diffusion multifab
 #pragma unroll 
