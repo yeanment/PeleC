@@ -32,8 +32,8 @@ PeleC_estdt_hydro ( amrex::Box const& bx, amrex::FArrayBox const& statefab,
     for         (int k = lo.z; k <= hi.z; ++k){
         for     (int j = lo.y; j <= hi.y; ++j){
             for (int i = lo.x; i <= hi.x; ++i){
-                rhoInv = 1.e0/ u(i,j,k,URHO); 
-                state.rho = u(i,j,k,URHO);
+                state.rho = u(i,j,k,URHO); 
+                rhoInv = 1.e0/state.rho; 
                 state.T   = u(i,j,k,UTEMP); 
                 state.e   = u(i,j,k,UEINT)*rhoInv; 
                 for(int n = 0; n < NUM_SPECIES; ++n) state.massfrac[n] = u(i,j,k,UFS+n)*rhoInv; 
@@ -61,21 +61,22 @@ PeleC_estdt_hydro ( amrex::Box const& bx, amrex::FArrayBox const& statefab,
 }
 
 AMREX_GPU_HOST_DEVICE
+inline
 void PeleC_trans4dt(const int which_trans,EOS eos, amrex::Real &D)
 {
     bool get_xi = false, get_mu = false, get_lam = false, get_Ddiag = false; 
-    amrex::Real dum1 = 0., dum2 = 0.; 
+    amrex::Real dum1 = 0., dum2 = 0.;
+ 
     if(which_trans==0){
         get_mu = true; 
-        PeleC_actual_transport(get_xi, get_lam, get_mu, get_Ddiag, eos.T, eos.rho, eos.massfrac, 
+        PeleC_actual_transport(get_xi, get_mu, get_lam, get_Ddiag, eos.T, eos.rho, eos.massfrac, 
                                nullptr, D, dum1, dum2); 
     }
     else if(which_trans==1){
         get_lam = true; 
-        PeleC_actual_transport(get_xi, get_lam, get_mu, get_Ddiag, eos.T, eos.rho, eos.massfrac, 
+        PeleC_actual_transport(get_xi, get_mu, get_lam, get_Ddiag, eos.T, eos.rho, eos.massfrac, 
                                nullptr, dum1, dum2, D);        
     }
-
 }
 
 /*Diffusion Velocity */ 
@@ -107,8 +108,10 @@ amrex::Real PeleC_estdt_veldif(amrex::Box const box, amrex::FArrayBox const& sta
                 eos.rho = u(i,j,k,URHO); 
                 rhoInv = 1.e0/eos.rho;         
                 #pragma unroll 
-                for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
-                eos.T = u(i,j,k,UTEMP); 
+                for(int n = 0; n < NUM_SPECIES; ++n){
+                     eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
+                } 
+                eos.T = u(i,j,k,UTEMP);
                 PeleC_trans4dt(which_trans, eos, D);
                 D *= rhoInv; 
                 dt1 = 0.5e0*dx*dx/(AMREX_SPACEDIM*D);

@@ -902,7 +902,9 @@ PeleC::estTimeStep (Real dt_old)
   // criterion, we will get exactly max_dt for a timestep.
 
   Real estdt_hydro = max_dt / cfl;
-
+  Real estdt_vdif  = max_dt / cfl; 
+  Real estdt_tdif  = max_dt / cfl; 
+  Real estdt_edif  = max_dt / cfl; 
   if (do_hydro || do_mol_AD || diffuse_vel || diffuse_temp || diffuse_enth)
   {
 
@@ -919,7 +921,8 @@ PeleC::estTimeStep (Real dt_old)
            [=] AMREX_GPU_HOST_DEVICE (Box const&  bx, FArrayBox const& fab) noexcept -> Real 
            {
                return PeleC_estdt_hydro(bx, fab, D_DECL(dx1, dx2, dx3)); 
-           });
+           });       
+           Gpu::synchronize();     
            estdt_hydro = amrex::min(estdt_hydro, dt);
         }
         if (diffuse_vel)
@@ -928,8 +931,9 @@ PeleC::estTimeStep (Real dt_old)
           [=] AMREX_GPU_HOST_DEVICE (Box const& bx, FArrayBox const& fab) noexcept -> Real
           {
               return PeleC_estdt_veldif(bx, fab, D_DECL(dx1,dx2,dx3)); 
-          }); 
-          estdt_hydro = amrex::min(estdt_hydro,dt);
+          });
+          Gpu::synchronize();     
+          estdt_vdif = amrex::min(estdt_vdif,dt);
         }
 
         if (diffuse_temp)
@@ -938,8 +942,10 @@ PeleC::estTimeStep (Real dt_old)
           [=] AMREX_GPU_HOST_DEVICE (Box const& bx, FArrayBox const& fab) noexcept -> Real
           {
               return PeleC_estdt_tempdif(bx, fab, D_DECL(dx1,dx2,dx3)); 
-          }); 
-          estdt_hydro = amrex::min(estdt_hydro,dt);
+          });
+          Gpu::synchronize();     
+          estdt_tdif = amrex::min(estdt_tdif,dt);
+
         }
 
         if (diffuse_enth)
@@ -948,10 +954,12 @@ PeleC::estTimeStep (Real dt_old)
           [=] AMREX_GPU_HOST_DEVICE (Box const& bx, FArrayBox const& fab) noexcept -> Real
           {
               return PeleC_estdt_enthdif(bx, fab, D_DECL(dx1,dx2,dx3)); 
-          }); 
-          estdt_hydro = amrex::min(estdt_hydro,dt);
+          });
+          Gpu::synchronize();    
+          estdt_edif = amrex::min(estdt_edif,dt);
         }
-        
+        estdt_hydro = amrex::min(estdt_hydro, amrex::min(estdt_vdif, 
+                                              amrex::min(estdt_tdif, estdt_edif)));
     }
     else{
 #ifdef _OPENMP
