@@ -137,7 +137,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
               {
                   PeleC_ctoprim(i,j,k, s, qar, qauxar);                  
               });
-          Gpu::Device::streamSynchronize();
+          Gpu::Device::streamSynchronize(); //TODO assess if we can remove this. 
       }
       
 // TODO deal with NSCBC      
@@ -213,7 +213,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         AMREX_PARALLEL_FOR_4D(cbox, NVAR, i , j, k ,n, {
             PeleC_diffup(i,j,k,n, D_DECL(flx1, flx2, flx3), vol, Dif); 
         });
-        Gpu::Device::streamSynchronize();
+        Gpu::Device::streamSynchronize(); //TODO Do we need this one too? 
       }  
 
       // Shut off unwanted diffusion after the fact
@@ -289,7 +289,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
   }  // End of OMP scope
 
   // Extrapolate to ghost cells
-  if (MOLSrcTerm.nGrow() > 0) {
+  if (MOLSrcTerm.nGrow() > 0) { //TODO GPU THESE! 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
