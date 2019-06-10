@@ -31,13 +31,14 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
         const amrex::Real dz = del[2]; 
 
         // Get Edge-centered transport coefficients
-        BL_PROFILE("PeleC::pc_move_transport_coeffs_to_ec call");
-        AMREX_PARALLEL_FOR_4D (box, nCompTr, i, j, k, n, { 
-               PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cx, 0, do_harmonic); 
-               PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cy, 1, do_harmonic);
-               PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cz, 2, do_harmonic);  
-        });       
-
+        {
+            BL_PROFILE("PeleC::pc_move_transport_coeffs_to_ec call");
+            AMREX_PARALLEL_FOR_4D (box, nCompTr, i, j, k, n, { 
+                   PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cx, 0, do_harmonic); 
+                   PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cy, 1, do_harmonic);
+                   PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cz, 2, do_harmonic);  
+            });       
+        }
         int nCompTan = 4;
         Gpu::AsyncFab tx_der(exbox, nCompTan);
         Gpu::AsyncFab ty_der(eybox, nCompTan); 
@@ -53,32 +54,36 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
         } 
         else
         {
-            BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs call");
+            {
+                BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs call");
         // Tangential derivs 
         // X 
-            AMREX_PARALLEL_FOR_3D(exbox, i, j, k, {
-                PeleC_compute_tangential_vel_derivs(i,j,k,tx, q, 0, dy, dz); 
-            });
+                AMREX_PARALLEL_FOR_3D(exbox, i, j, k, {
+                    PeleC_compute_tangential_vel_derivs(i,j,k,tx, q, 0, dy, dz); 
+                });
         // Y
-            AMREX_PARALLEL_FOR_3D(eybox, i, j, k, {
-                PeleC_compute_tangential_vel_derivs(i,j,k,ty, q, 1, dx, dz); 
-            });
+                AMREX_PARALLEL_FOR_3D(eybox, i, j, k, {
+                    PeleC_compute_tangential_vel_derivs(i,j,k,ty, q, 1, dx, dz); 
+                });
         //Z 
-            AMREX_PARALLEL_FOR_3D(eybox, i, j, k, {
-                PeleC_compute_tangential_vel_derivs(i,j,k,tz, q, 2, dx, dy); 
-            });
+                AMREX_PARALLEL_FOR_3D(eybox, i, j, k, {
+                    PeleC_compute_tangential_vel_derivs(i,j,k,tz, q, 2, dx, dy); 
+                });
+            }
 
         }  // diffuse_vel
 
         //Compute Extensive diffusion fluxes
-        BL_PROFILE("PeleC::diffusion_flux()"); 
-        AMREX_PARALLEL_FOR_3D(exbox, i, j, k,  {
-            PeleC_diffusion_flux(i,j,k, q, cx, tx, a1, flx1, dx, 0); 
-        });
-        AMREX_PARALLEL_FOR_3D(eybox, i, j, k,  {
-            PeleC_diffusion_flux(i,j,k, q, cy, ty, a2, flx2, dy, 1);
-        });
-        AMREX_PARALLEL_FOR_3D(ezbox, i, j, k,  {
-            PeleC_diffusion_flux(i,j,k, q, cz, tz, a3, flx3, dz, 2);
-        });
+        {
+            BL_PROFILE("PeleC::diffusion_flux()"); 
+            AMREX_PARALLEL_FOR_3D(exbox, i, j, k,  {
+                PeleC_diffusion_flux(i,j,k, q, cx, tx, a1, flx1, dx, 0); 
+            });
+            AMREX_PARALLEL_FOR_3D(eybox, i, j, k,  {
+                PeleC_diffusion_flux(i,j,k, q, cy, ty, a2, flx2, dy, 1);
+            });
+            AMREX_PARALLEL_FOR_3D(ezbox, i, j, k,  {
+                PeleC_diffusion_flux(i,j,k, q, cz, tz, a3, flx3, dz, 2);
+            });
+        }
 }
