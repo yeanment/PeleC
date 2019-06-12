@@ -62,11 +62,14 @@ void setC(const Box box,const int Nstart, const int Nend, const amrex::Array4<am
 
 AMREX_GPU_DEVICE
 inline
-void PeleC_diffextrap(const int i, const int j, const int k, const int n, 
-                      const amrex::Array4<amrex::Real> dif, 
-                      const int lo,  const int hi, const int dir) 
+void PeleC_diffextrap(const int i, const int j, const int k, 
+                      const amrex::Array4<amrex::Real> dif,
+                      const int ng, const int first, const int last, 
+                      D_DECL(const int lx, const int ly, const int lz), 
+                      D_DECL(const int hx, const int hy, const int hz))
 {
-        //TODO: Need to think about how to fill ghost cells on GPU. 
+//TODO finish this
+
 
 }
 

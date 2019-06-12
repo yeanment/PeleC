@@ -4,3 +4,4 @@ CEXE_sources += PeleC_gpu_hydro.cpp
 
 CEXE_headers += PeleC_method_$(DIM)D.H
 CEXE_headers += PeleC_K.H
+CEXE_headers += PeleC_misc.H

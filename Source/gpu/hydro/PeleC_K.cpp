@@ -1,11 +1,41 @@
 #include "PeleC_K.H"
-
+#include "PeleC_misc.H"
 #if AMREX_SPACEDIM==2 
 #include "PeleC_method_2D.H"
 #elif AMREX_SPACEDIM==3
 #include "PeleC_method_3D.H" 
 #endif 
 
+AMREX_GPU_DEVICE
+void PeleC_cmpTemp(const int i, const int j, const int k, amrex::Array4<amrex::Real> const& State)
+{
+    EOS eos_state; 
+    amrex::Real rho = State(i,j,k,URHO); 
+    amrex::Real rhoInv = 1.0/ rho; 
+    eos_state.rho = rho; 
+    eos_state.T = State(i,j,k,UTEMP); 
+    eos_state.e = State(i,j,k,UEINT)*rhoInv;
+#pragma unroll  
+    for(int n = 0; n < NUM_SPECIES; ++n){
+         eos_state.massfrac[n] = State(i,j,k,UFS+n)*rhoInv;
+    }
+#pragma unroll      
+    for(int n = 0; n < NUM_AUXILIARY; ++n) eos_state.aux[n] = State(i,j,k,UFX+n)*rhoInv; 
+    
+    eos_state.eos_re(); 
+    State(i,j,k,UTEMP) = eos_state.T; 
+}
+
+AMREX_GPU_DEVICE
+void PeleC_rst_int_e(const int i, const int j, const int k, amrex::Array4<amrex::Real> const& S)
+{
+    amrex::Real rho = S(i,j,k,URHO); 
+    amrex::Real u = S(i,j,k,UMX)/rho; 
+    amrex::Real v = S(i,j,k,UMY)/rho; 
+    amrex::Real w = S(i,j,k,UMZ)/rho; 
+    amrex::Real ke = 0.5e0*(u*u + v*v + w*w); 
+    S(i,j,k,UEINT) = S(i,j,k,UEDEN) - rho*ke; 
+}
 
 
 void 

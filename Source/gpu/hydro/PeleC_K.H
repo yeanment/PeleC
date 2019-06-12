@@ -232,7 +232,6 @@ void PeleC_ext_flx(const int i, const int j, const int k,
     for(int n = 0; n < NVAR; ++n) flx(i,j,k,n) *= area; 
 }
 
-
 AMREX_GPU_DEVICE
 inline 
 void PeleC_update(const int i, const int j, const int k,
@@ -260,6 +259,7 @@ void PeleC_update(const int i, const int j, const int k,
 
     update(i,j,k,UEINT) -= pdivu(i,j,k);     
 }
+
 
 //Derive routines 
 void PeleC_derpres(const Box& bx, FArrayBox& pfab, int dcomp, int /*ncomp*/,

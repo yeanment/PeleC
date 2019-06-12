@@ -32,6 +32,7 @@ using std::string;
 #include <PeleC_error_F.H>
 #include <PeleC_transport.H>
 #include <PeleC_timestep.H> 
+#include <PeleC_misc.H>
 
 #ifdef AMREX_USE_EB
 #include <AMReX_EBMultiFabUtil.H>
@@ -915,6 +916,7 @@ PeleC::estTimeStep (Real dt_old)
 #endif
 
     if(do_gpu){
+        prefetchToDevice(stateMF); //This should accelerate the below operations.  
         amrex::Real D_DECL(dx1 = dx[0], dx2 = dx[1], dx3 = dx[2]); 
         if(do_hydro){
            Real dt = amrex::ReduceMin(stateMF, 0, 
@@ -922,7 +924,6 @@ PeleC::estTimeStep (Real dt_old)
            {
                return PeleC_estdt_hydro(bx, fab, D_DECL(dx1, dx2, dx3)); 
            });       
-           Gpu::synchronize();     
            estdt_hydro = amrex::min(estdt_hydro, dt);
         }
         if (diffuse_vel)
@@ -932,7 +933,6 @@ PeleC::estTimeStep (Real dt_old)
           {
               return PeleC_estdt_veldif(bx, fab, D_DECL(dx1,dx2,dx3)); 
           });
-          Gpu::synchronize();     
           estdt_vdif = amrex::min(estdt_vdif,dt);
         }
 
@@ -943,7 +943,6 @@ PeleC::estTimeStep (Real dt_old)
           {
               return PeleC_estdt_tempdif(bx, fab, D_DECL(dx1,dx2,dx3)); 
           });
-          Gpu::synchronize();     
           estdt_tdif = amrex::min(estdt_tdif,dt);
 
         }
@@ -955,7 +954,6 @@ PeleC::estTimeStep (Real dt_old)
           {
               return PeleC_estdt_enthdif(bx, fab, D_DECL(dx1,dx2,dx3)); 
           });
-          Gpu::synchronize();    
           estdt_edif = amrex::min(estdt_edif,dt);
         }
         estdt_hydro = amrex::min(estdt_hydro, amrex::min(estdt_vdif, 
@@ -2002,45 +2000,54 @@ PeleC::reset_internal_energy(MultiFab& S_new, int ng)
 {
     Real sum  = 0.;
     Real sum0 = 0.;
-
-    if (parent->finestLevel() == 0 && print_energy_diagnostics)
-    {
+    if(!do_gpu){
+        if (parent->finestLevel() == 0 && print_energy_diagnostics)
+        {
         // Pass in the multifab and the component
-        sum0 = volWgtSumMF(&S_new,Eden,true);
+            sum0 = volWgtSumMF(&S_new,Eden,true);
+        }
     }
-
     // Ensure (rho e) isn't too small or negative
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-    for (MFIter mfi(S_new,true); mfi.isValid(); ++mfi)
+    for (MFIter mfi(S_new,TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.growntilebox(ng);
-
-        reset_internal_e(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
-                         BL_TO_FORTRAN_3D(S_new[mfi]),
-			 print_fortran_warnings);
+        if(do_gpu){
+            const auto& sarr = S_new.array(mfi); 
+            AMREX_PARALLEL_FOR_3D(bx, i, j, k, {
+                PeleC_rst_int_e(i,j,k, sarr); 
+            });
+        }
+        else{
+            reset_internal_e(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
+                             BL_TO_FORTRAN_3D(S_new[mfi]),
+		                	 print_fortran_warnings);
+        }
     }
 
     // Flush Fortran output
+    if(!do_gpu){
+        if (verbose)
+        flush_output();
 
-    if (verbose)
-	flush_output();
-
-    if (parent->finestLevel() == 0 && print_energy_diagnostics)
-    {
-        // Pass in the multifab and the component
-        sum = volWgtSumMF(&S_new,Eden,true);
-#ifdef BL_LAZY
-	Lazy::QueueReduction( [=] () mutable {
-#endif
-		ParallelDescriptor::ReduceRealSum(sum0);
-		ParallelDescriptor::ReduceRealSum(sum);
-		if (ParallelDescriptor::IOProcessor() && std::abs(sum-sum0) > 0)
-		    std::cout << "(rho E) added from reset terms                 : " << sum-sum0 << " out of " << sum0 << std::endl;
-#ifdef BL_LAZY
-	    });
-#endif
+        if (parent->finestLevel() == 0 && print_energy_diagnostics)
+        {
+            // Pass in the multifab and the component
+            sum = volWgtSumMF(&S_new,Eden,true);
+    #ifdef BL_LAZY
+        Lazy::QueueReduction( [=] () mutable {
+    #endif
+            ParallelDescriptor::ReduceRealSum(sum0);
+            ParallelDescriptor::ReduceRealSum(sum);
+            if (ParallelDescriptor::IOProcessor() && std::abs(sum-sum0) > 0)
+                std::cout << "(rho E) added from reset terms                 : " 
+                          << sum-sum0 << " out of " << sum0 << std::endl;
+    #ifdef BL_LAZY
+            });
+    #endif
+        }
     }
 }
 
@@ -2054,23 +2061,39 @@ PeleC::computeTemp(MultiFab& S, int ng)
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
+  if(do_gpu){
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-  for (MFIter mfi(S,true); mfi.isValid(); ++mfi)
-  {
-    const Box& bx = mfi.growntilebox(ng);
+      for (MFIter mfi(S,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+      {
+        const Box& bx = mfi.growntilebox(ng);
 
-#ifdef PELE_USE_EB
-    const auto& flag_fab = flags[mfi];
-    FabType typ = flag_fab.getType(bx);
-    if (typ == FabType::covered) {
-      continue;
-    }
+        const auto& sarr = S.array(mfi); 
+        AMREX_PARALLEL_FOR_3D(bx, i, j, k, {
+            PeleC_cmpTemp(i,j,k,sarr);
+        });   
+      } 
+  }
+  else{
+#ifdef _OPENMP
+#pragma omp parallel
 #endif
+      for (MFIter mfi(S,true); mfi.isValid(); ++mfi)
+      {
+        const Box& bx = mfi.growntilebox(ng);
 
-    auto& Sfab = S[mfi];
-    compute_temp(ARLIM_3D(bx.loVect()),ARLIM_3D(bx.hiVect()),BL_TO_FORTRAN_3D(Sfab));
+    #ifdef PELE_USE_EB
+        const auto& flag_fab = flags[mfi];
+        FabType typ = flag_fab.getType(bx);
+        if (typ == FabType::covered) {
+          continue;
+        }
+    #endif
+
+        auto& Sfab = S[mfi];
+        compute_temp(ARLIM_3D(bx.loVect()),ARLIM_3D(bx.hiVect()),BL_TO_FORTRAN_3D(Sfab));
+      }
   }
 }
 

@@ -87,6 +87,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
   }
   std::array<Real, BL_SPACEDIM> dxD = {D_DECL(dx1, dx1, dx1)};
   const Real *dxDp = &(dxD[0]);
+  prefetchToDevice(S); 
 
 
 #ifdef _OPENMP
@@ -137,9 +138,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
               {
                   PeleC_ctoprim(i,j,k, s, qar, qauxar);                  
               });
-          Gpu::Device::streamSynchronize(); //TODO assess if we can remove this. 
       }
-      
 // TODO deal with NSCBC      
 #if 0       
       for (int i = 0; i < BL_SPACEDIM ; i++)  {
@@ -213,7 +212,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         AMREX_PARALLEL_FOR_4D(cbox, NVAR, i , j, k ,n, {
             PeleC_diffup(i,j,k,n, D_DECL(flx1, flx2, flx3), vol, Dif); 
         });
-        Gpu::Device::streamSynchronize(); //TODO Do we need this one too? 
+       Gpu::Device::streamSynchronize(); //TODO We need this one as is. If we eliminate the Difextrap maybe we wont? 
       }  
 
       // Shut off unwanted diffusion after the fact
@@ -293,11 +292,28 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-    for (MFIter mfi(MOLSrcTerm, hydro_tile_size); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(MOLSrcTerm, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
       BL_PROFILE("PeleC::diffextrap calls");
-
+   
       const Box& bx = mfi.validbox();
-      pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
+      auto src = MOLSrcTerm.array(mfi); 
+      const int ng = MOLSrcTerm.nGrow(); 
+      auto lo = bx.loVect(); 
+      auto hi = bx.hiVect(); 
+      const int D_DECL(lx = lo[0], ly = lo[1], lz = lo[2]);
+      const int D_DECL(hx = hi[0], hy = hi[1], hz = hi[2]); 
+      amrex::ParallelFor(bx,
+      [=] AMREX_GPU_DEVICE (const int i, const int j, const int k)
+      {                
+          PeleC_diffextrap(i, j, k, src, ng, UMX, UMZ, D_DECL(lx, ly, lz),
+                           D_DECL(hx, hy, hz));
+          PeleC_diffextrap(i, j, k, src, ng, UFS, NUM_SPECIES, D_DECL(lx, ly, lz),
+                           D_DECL(hx, hy, hz));
+          PeleC_diffextrap(i, j, k, src, ng, UEDEN, UEDEN + 1, D_DECL(lx, ly, lz),
+                           D_DECL(hx, hy, hz));
+      });
+              
+/*      pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
                     BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], Xmom), &amrex::SpaceDim);
 
       int nspec = NumSpec;
@@ -306,7 +322,8 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 
       const int one = 1;
       pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
-                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], Eden), &one);
+                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], Eden), &one); */ 
+
     }
   }
 }
