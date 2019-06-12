@@ -111,7 +111,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 	  const int*  domain_lo = geom.Domain().loVect();
 	  const int*  domain_hi = geom.Domain().hiVect();
 
-    for (MFIter mfi(S,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(MOLSrcTerm,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
       const Box  vbox = mfi.tilebox();
       int ng = S.nGrow();
@@ -253,6 +253,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #endif
 #endif
       }
+
       BL_PROFILE_VAR_STOP(diff);
 #ifdef AMREX_USE_CUDA 
     auto run = RunOn::Gpu;
@@ -281,39 +282,28 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
                                       dxDp, dt, run);
           }
         }
-
+//Extrapolate to GhostCells 
+      if(MOLSrcTerm.nGrow() > 0){
+          BL_PROFILE("PeleC::diffextrap calls");
+          const int mg = MOLSrcTerm.nGrow();
+          const Box& bx = mfi.validbox();  
+          auto lo = bx.loVect(); 
+          auto hi = bx.hiVect(); 
+          auto dlo = Dterm.begin; 
+          auto dhi = Dterm.end; 
+          const int D_DECL(lx = lo[0], ly = lo[1], lz = lo[2]);
+          const int D_DECL(hx = hi[0], hy = hi[1], hz = hi[2]); 
+          amrex::ParallelFor(bx,
+          [=] AMREX_GPU_DEVICE (const int i, const int j, const int k)
+          {                
+              PeleC_diffextrap(i, j, k, Dterm, mg, UMX, UMZ+1, D_DECL(lx, ly, lz),
+                               D_DECL(hx, hy, hz), dlo, dhi);
+              PeleC_diffextrap(i, j, k, Dterm, mg, UFS, UFS + NUM_SPECIES, D_DECL(lx, ly, lz),
+                               D_DECL(hx, hy, hz), dlo, dhi);
+              PeleC_diffextrap(i, j, k, Dterm, mg, UEDEN, UEDEN + 1, D_DECL(lx, ly, lz),
+                               D_DECL(hx, hy, hz), dlo, dhi);
+          });                
+      }
     }  // End of MFIter scope
   }  // End of OMP scope
-
-//TODO asses why these are outside the previous MPIter loop. 
-  // Extrapolate to ghost cells
-  if (MOLSrcTerm.nGrow() > 0) {
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-    for (MFIter mfi(MOLSrcTerm, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
-      BL_PROFILE("PeleC::diffextrap calls");
-   
-      const Box& bx = mfi.validbox();
-      auto const &src = MOLSrcTerm.array(mfi); 
-      const int ng = MOLSrcTerm.nGrow(); 
-      auto lo = bx.loVect(); 
-      auto hi = bx.hiVect(); 
-      auto dlo = src.begin; 
-      auto dhi = src.end; 
-      const int D_DECL(lx = lo[0], ly = lo[1], lz = lo[2]);
-      const int D_DECL(hx = hi[0], hy = hi[1], hz = hi[2]); 
-      amrex::ParallelFor(bx,
-      [=] AMREX_GPU_DEVICE (const int i, const int j, const int k)
-      {                
-          PeleC_diffextrap(i, j, k, src, ng, UMX, UMZ+1, D_DECL(lx, ly, lz),
-                           D_DECL(hx, hy, hz), dlo, dhi);
-          PeleC_diffextrap(i, j, k, src, ng, UFS, UFS + NUM_SPECIES, D_DECL(lx, ly, lz),
-                           D_DECL(hx, hy, hz), dlo, dhi);
-          PeleC_diffextrap(i, j, k, src, ng, UEDEN, UEDEN + 1, D_DECL(lx, ly, lz),
-                           D_DECL(hx, hy, hz), dlo, dhi);
-      });  
-              
-    }
-  }
-}
+} // End of Function
