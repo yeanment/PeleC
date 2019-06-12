@@ -204,7 +204,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       auto const D_DECL(&a1 = (area[0]).array(mfi),  &a2 = (area[1]).array(mfi), &a3 = (area[2]).array(mfi)); 
       auto const& Dterm = MOLSrcTerm.array(mfi); 
       PeleC_compute_diffusion_flux(cbox, qar, coe_cc, D_DECL(flx1, flx2, flx3),
-                                   D_DECL(a1, a2, a3),  nCompTr, dx, do_harmonic, diffuse_vel); 
+                                   D_DECL(a1, a2, a3),  dx, do_harmonic, diffuse_vel); 
 
       // Compute flux divergence (1/Vol).Div(F.A)
       {
@@ -213,7 +213,6 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         AMREX_PARALLEL_FOR_4D(vbox, NVAR, i , j, k ,n, {
             PeleC_diffup(i,j,k,n, D_DECL(flx1, flx2, flx3), vol, Dterm); 
         });
-//       Gpu::Device::streamSynchronize(); //TODO 
       }  
 
       // Shut off unwanted diffusion after the fact

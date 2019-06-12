@@ -177,6 +177,6 @@ void
 PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Real> &q, const amrex::Array4<const amrex::Real> &coef, 
                              const amrex::Array4<amrex::Real> &flx1, const amrex::Array4<amrex::Real> &flx2, 
                              const amrex::Array4<const amrex::Real> &a1, const amrex::Array4<const amrex::Real> &a2, 
-                             const int nCompTr, const amrex::Real del[], const int do_harmonic, const int diffuse_vel); 
+                             const amrex::Real del[], const int do_harmonic, const int diffuse_vel); 
 
 #endif 

@@ -13,12 +13,12 @@ void
 PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Real> &q, const amrex::Array4<const amrex::Real> &coef, 
                              const amrex::Array4<amrex::Real> &flx1, const amrex::Array4<amrex::Real> &flx2, 
                              const amrex::Array4<const amrex::Real> &a1, const amrex::Array4<const amrex::Real> &a2, 
-                             const int nCompTr, const amrex::Real del[], const int do_harmonic, const int diffuse_vel) 
+                             const amrex::Real del[], const int do_harmonic, const int diffuse_vel) 
 {        
         Box exbox = amrex::surroundingNodes(box,0);
         Box eybox = amrex::surroundingNodes(box,1); 
-        Gpu::AsyncFab cx_ec(exbox, nCompTr); 
-        Gpu::AsyncFab cy_ec(eybox, nCompTr); 
+        Gpu::AsyncFab cx_ec(exbox, dComp_lambda+1); 
+        Gpu::AsyncFab cy_ec(eybox, dComp_lambda+1); 
         auto const &cx = cx_ec.array();
         auto const &cy = cy_ec.array(); 
         const amrex::Real dx = del[0]; 
@@ -26,7 +26,7 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
 
         // Get Edge-centered transport coefficients
         BL_PROFILE("PeleC::pc_move_transport_coeffs_to_ec call");
-        AMREX_PARALLEL_FOR_4D (box, nCompTr, i, j, k, n, { 
+        AMREX_PARALLEL_FOR_4D (box, dComp_lambda+1, i, j, k, n, { 
                PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cx, 0, do_harmonic); 
                PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cy, 1, do_harmonic); 
         });       
