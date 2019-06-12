@@ -87,8 +87,11 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
   }
   std::array<Real, BL_SPACEDIM> dxD = {D_DECL(dx1, dx1, dx1)};
   const Real *dxDp = &(dxD[0]);
-  prefetchToDevice(S); 
 
+//Fetch some gpu arrays 
+
+  prefetchToDevice(S); 
+  prefetchToDevice(MOLSrcTerm); 
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -199,8 +202,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #endif 
 #endif
       auto const D_DECL(&a1 = (area[0]).array(mfi),  &a2 = (area[1]).array(mfi), &a3 = (area[2]).array(mfi)); 
-      // Container on grown region, for hybrid divergence & redistribution
-      Gpu::AsyncFab Dterm(cbox, NUM_STATE); 
+      auto const& Dterm = MOLSrcTerm.array(mfi); 
       PeleC_compute_diffusion_flux(cbox, qar, coe_cc, D_DECL(flx1, flx2, flx3),
                                    D_DECL(a1, a2, a3),  nCompTr, dx, do_harmonic, diffuse_vel); 
 
@@ -208,11 +210,10 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       {
         BL_PROFILE("PeleC::pc_diffup()");
         auto const &vol = volume.array(mfi); 
-        auto const &Dif = Dterm.array(); 
-        AMREX_PARALLEL_FOR_4D(cbox, NVAR, i , j, k ,n, {
-            PeleC_diffup(i,j,k,n, D_DECL(flx1, flx2, flx3), vol, Dif); 
+        AMREX_PARALLEL_FOR_4D(vbox, NVAR, i , j, k ,n, {
+            PeleC_diffup(i,j,k,n, D_DECL(flx1, flx2, flx3), vol, Dterm); 
         });
-//       Gpu::Device::streamSynchronize(); //TODO We need this one as is. If we eliminate the Difextrap maybe we wont? 
+//       Gpu::Device::streamSynchronize(); //TODO 
       }  
 
       // Shut off unwanted diffusion after the fact
@@ -223,7 +224,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       //      scalar instead....
           
       if (diffuse_temp == 0 && diffuse_enth == 0) {
-        setC(cbox, Eden, Eint, Dterm.array(), 0.0);
+        setC(cbox, Eden, Eint, Dterm, 0.0);
         setC(cbox, Eden, Eint, flux_ecx.array(), 0.0);  
 #if AMREX_SPACEDIM > 1 
         setC(cbox, Eden, Eint, flux_ecy.array(), 0.0);  
@@ -233,7 +234,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #endif
       }
       if (diffuse_spec == 0) {
-        setC(cbox, FirstSpec, FirstSpec + NumSpec, Dterm.array(), 0.0);
+        setC(cbox, FirstSpec, FirstSpec + NumSpec, Dterm, 0.0);
         setC(cbox, FirstSpec, FirstSpec + NumSpec, flux_ecx.array(), 0.0);  
 #if AMREX_SPACEDIM > 1 
         setC(cbox, FirstSpec, FirstSpec + NumSpec, flux_ecy.array(), 0.0);  
@@ -244,7 +245,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       }
 
       if (diffuse_vel  == 0) {
-        setC(cbox, Xmom, Xmom + 3, Dterm.array(), 0.0);
+        setC(cbox, Xmom, Xmom + 3, Dterm, 0.0);
         setC(cbox, Xmom, Xmom + 3, flux_ecx.array(), 0.0);  
 #if AMREX_SPACEDIM > 1 
         setC(cbox, Xmom, Xmom + 3, flux_ecy.array(), 0.0);  
@@ -254,8 +255,6 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #endif
       }
       BL_PROFILE_VAR_STOP(diff);
-      MOLSrcTerm[mfi].setVal(0, vbox, 0, NUM_STATE);
-      MOLSrcTerm[mfi].copy(Dterm.fab(), vbox, 0, vbox, 0, NUM_STATE);
 #ifdef AMREX_USE_CUDA 
     auto run = RunOn::Gpu;
 #else 
@@ -287,8 +286,9 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
     }  // End of MFIter scope
   }  // End of OMP scope
 
+//TODO asses why these are outside the previous MPIter loop. 
   // Extrapolate to ghost cells
-  if (MOLSrcTerm.nGrow() > 0) { //TODO GPU THESE! 
+  if (MOLSrcTerm.nGrow() > 0) {
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -296,7 +296,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       BL_PROFILE("PeleC::diffextrap calls");
    
       const Box& bx = mfi.validbox();
-      auto src = MOLSrcTerm.array(mfi); 
+      auto const &src = MOLSrcTerm.array(mfi); 
       const int ng = MOLSrcTerm.nGrow(); 
       auto lo = bx.loVect(); 
       auto hi = bx.hiVect(); 
@@ -313,19 +313,8 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
                            D_DECL(hx, hy, hz), dlo, dhi);
           PeleC_diffextrap(i, j, k, src, ng, UEDEN, UEDEN + 1, D_DECL(lx, ly, lz),
                            D_DECL(hx, hy, hz), dlo, dhi);
-      });
+      });  
               
-/*      pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
-                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], Xmom), &amrex::SpaceDim);
-
-      int nspec = NumSpec;
-      pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
-                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], FirstSpec), &nspec);
-
-      const int one = 1;
-      pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
-                    BL_TO_FORTRAN_N_3D(MOLSrcTerm[mfi], Eden), &one); */ 
-
     }
   }
 }
