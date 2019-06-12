@@ -212,7 +212,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         AMREX_PARALLEL_FOR_4D(cbox, NVAR, i , j, k ,n, {
             PeleC_diffup(i,j,k,n, D_DECL(flx1, flx2, flx3), vol, Dif); 
         });
-       Gpu::Device::streamSynchronize(); //TODO We need this one as is. If we eliminate the Difextrap maybe we wont? 
+//       Gpu::Device::streamSynchronize(); //TODO We need this one as is. If we eliminate the Difextrap maybe we wont? 
       }  
 
       // Shut off unwanted diffusion after the fact
