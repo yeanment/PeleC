@@ -300,17 +300,19 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
       const int ng = MOLSrcTerm.nGrow(); 
       auto lo = bx.loVect(); 
       auto hi = bx.hiVect(); 
+      auto dlo = src.begin; 
+      auto dhi = src.end; 
       const int D_DECL(lx = lo[0], ly = lo[1], lz = lo[2]);
       const int D_DECL(hx = hi[0], hy = hi[1], hz = hi[2]); 
       amrex::ParallelFor(bx,
       [=] AMREX_GPU_DEVICE (const int i, const int j, const int k)
       {                
-          PeleC_diffextrap(i, j, k, src, ng, UMX, UMZ, D_DECL(lx, ly, lz),
-                           D_DECL(hx, hy, hz));
-          PeleC_diffextrap(i, j, k, src, ng, UFS, NUM_SPECIES, D_DECL(lx, ly, lz),
-                           D_DECL(hx, hy, hz));
+          PeleC_diffextrap(i, j, k, src, ng, UMX, UMZ+1, D_DECL(lx, ly, lz),
+                           D_DECL(hx, hy, hz), dlo, dhi);
+          PeleC_diffextrap(i, j, k, src, ng, UFS, UFS + NUM_SPECIES, D_DECL(lx, ly, lz),
+                           D_DECL(hx, hy, hz), dlo, dhi);
           PeleC_diffextrap(i, j, k, src, ng, UEDEN, UEDEN + 1, D_DECL(lx, ly, lz),
-                           D_DECL(hx, hy, hz));
+                           D_DECL(hx, hy, hz), dlo, dhi);
       });
               
 /*      pc_diffextrap(ARLIM_3D(bx.loVect()), ARLIM_3D(bx.hiVect()),
