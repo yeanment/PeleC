@@ -6,15 +6,18 @@
 
 
 extern "C" {
-AMREX_GPU_HOST_DEVICE void get_imw(double* neww); 
+AMREX_GPU_HOST_DEVICE void get_imw(double neww[]);
+AMREX_GPU_HOST_DEVICE void get_mn(double mw[]);  
 AMREX_GPU_HOST_DEVICE void CKPY(double*  rho,double*  T,double*  y,double *  P);
 AMREX_GPU_HOST_DEVICE void CKCVMS(double*  T, double*  cvms);
 AMREX_GPU_HOST_DEVICE void CKCVBS(double*  T, double* massfrac, double* cv); 
 AMREX_GPU_HOST_DEVICE void CKCPMS(double*  T, double*  cvms);
 AMREX_GPU_HOST_DEVICE void CKUMS(double*  T,double*  ums);
 AMREX_GPU_HOST_DEVICE void CKHMS(double*  T,double*  ums);
+AMREX_GPU_HOST_DEVICE void CKWYR(double* rho, double* T, double* y, double* wdot); 
 AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double*  e,double*  y, double*  t, int *ierr);
-AMREX_GPU_HOST_DEVICE void CKYTX(double massfrac[], double molefrac[]); 
+AMREX_GPU_HOST_DEVICE void CKYTX(double massfrac[], double molefrac[]);
+ 
 }
 
 AMREX_GPU_HOST_DEVICE EOS::EOS()
@@ -69,6 +72,31 @@ void EOS::eos_re()
 
     eos_bottom(); 
 }
+
+AMREX_GPU_HOST_DEVICE
+void EOS::eos_rt()
+{
+    eos_wb(); 
+    CKPY(&rho, &T, massfrac, &p); 
+    CKUMS(&T, ei); 
+    for(int i = 0; i < NUM_SPECIES; ++i) e+= massfrac[i]*ei[i]; 
+    
+    eos_bottom(); 
+}
+
+
+AMREX_GPU_HOST_DEVICE
+void EOS::eos_mpr2wdot(amrex::Real wdot[])
+{
+    CKWYR(&rho, &T, massfrac, wdot); 
+    eos_rt(); 
+    amrex::Real mw[NUM_SPECIES]; 
+    get_mw(mw); 
+    for(int n = 0; n < NUM_SPECIES; n++){
+        wdot[n] = wdot[n]*mw[n]; 
+    }
+}
+
 
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_rp()

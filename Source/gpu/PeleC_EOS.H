@@ -35,7 +35,9 @@ AMREX_GPU_HOST_DEVICE    void eos_cv();
 AMREX_GPU_HOST_DEVICE    void eos_rp();  
 AMREX_GPU_HOST_DEVICE    void eos_bottom();
 AMREX_GPU_HOST_DEVICE    void eos_ytx(); 
-AMREX_GPU_HOST_DEVICE    void eos_hi(); 
+AMREX_GPU_HOST_DEVICE    void eos_hi();
+AMREX_GPU_HOST_DEVICE    void eos_rt(); 
+AMREX_GPU_HOST_DEVICE    void eos_mpr2wdot(amrex::Real wdot[]);  
 //TODO add more later!  
 };
 #endif

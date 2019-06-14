@@ -544,7 +544,10 @@ PeleC::do_sdc_iteration (Real time,
   // Update I_R and rebuild S_new accordingly
   if (do_react == 1)
   {
-    react_state(time, dt);
+    if(do_gpu) 
+        react_state_gpu(time, dt); 
+    else
+        react_state(time, dt);
   }
   else
   {

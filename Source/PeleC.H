@@ -436,6 +436,7 @@ public:
 
 #ifdef REACTIONS
     void react_state(amrex::Real time, amrex::Real dt, bool init=false, amrex::MultiFab* A_aux = nullptr);
+    void react_state_gpu(amrex::Real time, amrex::Real dt, bool init=false, amrex::MultiFab* A_aux = nullptr); 
 #endif
 
     void reset_internal_energy (amrex::MultiFab& State, int ng);
