@@ -125,7 +125,7 @@ endif
 
 Bdirs   := Source Source/param_includes Source/Src_nd Source/Src_$(DIM)d Source/TurbInflow 
 
-Bdirs += Source/gpu Source/gpu/hydro Source/gpu/diffusion/transport Source/gpu/diffusion  
+Bdirs += Source/gpu Source/gpu/hydro Source/gpu/react Source/gpu/diffusion/transport Source/gpu/diffusion  
 
 ifeq ($(USE_EB), TRUE)
   Pdirs := Base EB Amr Boundary AmrCore LinearSolvers/MLMG LinearSolvers/C_CellMG/

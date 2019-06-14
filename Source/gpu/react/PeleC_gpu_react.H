@@ -79,7 +79,6 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
                                  const int nsteps_min, const int nsteps_max, 
                                  const int nsteps_guess, const int do_update) 
 {
-    amrex::Real tol = 1e-20; 
     EOS eos; 
     //compute rhoe_ext/rhoy_ext 
     amrex::Real rhoE_old = uold(i,j,k,UEDEN); 
@@ -91,7 +90,7 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
     for(int n = UFS; n < UFS+NUM_SPECIES; n++) rho+= uold(i,j,k,n); 
 
     amrex::Real nrg = (rhoE_old - rhoKE_old)*rhoInv; 
-    amrex::Real re_old = nrg*rho;
+    amrex::Real re_old = nrg*uold(i,j,k,URHO);
     rhou = unew(i,j,k,UMX), rhov = unew(i,j,k,UMY), rhow = unew(i,j,k, UMZ);  
     rhoInv = 1.e0/unew(i,j,k,URHO); 
     amrex::Real rhoKE_new = 0.5*(rhou*rhou + rhov*rhov + rhow*rhow)*rhoInv; 
@@ -102,24 +101,23 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
 
     //RK dts 
     amrex::Real dt_rk = dt_react/nsteps_guess; 
-    amrex::Real dt_min = dt_react/nsteps_min; 
-    amrex::Real dt_max = dt_react/nsteps_max; 
+    amrex::Real dt_min = dt_react/nsteps_max; 
+    amrex::Real dt_max = dt_react/nsteps_min; 
     amrex::Real updt_time = 0.e0; 
     int steps = 0; 
     amrex::Real urk[NVAR];
-    amrex::Real urk_old[NVAR];
+    amrex::Real urk_old[NVAR] = {};
     amrex::Real urk_err[NVAR] = {}; 
-    amrex::Real wdot[NVAR];  
+    amrex::Real wdot[NVAR] = {};  
     for(int n = 0; n < NVAR; ++n) urk[n] = uold(i,j,k,n);  
 
     //Do the RK! 
-    while(updt_time < dt_react){ 
+    while(updt_time < dt_react && steps < nsteps_max){ 
 #pragma unroll 
         for(int n = 0; n < NVAR; n++)  urk_old[n] = urk[n]; 
-
+        
         updt_time+= dt_rk; 
         steps++; 
-
         for(int stage = 0; stage < 6; stage++)
         {
             rhoInv = 1.e0/urk[URHO]; 
@@ -127,15 +125,16 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
             for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = urk[UFS+n]*rhoInv; 
             
             eos.rho = urk[URHO]; 
-            eos.T = urk[UTEMP]; 
+            eos.T = urk[UTEMP];
             eos.eos_mpr2wdot(wdot); 
             for(int n = 0; n < NUM_SPECIES; ++n) wdot[n] += rhoydot_ext[n]; 
         
-            amrex::Real tempsrc = rhoedot_ext;  
+            amrex::Real tempsrc = rhoedot_ext; 
+#pragma unroll 
             for(int n = 0; n < NUM_SPECIES; ++n){
                  tempsrc -= wdot[n]*eos.ei[n];      
             }
-            tempsrc /= (urk[URHO]/eos.cv); 
+            tempsrc /= (urk[URHO]*eos.cv); 
 
 
  /*================== Update urk_err =================== */
@@ -149,10 +148,9 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
 /*================== Update Stage solution =================== */ 
             //Species
 #pragma unroll 
-            for(int n = 0; n < NUM_SPECIES; ++n){ 
+            for(int n = 0; n < NUM_SPECIES; ++n){
                 urk[UFS+n] = urk_old[UFS+n] + alpha_rk64[stage]*dt_rk*wdot[n]; 
-                std::cout<<urk[UFS+n]<< '\t' << alpha_rk64[stage] << '\t' << wdot[n] <<std::endl;}
-            std::cin.get(); 
+             }
             //Temperature
             urk[UTEMP] = urk_old[UTEMP] + alpha_rk64[stage]*dt_rk*tempsrc; 
 
@@ -170,8 +168,8 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
                 urk[URHO] += urk[UFS+n];
 
 /*================ Adapt Time step! ======================== */ 
-           adapt_timestep(urk_err, dt_max, dt_rk, dt_min, tol); 
-        }//end rk stages 
+        }//end rk stages
+        adapt_timestep(urk_err, dt_max, dt_rk, dt_min, 1.e-15); 
     }//end timestep loop 
 
 //Add drhoY/dt to reactions MultiFab and update unew if needed
@@ -184,16 +182,19 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
         unew(i,j,k,UMX) = umnew;  
         unew(i,j,k,UMY) = vmnew; 
         unew(i,j,k,UMZ) = wmnew; 
-        unew(i,j,k,UTEMP) = urk[UTEMP];  
+        unew(i,j,k,UTEMP) = urk[UTEMP]; 
 #pragma unroll 
-        for(int n=0; n <NUM_SPECIES; ++n) unew(i,j,k, UFS+n) = urk[UFS+n];         
+        for(int n=0; n <NUM_SPECIES; ++n){
+             unew(i,j,k, UFS+n) = urk[UFS+n];         
+        }
     }
 
 #pragma unroll     
-    for(int n =0; n < NUM_SPECIES; ++n) IR(i,j,k,n) = (urk[UFS+n] - uold(i,j,k,UFS+n))/dt_react 
-                                                    - asrc(i,j,k,UFS+n);
+    for(int n =0; n < NUM_SPECIES; ++n){
+         IR(i,j,k,n) = (urk[UFS+n] - uold(i,j,k,UFS+n))/dt_react  - asrc(i,j,k,UFS+n);
+    }
     IR(i,j,k,NUM_SPECIES) = (re_old + dt_react*rhoedot_ext + 0.5e0*(umnew*umnew + vmnew*vmnew + wmnew*wmnew)/urk[URHO] 
-                             - uold(i,j,k,UEDEN))/dt_react - asrc(i,j,k,UEDEN); 
+                             - uold(i,j,k,UEDEN))/dt_react - asrc(i,j,k,UEDEN);
 }
 
 

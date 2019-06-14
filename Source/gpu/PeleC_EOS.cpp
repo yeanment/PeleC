@@ -78,7 +78,7 @@ void EOS::eos_rt()
 {
     eos_wb(); 
     CKPY(&rho, &T, massfrac, &p); 
-    CKUMS(&T, ei); 
+    CKUMS(&T, ei);
     for(int i = 0; i < NUM_SPECIES; ++i) e+= massfrac[i]*ei[i]; 
     
     eos_bottom(); 
@@ -88,12 +88,12 @@ void EOS::eos_rt()
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_mpr2wdot(amrex::Real wdot[])
 {
-    CKWYR(&rho, &T, massfrac, wdot); 
+    CKWYR(&rho, &T, massfrac, wdot);
     eos_rt(); 
     amrex::Real mw[NUM_SPECIES]; 
     get_mw(mw); 
     for(int n = 0; n < NUM_SPECIES; n++){
-        wdot[n] = wdot[n]*mw[n]; 
+        wdot[n] *= mw[n];
     }
 }
 

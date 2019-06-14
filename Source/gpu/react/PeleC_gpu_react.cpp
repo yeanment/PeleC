@@ -92,7 +92,6 @@ PeleC::react_state_gpu(Real time, Real dt, bool react_init, MultiFab* A_aux)
             auto const& I_R        = reactions.array(mfi);
             int do_update         = react_init ? 0 : 1;  // TODO: Update here? Or just get reaction source?
 
-
             if(chem_integrator==1)
             {
                 amrex::Abort("Implicit Chemistry is not implemented yet on GPU only explicit."); 
