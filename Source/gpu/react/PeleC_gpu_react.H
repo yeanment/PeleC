@@ -122,11 +122,13 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
         {
             rhoInv = 1.e0/urk[URHO]; 
 #pragma unroll 
-            for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = urk[UFS+n]*rhoInv; 
+            for(int n = 0; n < NUM_SPECIES; ++n){
+                 eos.massfrac[n] = urk[UFS+n]*rhoInv; 
+                 wdot[n] = 0.e0; } 
             
             eos.rho = urk[URHO]; 
             eos.T = urk[UTEMP];
-            eos.eos_mpr2wdot(wdot); 
+            eos.eos_mpr2wdot(wdot);  
             for(int n = 0; n < NUM_SPECIES; ++n) wdot[n] += rhoydot_ext[n]; 
         
             amrex::Real tempsrc = rhoedot_ext; 

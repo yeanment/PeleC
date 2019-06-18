@@ -260,7 +260,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #else 
     auto run = RunOn::Cpu;
 #endif 
-
+        Gpu::streamSynchronize(); 
         if (do_reflux && flux_factor != 0)  // no eb in problem
         {
             (flux_ecx.fab()).mult(flux_factor);
@@ -303,7 +303,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
               PeleC_diffextrap(i, j, k, Dterm, mg, UEDEN, UEDEN + 1, D_DECL(lx, ly, lz),
                                D_DECL(hx, hy, hz), dlo, dhi);
           });                
-      }
+      }  
     }  // End of MFIter scope
   }  // End of OMP scope
 } // End of Function

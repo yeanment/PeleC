@@ -94,7 +94,7 @@ void EOS::eos_mpr2wdot(amrex::Real wdot[])
     get_mw(mw); 
     for(int n = 0; n < NUM_SPECIES; n++){
         wdot[n] *= mw[n];
-    }
+    }  
 }
 
 
