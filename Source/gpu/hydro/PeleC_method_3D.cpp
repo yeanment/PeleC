@@ -144,11 +144,15 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     const Box& txbxm = growHi(txbx, cdir, 1); 
     FArrayBox qxym(txbxm, QVAR); 
     FArrayBox qxyp(txbx , QVAR);
+    Elixir qxymeli = qxym.elixir(); 
+    Elixir qxypeli = qxyp.elixir(); 
     auto const& qmxy = qxym.array();
     auto const& qpxy = qxyp.array();  
 
     FArrayBox qxzm(txbxm, QVAR); 
     FArrayBox qxzp(txbx , QVAR);
+    Elixir qxzmeli = qxzm.elixir(); 
+    Elixir qxzpeli = qxzp.elixir(); 
     auto const& qmxz = qxzm.array();
     auto const& qpxz = qxzp.array(); 
 
@@ -190,6 +194,11 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_cmpflx(i,j,k, bclx, bchx, dlx, dhx, qmxz, qpxz, flxz, qxz, qaux, cdir); 
     }); 
 
+/* Clear Elixirs */     
+    qxymeli.clear(); 
+    qxypeli.clear(); 
+    qxzmeli.clear(); 
+    qxzpeli.clear(); 
 
 //===================== Y interface corrections ====================
 
@@ -199,7 +208,9 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     FArrayBox qyxm(tybxm, QVAR); 
     FArrayBox qyxp(tybx, QVAR); 
     FArrayBox qyzm(tybxm, QVAR); 
-    FArrayBox qyzp(tybx, QVAR); 
+    FArrayBox qyzp(tybx, QVAR);
+    Elixir qyxmeli = qyxm.elixir(), qyxpeli = qyxp.elixir(); 
+    Elixir qyzmeli = qyzm.elixir(), qyzpeli = qyzp.elixir();  
     auto const& qmyx = qyxm.array(); 
     auto const& qpyx = qyxp.array(); 
     auto const& qmyz = qyzm.array(); 
@@ -227,7 +238,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
    FArrayBox gdvyxfab(tyfxbx, NGDNV); 
    FArrayBox gdvyzfab(tyfxbx, NGDNV); 
    Elixir fluxyxeli = fluxyx.elixir(), gdvyxeli = gdvyxfab.elixir(); 
-   Elixir fluxyzeli = fluxyz.elixir(), gdvyxeli = gdvyxfab.elixir();    
+   Elixir fluxyzeli = fluxyz.elixir(), gdvyzeli = gdvyzfab.elixir();    
    
    auto const& flyx = fluxyx.array(); 
    auto const& flyz = fluxyz.array(); 
@@ -242,6 +253,11 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qmyz , qpyz , flyz, qyz, qaux, cdir); 
     });
 
+/* Clear temporary elixirs */ 
+    qyxmeli.clear(); 
+    qyxpeli.clear(); 
+    qyzmeli.clear(); 
+    qyzpeli.clear(); 
 
 //===================== Z interface corrections ====================
 
@@ -252,6 +268,9 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     FArrayBox qzxp(tzbx, QVAR); 
     FArrayBox qzym(tzbxm, QVAR); 
     FArrayBox qzyp(tzbx, QVAR); 
+    Elixir qzxmeli = qzxm.elixir(), qzxpeli = qzxp.elixir(); 
+    Elixir qzymeli = qzym.elixir(), qzypeli = qzyp.elixir();  
+
     auto const& qmzx = qzxm.array(); 
     auto const& qpzx = qzxp.array(); 
     auto const& qmzy = qzym.array(); 
@@ -282,7 +301,7 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
    FArrayBox gdvzxfab(tzfxbx, NGDNV); 
    FArrayBox gdvzyfab(tzfxbx, NGDNV); 
    Elixir fluxzxeli = fluxzx.elixir(), gdvzxeli = gdvzxfab.elixir(); 
-   Elixir fluxzyeli = fluxzy.elixir(), gdvzxeli - gdvzxfab.elixir();    
+   Elixir fluxzyeli = fluxzy.elixir(), gdvzyeli = gdvzyfab.elixir();    
 
  
    auto const& flzx = fluxzx.array(); 
@@ -297,11 +316,23 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
       PeleC_cmpflx(i,j,k, bclz, bchz, dlz, dhz, qmzy, qpzy, flzy, qzy, qaux, cdir); 
     });
 
+/* Clear temp elixirs */ 
+    qzxmeli.clear(); 
+    qzxpeli.clear(); 
+    qzymeli.clear(); 
+    qzypeli.clear(); 
 
+
+
+/*  Temp Fabs for Final Fluxs */ 
     FArrayBox qmfab(bxg2, QVAR); 
     FArrayBox qpfab(bxg1, QVAR);
+    Elixir qmeli = qmfab.elixir(); 
+    Elixir qpeli = qpfab.elixir(); 
     auto const& qm = qmfab.array(); 
     auto const& qp = qpfab.array();  
+/* Don't worry about clearing these as they will clear when they go out of scope */ 
+
 
 //==================== X| Y&Z ======================================
     cdir = 0;   
