@@ -47,8 +47,10 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 
     int cdir = 0; 
     const Box& xmbx = growHi(bxg2, cdir, 1); 
-    AsyncFab qxm(xmbx, QVAR); 
-    AsyncFab qxp(bxg2, QVAR);
+    FArrayBox qxm(xmbx, QVAR); 
+    FArrayBox qxp(bxg2, QVAR);
+    Elixir qxmeli = qxm.elixir(); 
+    Elixir qxpeli = qxp.elixir(); 
     auto const& qxmarr = qxm.array(); 
     auto const& qxparr = qxp.array();
 
@@ -57,8 +59,10 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     cdir = 1; 
     const Box& yflxbx = surroundingNodes(grow(bxg2, cdir, -1) ,cdir); 
     const Box& ymbx = growHi(bxg2, cdir, 1); 
-    AsyncFab qym(ymbx, QVAR);
-    AsyncFab qyp(bxg2, QVAR);
+    FArrayBox qym(ymbx, QVAR);
+    FArrayBox qyp(bxg2, QVAR);
+    Elixir qymeli = qym.elixir(); 
+    Elixir qypeli = qyp.elixir(); 
     auto const& qymarr = qym.array(); 
     auto const& qyparr = qyp.array();  
 
@@ -67,8 +71,10 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     cdir = 2; 
     const Box& zmbx = growHi(bxg2, cdir, 1); 
     const Box& zflxbx = surroundingNodes(grow(bxg2,cdir, -1),cdir);
-    AsyncFab qzm(zmbx, QVAR); 
-    AsyncFab qzp(bxg2, QVAR);
+    FArrayBox qzm(zmbx, QVAR); 
+    FArrayBox qzp(bxg2, QVAR);
+    Elixir qzmeli = qzm.elixir(); 
+    Elixir qzpeli = qzp.elixir(); 
     auto const& qzmarr = qzm.array(); 
     auto const& qzparr = qzp.array();
 
@@ -98,11 +104,11 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 //===================== X initial fluxes ===========================
     cdir = 0; 
     const Box& xflxbx = surroundingNodes(grow(bxg2, cdir, -1), cdir); 
-    AsyncFab fx(xflxbx, NVAR);
+    FArrayBox fx(xflxbx, NVAR);
     auto const& fxarr = fx.array(); 
-    AsyncFab qgdx(xflxbx, NGDNV); 
+    FArrayBox qgdx(xflxbx, NGDNV); 
     auto const& gdtempx = qgdx.array(); 
-
+    Elixir fxeli = fx.elixir(), qgdxeli = qgdx.elixir(); 
     AMREX_PARALLEL_FOR_3D (xflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k,bclx, bchx, dlx, dhx, qxmarr, qxparr, fxarr, gdtempx, qaux, cdir);
     });
@@ -110,20 +116,22 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
 //===================== Y initial fluxes ===========================
     cdir = 1; 
 
-    AsyncFab fy(yflxbx, NVAR); 
+    FArrayBox fy(yflxbx, NVAR); 
     auto const& fyarr = fy.array();
-    AsyncFab qgdy(yflxbx, NGDNV); 
-    auto const& gdtempy = qgdy.array(); 
+    FArrayBox qgdy(yflxbx, NGDNV); 
+    auto const& gdtempy = qgdy.array();
+    Elixir fyeli = fy.elixir(), qgdyeli = qgdy.elixir(); 
     AMREX_PARALLEL_FOR_3D (yflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k, bcly, bchy, dly, dhy, qymarr, qyparr, fyarr, gdtempy, qaux, cdir); 
     }); 
 
 //===================== Z initial fluxes ===========================
     cdir = 2; 
-    AsyncFab fz(zflxbx, NVAR);
+    FArrayBox fz(zflxbx, NVAR);
     auto const& fzarr = fz.array(); 
-    AsyncFab qgdz(zflxbx, NGDNV); 
+    FArrayBox qgdz(zflxbx, NGDNV); 
     auto const& gdtempz = qgdz.array(); 
+    Elixir fzeli = fz.elixir(), qgdzeli = qgdz.elixir(); 
     AMREX_PARALLEL_FOR_3D (zflxbx, i,j,k, {
         PeleC_cmpflx(i,j,k,bclz, bchz, dlz, dhz, qzmarr, qzparr, fzarr, gdtempz, qaux, cdir);
     });
@@ -134,13 +142,13 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     cdir = 0;
     const Box& txbx = grow(bxg1, cdir, 1);
     const Box& txbxm = growHi(txbx, cdir, 1); 
-    AsyncFab qxym(txbxm, QVAR); 
-    AsyncFab qxyp(txbx , QVAR);
+    FArrayBox qxym(txbxm, QVAR); 
+    FArrayBox qxyp(txbx , QVAR);
     auto const& qmxy = qxym.array();
     auto const& qpxy = qxyp.array();  
 
-    AsyncFab qxzm(txbxm, QVAR); 
-    AsyncFab qxzp(txbx , QVAR);
+    FArrayBox qxzm(txbxm, QVAR); 
+    FArrayBox qxzp(txbx , QVAR);
     auto const& qmxz = qxzm.array();
     auto const& qpxz = qxzp.array(); 
 
@@ -157,13 +165,15 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
                       qaux, gdtempz, cdtdz);
 
    });
-
+   
    const Box& txfxbx = surroundingNodes(bxg1, cdir); 
-   AsyncFab fluxxy(txfxbx, NVAR); 
-   AsyncFab fluxxz(txfxbx, NVAR); 
-   AsyncFab gdvxyfab(txfxbx, NGDNV); 
-   AsyncFab gdvxzfab(txfxbx, NGDNV); 
-    
+   FArrayBox fluxxy(txfxbx, NVAR); 
+   FArrayBox fluxxz(txfxbx, NVAR); 
+   FArrayBox gdvxyfab(txfxbx, NGDNV); 
+   FArrayBox gdvxzfab(txfxbx, NGDNV); 
+   Elixir fluxxyeli = fluxxy.elixir(), gdvxyeli = gdvxyfab.elixir(); 
+   Elixir fluxxzeli = fluxxz.elixir(), gdvxzeli = gdvxzfab.elixir();    
+   
    auto const& flxy = fluxxy.array(); 
    auto const& flxz = fluxxz.array(); 
    auto const& qxy = gdvxyfab.array(); 
@@ -186,10 +196,10 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     cdir = 1; 
     const Box& tybx  = grow(bxg1, cdir, 1);
     const Box& tybxm = growHi(tybx, cdir, 1); 
-    AsyncFab qyxm(tybxm, QVAR); 
-    AsyncFab qyxp(tybx, QVAR); 
-    AsyncFab qyzm(tybxm, QVAR); 
-    AsyncFab qyzp(tybx, QVAR); 
+    FArrayBox qyxm(tybxm, QVAR); 
+    FArrayBox qyxp(tybx, QVAR); 
+    FArrayBox qyzm(tybxm, QVAR); 
+    FArrayBox qyzp(tybx, QVAR); 
     auto const& qmyx = qyxm.array(); 
     auto const& qpyx = qyxp.array(); 
     auto const& qmyz = qyzm.array(); 
@@ -205,14 +215,20 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
                       qaux, gdtempz, cdtdz); 
     }); 
 
+//Clear used Temp Elixirs 
+    fzeli.clear(); 
+    qgdzeli.clear(); 
+
 //===================== Riemann problem Y|X Y|Z  ====================
 
    const Box& tyfxbx = surroundingNodes(bxg1, cdir);
-   AsyncFab fluxyx(tyfxbx, NVAR); 
-   AsyncFab fluxyz(tyfxbx, NVAR); 
-   AsyncFab gdvyxfab(tyfxbx, NGDNV); 
-   AsyncFab gdvyzfab(tyfxbx, NGDNV); 
-    
+   FArrayBox fluxyx(tyfxbx, NVAR); 
+   FArrayBox fluxyz(tyfxbx, NVAR); 
+   FArrayBox gdvyxfab(tyfxbx, NGDNV); 
+   FArrayBox gdvyzfab(tyfxbx, NGDNV); 
+   Elixir fluxyxeli = fluxyx.elixir(), gdvyxeli = gdvyxfab.elixir(); 
+   Elixir fluxyzeli = fluxyz.elixir(), gdvyxeli = gdvyxfab.elixir();    
+   
    auto const& flyx = fluxyx.array(); 
    auto const& flyz = fluxyz.array(); 
    auto const& qyx = gdvyxfab.array(); 
@@ -232,10 +248,10 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     cdir = 2; 
     const Box& tzbx = grow(bxg1, cdir, 1);
     const Box& tzbxm = growHi(tzbx, cdir, 1);
-    AsyncFab qzxm(tzbxm, QVAR); 
-    AsyncFab qzxp(tzbx, QVAR); 
-    AsyncFab qzym(tzbxm, QVAR); 
-    AsyncFab qzyp(tzbx, QVAR); 
+    FArrayBox qzxm(tzbxm, QVAR); 
+    FArrayBox qzxp(tzbx, QVAR); 
+    FArrayBox qzym(tzbxm, QVAR); 
+    FArrayBox qzyp(tzbx, QVAR); 
     auto const& qmzx = qzxm.array(); 
     auto const& qpzx = qzxp.array(); 
     auto const& qmzy = qzym.array(); 
@@ -250,14 +266,25 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
         PeleC_transy2(i,j,k, qmzy, qpzy, qzmarr, qzparr, fyarr, 
                       qaux, gdtempy,cdtdy); 
     }); 
+
+/* Clear Elixirs */ 
+    fxeli.clear(); 
+    fyeli.clear(); 
+    qgdxeli.clear(); 
+    qgdyeli.clear(); 
+
+
 //===================== Riemann problem Z|X Z|Y  ====================
     
    const Box& tzfxbx = surroundingNodes(bxg1, cdir);
-   AsyncFab fluxzx(tzfxbx, NVAR); 
-   AsyncFab fluxzy(tzfxbx, NVAR); 
-   AsyncFab gdvzxfab(tzfxbx, NGDNV); 
-   AsyncFab gdvzyfab(tzfxbx, NGDNV); 
-    
+   FArrayBox fluxzx(tzfxbx, NVAR); 
+   FArrayBox fluxzy(tzfxbx, NVAR); 
+   FArrayBox gdvzxfab(tzfxbx, NGDNV); 
+   FArrayBox gdvzyfab(tzfxbx, NGDNV); 
+   Elixir fluxzxeli = fluxzx.elixir(), gdvzxeli = gdvzxfab.elixir(); 
+   Elixir fluxzyeli = fluxzy.elixir(), gdvzxeli - gdvzxfab.elixir();    
+
+ 
    auto const& flzx = fluxzx.array(); 
    auto const& flzy = fluxzy.array(); 
    auto const& qzx = gdvzxfab.array(); 
@@ -271,8 +298,8 @@ void PeleC_umeth_3D(amrex::Box const& bx, const int* bclo, const int* bchi,
     });
 
 
-    AsyncFab qmfab(bxg2, QVAR); 
-    AsyncFab qpfab(bxg1, QVAR);
+    FArrayBox qmfab(bxg2, QVAR); 
+    FArrayBox qpfab(bxg1, QVAR);
     auto const& qm = qmfab.array(); 
     auto const& qp = qpfab.array();  
 
