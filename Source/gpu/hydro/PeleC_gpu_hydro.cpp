@@ -98,45 +98,50 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
 
 	const int*  domain_lo = geom.Domain().loVect();
 	const int*  domain_hi = geom.Domain().hiVect();
+
+    /* Temporary Fabs needed for Hydro Computation */ 
+    FArrayBox q, qaux, src_q, D_DECL(flx1, flx2, flx3); 
     for (MFIter mfi(S_new,TilingIfNotGPU()); mfi.isValid(); ++mfi) 	
 	{
 
-        BL_PROFILE_VAR("umdrv_alloc", ualloc); 
 	    const Box& bx  = mfi.tilebox();
 	    const Box& qbx = amrex::grow(bx, NUM_GROW);
 	    const int* lo = bx.loVect();
 	    const int* hi = bx.hiVect();
-	    const FArrayBox *statein  = &S[mfi];
-	    FArrayBox *stateout = &(S_new[mfi]);
-	    FArrayBox *source_out = hydro_source.fabPtr(mfi);
 
         const Box& xfbx = surroundingNodes(bx, 0); 
-        AsyncFab flx1(xfbx, NVAR);
+        flx1.resize(xfbx, NVAR);
+        Elixir flx1eli = flx1.elixir(); 
 #if (AMREX_SPACEDIM >=2)
         const Box& yfbx = surroundingNodes(bx, 1);
-        AsyncFab flx2(yfbx, NVAR); 
+        flx2.resize(yfbx, NVAR); 
+        Elixir flx2eli = flx2.elixir(); 
 #if (AMREX_SPACEDIM ==3) 
         const Box& zfbx = surroundingNodes(bx, 2); 
-        AsyncFab flx3(zfbx, NVAR); 
+        flx3.resize(zfbx, NVAR); 
+        Elixir flx3eli = flx3.elixir(); 
 #endif
 #endif
 
         auto const& s = S.array(mfi);     
         auto const& hyd_src = hydro_source.array(mfi); 
-        Gpu::AsyncFab q(qbx, QVAR);
-        Gpu::AsyncFab qaux(qbx, NQAUX); 
-        Gpu::AsyncFab src_q(qbx, QVAR);
+// Resize Temporary Fabs 
+        q.resize(qbx, QVAR);
+        qaux.resize(qbx, NQAUX); 
+        src_q.resize(qbx, QVAR);
+//Use Elixer Construct to steal the Fabs metadata 
+        Elixir qeli = q.elixir(); 
+        Elixir qauxeli = qaux.elixir(); 
+        Elixir src_qeli = src_q.elixir(); 
+//Get Arrays to pass to the gpu. 
         auto const& qarr = q.array(); 
         auto const& qauxar = qaux.array(); 
         auto const& srcqarr = src_q.array(); 
-        BL_PROFILE_VAR_STOP(ualloc); 
 
         BL_PROFILE_VAR("PeleC::ctoprim()", ctop); 
         AMREX_PARALLEL_FOR_3D(qbx, i, j, k, 
             {
                  PeleC_ctoprim(i,j,k, s, qarr, qauxar);                 
-/*                 amrex::Print()<<qarr(i,j,k,QFS)<< std::endl; 
-                 std::cin.get(); */
 
              });
         BL_PROFILE_VAR_STOP(ctop);
@@ -151,6 +156,7 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
       
       // Allocate fabs for bcMask. Note that we grow in the opposite direction
       // because the Riemann solver wants a face value in a ghost-cell
+#if 0 
       for (int i = 0; i < BL_SPACEDIM ; i++)  {
         const Box& bxtmp = amrex::surroundingNodes(bx,i);
         Box TestBox(bxtmp);
@@ -180,7 +186,7 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                      &flag_nscbc_isAnyPerio, flag_nscbc_perio, 
                      &time, dx, &dt);
       }
-
+#endif
         BL_PROFILE_VAR("PeleC::srctoprim()", srctop);  
         const auto& src_in  = sources_for_hydro.array(mfi);
                 AMREX_PARALLEL_FOR_3D(qbx,i, j, k,{
@@ -229,9 +235,9 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                       if (level < finest_level)
                       {
                         getFluxReg(level+1).CrseAdd(mfi,
-                        {D_DECL(&(flx1.fab()),
-                                &(flx2.fab()),
-                                &(flx3.fab()))}, dxDp,dt, run);
+                        {D_DECL(&(flx1),
+                                &(flx2),
+                                &(flx3))}, dxDp,dt, run);
 
                         if (!DefaultGeometry().IsCartesian()) {
                             amrex::Abort("Flux registers not r-z compatible yet");
@@ -242,9 +248,9 @@ PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr
                       if (level > 0)
                       {
                         getFluxReg(level).FineAdd(mfi, 
-                        {D_DECL(&(flx1.fab()),
-                                &(flx2.fab()),
-                                &(flx3.fab()))}, dxDp,dt, run);
+                        {D_DECL(&(flx1),
+                                &(flx2),
+                                &(flx3))}, dxDp,dt, run);
 
                         if (!DefaultGeometry().IsCartesian()) {
                             amrex::Abort("Flux registers not r-z compatible yet");
