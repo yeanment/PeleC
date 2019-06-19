@@ -111,6 +111,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 	  const int*  domain_lo = geom.Domain().loVect();
 	  const int*  domain_hi = geom.Domain().hiVect();
 
+    FArrayBox q, qaux, coeff_cc, D_DECL(flux_ecx, flux_ecy, flux_ecz); 
     for (MFIter mfi(MOLSrcTerm,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
       const Box  vbox = mfi.tilebox();
@@ -126,8 +127,12 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 
       BL_PROFILE_VAR_START(diff);
       int nqaux = NQAUX > 0 ? NQAUX : 1;
-      Gpu::AsyncFab q(gbox, QVAR), qaux(gbox, nqaux); 
-      Gpu::AsyncFab coeff_cc(gbox, nCompTr); 
+      q.resize(gbox, QVAR);
+      qaux.resize(gbox, nqaux); 
+      coeff_cc.resize(gbox, nCompTr); 
+      Elixir qeli = q.elixir(); 
+      Elixir qauxeli = qaux.elixir(); 
+      Elixir coefeli = coeff_cc.elixir(); 
       auto const& s = S.array(mfi); 
       auto const& qar = q.array(); 
       auto const& qauxar = qaux.array(); 
@@ -188,15 +193,18 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
         }); 
       } 
 
-     Gpu::AsyncFab flux_ecx(amrex::surroundingNodes(cbox,0), NUM_STATE);
+     flux_ecx.resize(amrex::surroundingNodes(cbox,0), NUM_STATE);
+     Elixir flux1eli = flux_ecx.elixir(); 
      auto const &flx1 = flux_ecx.array();
      setV(amrex::surroundingNodes(cbox,0), NUM_STATE, flx1,0); 
 #if AMREX_SPACEDIM > 1 
-     Gpu::AsyncFab flux_ecy(amrex::surroundingNodes(cbox,1), NUM_STATE);
+     flux_ecy.resize(amrex::surroundingNodes(cbox,1), NUM_STATE);
+     Elixir flux2eli = flux_ecy.elixir(); 
      auto const &flx2 = flux_ecy.array();
      setV(amrex::surroundingNodes(cbox,1), NUM_STATE, flx2,0); 
 #if AMREX_SPACEDIM > 2 
-     Gpu::AsyncFab flux_ecz(amrex::surroundingNodes(cbox,2), NUM_STATE);
+     flux_ecz.resize(amrex::surroundingNodes(cbox,2), NUM_STATE);
+     Elixir flux3eli = flux_ecz.elixir(); 
      auto const &flx3 = flux_ecz.array();
      setV(amrex::surroundingNodes(cbox,2), NUM_STATE, flx3,0); 
 #endif 
@@ -245,11 +253,11 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 
       if (diffuse_vel  == 0) {
         setC(cbox, Xmom, Xmom + 3, Dterm, 0.0);
-        setC(cbox, Xmom, Xmom + 3, flux_ecx.array(), 0.0);  
+        setC(cbox, Xmom, Xmom + 3, flx1, 0.0);  
 #if AMREX_SPACEDIM > 1 
-        setC(cbox, Xmom, Xmom + 3, flux_ecy.array(), 0.0);  
+        setC(cbox, Xmom, Xmom + 3, flx2, 0.0);  
 #if AMREX_SPACEDIM > 2 
-        setC(cbox, Xmom, Xmom + 3, flux_ecz.array(), 0.0);  
+        setC(cbox, Xmom, Xmom + 3, flx3, 0.0);  
 #endif
 #endif
       }
@@ -260,25 +268,35 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #else 
     auto run = RunOn::Cpu;
 #endif 
-        Gpu::streamSynchronize(); 
         if (do_reflux && flux_factor != 0)  // no eb in problem
         {
-            (flux_ecx.fab()).mult(flux_factor);
-#if AMREX_SPACEDIM > 1 
-            (flux_ecy.fab()).mult(flux_factor);
+            const int N = NUM_STATE; 
+            AMREX_PARALLEL_FOR_4D(amrex::surroundingNodes(cbox,0), N, i, j, k, n, 
+                {
+                    flx1(i,j,k,n) *= flux_factor; 
+                }); 
+#if AMREX_SPACEDIM > 1
+            AMREX_PARALLEL_FOR_4D(amrex::surroundingNodes(cbox,1), N, i, j, k, n, 
+                {
+                    flx2(i,j,k,n) *= flux_factor; 
+                }); 
 #if AMREX_SPACEDIM > 2 
-            (flux_ecz.fab()).mult(flux_factor);
+            AMREX_PARALLEL_FOR_4D(amrex::surroundingNodes(cbox,2), N, i, j, k, n, 
+                {
+                    flx3(i,j,k,n) *= flux_factor; 
+                }); 
 #endif
 #endif
+
           if (level < parent->finestLevel()) {
             getFluxReg(level+1).CrseAdd(mfi,
-                                       {D_DECL(&flux_ecx.fab(), &flux_ecy.fab(), &flux_ecz.fab())},
+                                       {D_DECL(&flux_ecx, &flux_ecy, &flux_ecz)},
                                         dxDp, dt, run);
           }
 
           if (level > 0) {
             getFluxReg(level).FineAdd(mfi,
-                                     {D_DECL(&flux_ecx.fab(), &flux_ecy.fab(), &flux_ecz.fab())},
+                                     {D_DECL(&flux_ecx, &flux_ecy, &flux_ecz)},
                                       dxDp, dt, run);
           }
         }

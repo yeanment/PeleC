@@ -63,44 +63,57 @@ PeleC_umdrv(const int is_finest_level, const amrex::Real time, amrex::Box const 
 //  Set Up for Hydro Flux Calculations 
     auto const& bxg2 = grow(bx, 2); 
     auto const& q1bx = surroundingNodes(bxg2,0); 
-    Gpu::AsyncFab q1(q1bx, NGDNV); 
+    FArrayBox q1(q1bx, NGDNV);
+    Elixir q1eli = q1.elixir();  
     amrex::Real const delx    = dx[0]; 
 
 #if AMREX_SPACEDIM > 1
     amrex::Real const dely    = dx[1]; 
     auto const& q2bx = surroundingNodes(bxg2,1); 
-    Gpu::AsyncFab q2(q2bx, NGDNV); 
+    FArrayBox q2(q2bx, NGDNV);
+    Elixir q2eli = q2.elixir();  
 
 #if AMREX_SPACEDIM > 2
     amrex::Real const delz    = dx[2]; 
     auto const& q3bx = surroundingNodes(bxg2,2); 
-    Gpu::AsyncFab q3(q3bx, NGDNV); 
+    FArrayBox q3(q3bx, NGDNV);
+    Elixir q3eli = q3.elixir();  
 #endif
 #endif
 
 
 //  Temporary FArrayBoxes 
-    Gpu::AsyncFab divu(bxg2, 1); 
-    Gpu::AsyncFab pdivu(bx, 1); 
+    FArrayBox divu(bxg2, 1); 
+    FArrayBox pdivu(bx, 1);
+    Elixir divueli = divu.elixir(); 
+    Elixir pdiveli = pdivu.elixir();  
     auto const&  divarr = divu.array(); 
     auto const& pdivuarr = pdivu.array();
+    /*No Need to Clear these, as they go out of scope at the end of the function */ 
 
     BL_PROFILE_VAR("PeleC::umeth()", umeth); 
 #if AMREX_SPACEDIM == 1
     Abort("No 1D implementation!"); 
 /*    PeleC_umeth_1D(bx, bclo, bchi, domlo, domhi,  q,  qaux, src_q, 
                    bcMask, flux1, q1, pdivu, dx, dt);  */ 
-#elif AMREX_SPACEDIM==2 
+#elif AMREX_SPACEDIM==2
+    auto const& q1arr = q1.array(); 
+    auto const& q2arr = q2.array(); 
     PeleC_umeth_2D(bx, bclo, bchi, domlo, domhi,q,  qaux, src_q,// bcMask, 
                    flux1, flux2, dloga,
-                   q1.array(), q2.array(), a1, a2, pdivuarr, vol, dx, dt); 
+                   q1arr, q2arr, a1, a2, pdivuarr, vol, dx, dt);
+    q1eli.clear(); 
+    q2eli.clear(); 
 #else
     auto const& q1arr = q1.array(); 
     auto const& q2arr = q2.array(); 
     auto const& q3arr = q3.array(); 
 
     PeleC_umeth_3D(bx, bclo, bchi, domlo, domhi, q,  qaux, src_q, //bcMask,
-                   flux1, flux2, flux3,  q1arr, q2arr, q3arr, a1, a2, a3, pdivuarr, vol, dx, dt);   
+                   flux1, flux2, flux3,  q1arr, q2arr, q3arr, a1, a2, a3, pdivuarr, vol, dx, dt);  
+    q1eli.clear(); 
+    q2eli.clear(); 
+    q3eli.clear();  
 #endif
     BL_PROFILE_VAR_STOP(umeth); 
 

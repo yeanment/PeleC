@@ -39,15 +39,19 @@ computeTemp now is launched via a kernel and estdt is done using MultiFab::reduc
 The hydro routines were converted to device functions and are launched using the 
 AMREX_PARALLEL_FOR_3D lambda function. Here is an example: 
 
-const box& = mfi.tilebox(); 
-Gpu::AsyncFab q(box, NVAR);  // Asynchronous FAB for GPU streams (is just regular FAB when USE_CUDA=FALSE)
+const Box &box = mfi.tilebox(); 
+FArrayBox q(box, QVAR); 
+The use of elixir allows for fabs to be handled safely in the Asynchronous environment. 
+Elixir qeli = q.elixir(); 
 auto const& qarr = q.array(); // Returns a much simpler object than FAB, indexed like fortran i.e. qarr(i,j,k,n); 
-//Using this object is less taxing for the GPU than passing the AsyncFab to the kernel.  
+//Using this object is less taxing for the GPU than passing the FabPtr to the kernel.  
 
 AMREX_PARALLEL_FOR_3D(box, i, j, k, 
 	{
 		My_device_function(i,j,k,qarr); 
 	}); 
+//Clear Elixir to free mem 
+qeli.clear(); 
 
 Here My_device_function is a AMREX_GPU_DEVICE function that manipulates data from q. 
 AMREX_PARALLEL_FOR_3D is a lambda that launches a kernel over box for indicies i, j, k. 
@@ -61,11 +65,12 @@ This reduces launch overhead thus reducing run time. Suppose that we have two AM
 use data from an array, S, but produce two arrays that do not depend on eachother. 
 Then the implementation would look like this: 
 
-const box& = mfi.tilebox(); 
-Gpu::AsyncFab sfab(box, NVAR);  
-auto const& s = sfab.array(); 
-Gpu::AsyncFab fab1(box, QVAR); 
-Gpu::AsyncFab fab2(box, QVAR); 
+const Box &box  = mfi.tilebox(); 
+auto const& s = S.array(mfi); 
+FArrayBox fab1(box, QVAR); 
+FArrayBox fab2(box, QVAR);
+Elixir f1eli = fab1.elixir(); 
+Elixir f2eli = fab2.elixir();  
 auto const& q1 = fab1.array(); 
 auto const& q2 = fab2.array(); 
 
@@ -74,6 +79,9 @@ AMREX_PARALLEL_FOR_3D(box, i, j, k,
 		dev_fun1(i,j,k,q1,s); 
 		dev_fun2(i,j,k,q2,s); 
 	});
+
+f1eli.clear(); 
+f2eli.clear(); 
 
 This concept is used throughout PeleC_umeth, grouping many transverse correction routines. 
 
