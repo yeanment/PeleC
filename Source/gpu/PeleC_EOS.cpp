@@ -87,7 +87,6 @@ void EOS::eos_rt()
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_mpr2wdot(amrex::Real wdot[])
 {
-    BL_PROFILE_VAR("PeleC::EOS::eos_mpr2wdot", EOS_mpr2wdot); 
     CKWYR(&rho, &T, massfrac, wdot);
     eos_rt(); 
     amrex::Real mw[NUM_SPECIES]; 
@@ -95,7 +94,6 @@ void EOS::eos_mpr2wdot(amrex::Real wdot[])
     for(int n = 0; n < NUM_SPECIES; n++){
         wdot[n] *= mw[n];
     }  
-    BL_PROFILE_VAR_STOP(EOS_mpr2wdot); 
 }
 
 
