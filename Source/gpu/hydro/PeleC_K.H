@@ -52,7 +52,6 @@ void PeleC_ctoprim(const int i, const int j, const int k,
     q(i,j,k,QU) = v.x; 
     q(i,j,k,QV) = v.y;
     q(i,j,k,QW) = v.z; 
-// Maybe #pragma unroll                 
     for(int ipassive = 0; ipassive < npassive; ++ipassive){
         n = eos_state.upass_map(ipassive); 
         nq = eos_state.qpass_map(ipassive); 
@@ -61,9 +60,7 @@ void PeleC_ctoprim(const int i, const int j, const int k,
 
     eos_state.e = (u(i,j,k,UEDEN) - kineng)*rhoinv;
     eos_state.T = u(i,j,k,UTEMP); 
-#pragma unroll 
     for(int sp = 0; sp < NUM_SPECIES; ++sp) eos_state.massfrac[sp] = q(i,j,k,sp+QFS);
-#pragma unroll
     for(int ax = 0; ax < naux; ++ax) eos_state.aux[ax] = q(i,j,k,ax+QFX); 
 // Call eos_re
     eos_state.eos_re(); 
@@ -113,7 +110,6 @@ void PeleC_srctoprim(const int i, const int j, const int k,
     srcq(i,j,k,QPRES)  = qa(i,j,k,QDPDE)*(srcq(i,j,k,QREINT) - q(i,j,k,QREINT)*srcrho*rhoinv)*rhoinv
                    + qa(i,j,k,QDPDR)*srcrho; 
 
-#pragma unroll 
     for(int ip = 0; ip < npassive; ++ip)
     {
         n  = EOS::upass_map(ip); 
@@ -216,7 +212,6 @@ void PeleC_norm_spec_flx(const int i, const int j, const int k,
     for(int n = UFS; n < num; ++n) summ += flx(i,j,k,n);
 
     fac = (summ != 0.e0) ? flx(i,j,k,URHO)/summ : 1.e0; 
-#pragma unroll 
     for(int n = UFS; n < num; ++n) flx(i,j,k,n) *= fac; 
 
 }
@@ -228,7 +223,6 @@ void PeleC_ext_flx(const int i, const int j, const int k,
                    amrex::Array4<const amrex::Real> const& a) 
 {
     amrex::Real area = a(i,j,k); //avoid reading from global memory NVAR times
-#pragma unroll 
     for(int n = 0; n < NVAR; ++n) flx(i,j,k,n) *= area; 
 }
 
@@ -244,7 +238,6 @@ void PeleC_update(const int i, const int j, const int k,
                   amrex::Array4<const amrex::Real> const& pdivu)
 {
     amrex::Real v = vol(i,j,k); 
-#pragma unroll 
     for(int n = 0; n < NVAR; ++n)
     { 
 #if(AMREX_SPACEDIM==2)

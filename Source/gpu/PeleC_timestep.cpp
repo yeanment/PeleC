@@ -107,7 +107,6 @@ amrex::Real PeleC_estdt_veldif(amrex::Box const box, amrex::FArrayBox const& sta
             for (int i = lo.x; i <= hi.x; ++i){
                 eos.rho = u(i,j,k,URHO); 
                 rhoInv = 1.e0/eos.rho;         
-                #pragma unroll 
                 for(int n = 0; n < NUM_SPECIES; ++n){
                      eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
                 } 
@@ -159,7 +158,6 @@ amrex::Real PeleC_estdt_tempdif(amrex::Box const bx, amrex::FArrayBox const& sta
             for (int i = lo.x; i <= hi.x; ++i){
                 eos.rho = u(i,j,k,URHO); 
                 rhoInv = 1.e0/eos.rho;         
-                #pragma unroll 
                 for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
                 eos.T = u(i,j,k,UTEMP); 
                 PeleC_trans4dt(which_trans, eos, D);
@@ -210,7 +208,6 @@ amrex::Real PeleC_estdt_enthdif(amrex::Box const bx, amrex::FArrayBox const& sta
             for (int i = lo.x; i <= hi.x; ++i){
                 eos.rho = u(i,j,k,URHO); 
                 rhoInv = 1.e0/eos.rho;         
-                #pragma unroll 
                 for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
                 eos.e = u(i,j,k,UEINT)*rhoInv; 
                 eos.T = u(i,j,k,UTEMP); 

@@ -54,7 +54,6 @@ void EOS::eos_wb()
     amrex::Real imw[NUM_SPECIES]; 
     get_imw(imw);
     amrex::Real summ =0.0; 
-#pragma unroll 
     for(int i = 0; i < NUM_SPECIES; ++i) summ+= massfrac[i]*imw[i]; 
     wbar = 1.0/summ; 
 }
@@ -88,6 +87,7 @@ void EOS::eos_rt()
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_mpr2wdot(amrex::Real wdot[])
 {
+    BL_PROFILE_VAR("PeleC::EOS::eos_mpr2wdot", EOS_mpr2wdot); 
     CKWYR(&rho, &T, massfrac, wdot);
     eos_rt(); 
     amrex::Real mw[NUM_SPECIES]; 
@@ -95,6 +95,7 @@ void EOS::eos_mpr2wdot(amrex::Real wdot[])
     for(int n = 0; n < NUM_SPECIES; n++){
         wdot[n] *= mw[n];
     }  
+    BL_PROFILE_VAR_STOP(EOS_mpr2wdot); 
 }
 
 
@@ -105,7 +106,6 @@ void EOS::eos_rp()
     T = p*wbar/(rho*Ru);
     CKUMS(&T,  ei);
     e = 0.0;  
-#pragma unroll
     for(int i = 0; i < NUM_SPECIES; ++i) e += massfrac[i]*ei[i]; 
     eos_bottom();     
 }

@@ -49,7 +49,6 @@ void PeleC_get_transport_coeffs(amrex::Box const& bx, amrex::Array4<const amrex:
 
                 T = q(i,j,k, QTEMP);
                 rho = q(i,j,k,QRHO);
-#pragma unroll 
                 for (int n = 0; n < NUM_SPECIES; ++n){
                   massloc[n] = q(i,j,k,QFS + n);
                 }
@@ -58,7 +57,6 @@ void PeleC_get_transport_coeffs(amrex::Box const& bx, amrex::Array4<const amrex:
                                        T, rho, massloc, Ddiag, muloc, xiloc, lamloc);
 
                 //   mu, xi and lambda are stored after D in the diffusion multifab
-#pragma unroll 
                 for (int n = 0; n < NUM_SPECIES; ++n){
                   D(i,j,k,n) = Ddiag[n];
                 }
