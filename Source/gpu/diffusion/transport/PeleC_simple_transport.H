@@ -38,6 +38,7 @@ void PeleC_comp_pure_bulk(amrex::Real Tloc,  amrex::Real* muloc,
 
   amrex::Real epskoverT, epskoverTstd;
   amrex::Real pi = 3.141592653589793238;
+  amrex::Rela pi3_2 = 5.56832799683171
 
 
 
@@ -70,11 +71,11 @@ void PeleC_comp_pure_bulk(amrex::Real Tloc,  amrex::Real* muloc,
       epskoverTstd = eps[i]/298.0;
       epskoverT = eps[i]/ Tloc;
 
-      Fnorm[i] = 1.0 + 0.50*std::pow(pi,1.5)*std::sqrt(epskoverTstd) + (2.0+.50*pi*pi)*epskoverTstd
-                  +std::pow(pi*epskoverTstd,1.5) ;
+      Fnorm[i] = 1.0 + 0.50*pi3_2*std::sqrt(epskoverTstd) + (2.0+.50*pi*pi)*epskoverTstd
+                  +pi3_2*std::sqrt(epskoverTstd)*epskoverTstd ;
 
-      FofT[i] = 1.0 + 0.50*std::pow(pi,1.5)*std::sqrt(epskoverT) + (2.0+.50*pi*pi)*epskoverT
-                  +std::pow(pi*epskoverT,1.5) ;
+      FofT[i] = 1.0 + 0.50*pi3_2*std::sqrt(epskoverT) + (2.0+.50*pi*pi)*epskoverT
+                  +pi3_2*std::sqrt(epskoverT)*epskoverT ;
 
    }
       
@@ -89,7 +90,7 @@ void PeleC_comp_pure_bulk(amrex::Real Tloc,  amrex::Real* muloc,
 //   zrot/crot approximately zint / cint by assuming vibrational internal energy is small
 //   cvkrot is scaled by wk / Ru = mk / kb relative to standard specific cv
 
-        xiloc[i] = 0.250*pi*std::pow(cvkint[i]/(cvkint[i]+1.50),2)* zrot[i]/cvkrot[i]* 
+        xiloc[i] = 0.250*pi*(cvkint[i]/(cvkint[i]+1.50)*cvkint[i]/(cvkint[i]+1.50))* zrot[i]/cvkrot[i]* 
                           Fnorm[i]/FofT[i] * muloc[i];
 
       }
@@ -173,13 +174,13 @@ void  PeleC_actual_transport(bool wtr_get_xi, bool wtr_get_mu,
 
       for (int i = 0; i < NUM_SPECIES ; ++i){
        
-            mu = mu+Xloc[i]* std::pow(muloc[i],6.0);
+            mu = mu+Xloc[i]* (muloc[i]*muloc[i]*muloc[i]*muloc[i]*muloc[i]*muloc[i]);
 
        }
 
 
 
-       mu = std::pow(mu,1.0/6.0);
+       mu = std::cbrt(std::sqrt(mu)); // mu = (sum[ Xloc_i * muloc_i^6])^(1/6)
 
 
 //  assumption that we only get bulk viscosity if we are already getting shear viscosity
@@ -192,11 +193,11 @@ void  PeleC_actual_transport(bool wtr_get_xi, bool wtr_get_mu,
 
        for (int i = 0; i < NUM_SPECIES ; ++i){
        
-            xi = xi+Xloc[i]*std::pow( xiloc[i], 0.750);
+            xi = xi+Xloc[i]*(std::sqrt(std::sqrt(xiloc[i]*xiloc[i]*xiloc[i])));//xi = sum[Xloc_i*xiloc_i^(3/4)]; 
 
         }
 
-       xi = std::pow(xi,4.0/3.0);
+       xi = std::cbrt(xi*xi*xi*xi); // xi = (sum[Xloc_i*xiloc_i^(3/4)])^(4/3)
 
 
     }
@@ -217,12 +218,12 @@ void  PeleC_actual_transport(bool wtr_get_xi, bool wtr_get_mu,
 
        for (int i = 0; i < NUM_SPECIES ; ++i){
 
-            lam = lam+ Xloc[i]*std::pow(lamloc[i],0.25);
+            lam += Xloc[i]*std::sqrt(std::sqrt(lamloc[i])); //lam = sum[Xloc_i * (lamloc_i)^(1/4)]
 
        }
 
 
-       lam = std::pow(lam,4.);
+       lam = lam*lam*lam*lam; // lam = lam^4
 
 
     }
