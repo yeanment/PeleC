@@ -38,7 +38,7 @@ void PeleC_comp_pure_bulk(amrex::Real Tloc,  amrex::Real* muloc,
 
   amrex::Real epskoverT, epskoverTstd;
   amrex::Real pi = 3.141592653589793238;
-  amrex::Rela pi3_2 = 5.56832799683171
+  amrex::Real pi3_2 = 5.56832799683171;
 
 
 
