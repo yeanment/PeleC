@@ -68,42 +68,46 @@ PeleC::volWgtSum (const std::string& name,
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
+    if(do_gpu){
+        sum = MultiFab::Dot(*mf, 0, volume, 0, 0, 0, local);
+    }
+    else{
 #ifdef _OPENMP
 #pragma omp parallel reduction(+:sum)
 #endif    
-  for (MFIter mfi(*mf,true); mfi.isValid(); ++mfi)
-  {
-    Real s = 0.0;
-    const Box& box  = mfi.tilebox();
+          for (MFIter mfi(*mf,true); mfi.isValid(); ++mfi)
+          {
+            Real s = 0.0;
+            const Box& box  = mfi.tilebox();
 
-    FArrayBox vol(box);
-    vol.setVal(1.0);
+            FArrayBox vol(box);
+            vol.setVal(1.0);
 #ifdef PELE_USE_EB
-    const auto& flag_fab = flags[mfi];
-    FabType typ = flag_fab.getType(box);
-    if (typ == FabType::covered) {
-      continue;
-    }
-    vol.copy(vfrac[mfi], box, 0, box, 0, 1);
+            const auto& flag_fab = flags[mfi];
+            FabType typ = flag_fab.getType(box);
+            if (typ == FabType::covered) {
+              continue;
+            }
+            vol.copy(vfrac[mfi], box, 0, box, 0, 1);
 #endif
 
-    auto& fab = (*mf)[mfi];
+            auto& fab = (*mf)[mfi];
 
-    const int* lo   = box.loVect();
-    const int* hi   = box.hiVect();
+            const int* lo   = box.loVect();
+            const int* hi   = box.hiVect();
 
-    vol.mult(volume[mfi]);
+            vol.mult(volume[mfi]);
 
-    //
-    // Note that this routine will do a volume weighted sum of
-    // whatever quantity is passed in, not strictly the "mass".
-    //
-    pc_summass(ARLIM_3D(lo),ARLIM_3D(hi),BL_TO_FORTRAN_3D(fab),
-               ZFILL(dx),BL_TO_FORTRAN_3D(vol),&s);
+            //
+            // Note that this routine will do a volume weighted sum of
+            // whatever quantity is passed in, not strictly the "mass".
+            //
+            pc_summass(ARLIM_3D(lo),ARLIM_3D(hi),BL_TO_FORTRAN_3D(fab),
+                       ZFILL(dx),BL_TO_FORTRAN_3D(vol),&s);
 
-    sum += s;
+            sum += s;
+          }
   }
-
 
   if (!local)
     ParallelDescriptor::ReduceRealSum(sum);
