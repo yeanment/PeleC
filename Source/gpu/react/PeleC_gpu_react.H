@@ -68,7 +68,8 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
                                  amrex::Array4<amrex::Real> const& IR,
                                  const amrex::Real dt_react,  
                                  const int nsteps_min, const int nsteps_max, 
-                                 const int nsteps_guess, const int do_update) 
+                                 const int nsteps_guess, const amrex::Real errtol, 
+                                 const int do_update) 
 {
     EOS eos;
 
@@ -191,7 +192,7 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
 
 /*================ Adapt Time step! ======================== */ 
         }//end rk stages
-        adapt_timestep(urk_err, dt_max, dt_rk, dt_min, 1.e-15); 
+        adapt_timestep(urk_err, dt_max, dt_rk, dt_min, errtol); 
     }//end timestep loop 
 
 //Add drhoY/dt to reactions MultiFab and update unew if needed
