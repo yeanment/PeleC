@@ -135,14 +135,14 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
     amrex::Real updt_time = 0.e0; 
     amrex::Real urk[NVAR];
     amrex::Real urk_old[NVAR] = {};
-    amrex::Real urk_err[NVAR] = {}; 
-    amrex::Real wdot[NVAR] = {};  
     for(int n = 0; n < NVAR; ++n) urk[n] = uold(i,j,k,n);  
 
     //Do the RK! 
     while(updt_time < dt_react){ 
         for(int n = 0; n < NVAR; n++)  urk_old[n] = urk[n]; 
-        
+        amrex::Real urk_err[NVAR] = {}; 
+        amrex::Real wdot[NVAR] = {};  
+       
         updt_time+= dt_rk; 
         for(int stage = 0; stage < 6; stage++)
         {
