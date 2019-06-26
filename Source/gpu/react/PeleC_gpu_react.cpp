@@ -108,14 +108,16 @@ PeleC::react_state_gpu(Real time, Real dt, bool react_init, MultiFab* A_aux)
             {
             // Hard RK4 integration min and max, but dt will be found adaptively.
             // We just include an initial guess. 
-               const int nsubsteps_min=20;
-               const int nsubsteps_max=200;
-               const int nsubsteps_guess=100;
+               const int nsubsteps_min=adaptrk_nsubsteps_min;
+               const int nsubsteps_max=adaptrk_nsubsteps_max;
+               const int nsubsteps_guess=adaptrk_nsubsteps_guess;  
+               const amrex::Real errtol = adaptrk_errtol; 
 
                 AMREX_PARALLEL_FOR_3D(bx, i, j, k, {
                     PeleC_expl_reactions(i, j, k, uold, unew, 
                                          a, I_R, dt, nsubsteps_min, 
-                                         nsubsteps_max, nsubsteps_guess, do_update);
+                                         nsubsteps_max, nsubsteps_guess,
+                                         errtol, do_update);
                     });
              }
 
