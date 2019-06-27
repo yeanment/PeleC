@@ -58,6 +58,39 @@ void EOS::eos_wb()
     wbar = 1.0/summ; 
 }
 
+/*Prototype for moving EOS to be a namespace instead of a class */ 
+AMREX_GPU_HOST_DEVICE
+void EOS::eos_ctop(amrex::Real massfrac1[], amrex::Real rho1,
+                   amrex::Real &e1, amrex::Real &T1, 
+                   amrex::Real &p1, amrex::Real &dpdr_e1,
+                   amrex::Real &dpde1, amrex::Real &gam11, amrex::Real &cs1, 
+                   amrex::Real &wbar1)
+{
+    int lierr = 0;
+// eos_wb();  
+    amrex::Real temp[NUM_SPECIES]; 
+    //here temp is the inverse molecular weights 
+    get_imw(temp);
+    amrex::Real summ =0.0; 
+    for(int i = 0; i < NUM_SPECIES; ++i) summ+= massfrac1[i]*temp[i]; 
+    wbar1 = 1.0/summ; 
+//  get Temperature
+    GET_T_GIVEN_EY(&e1, massfrac1, &T1, &lierr);    
+//  get pressure 
+    CKPY(&rho1, &T1, massfrac1, &p1); 
+
+//  get rest() 
+    CKCVMS(&T1,  temp); // temp changes from imw to cvi
+    amrex::Real cv1 = 0.e0; 
+    for(int i = 0; i < NUM_SPECIES; ++i){
+         cv1+=massfrac1[i]*temp[i];
+    }
+    amrex::Real Cvx = wbar1*cv1; 
+    gam11 = (Cvx + Ru)/Cvx; 
+    cs1 = std::sqrt(gam11*p1/rho1); 
+    dpdr_e1 = p1/rho1;
+    dpde1 = (gam11 - 1.0)*rho1; 
+}
 
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_re()
