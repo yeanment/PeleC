@@ -17,8 +17,10 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
 {        
         Box exbox = amrex::surroundingNodes(box,0);
         Box eybox = amrex::surroundingNodes(box,1); 
-        Gpu::AsyncFab cx_ec(exbox, dComp_lambda+1); 
-        Gpu::AsyncFab cy_ec(eybox, dComp_lambda+1); 
+        FArrayBox cx_ec(exbox, dComp_lambda+1);
+        Elixir cxeli = cx_ec.elixir();  
+        FArrayBox cy_ec(eybox, dComp_lambda+1); 
+        Elixir cyeli = cy_ec.elixir(); 
         auto const &cx = cx_ec.array();
         auto const &cy = cy_ec.array(); 
         const amrex::Real dx = del[0]; 
@@ -32,8 +34,10 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
         });       
 
         int nCompTan = 2;
-        Gpu::AsyncFab tx_der(exbox, nCompTan);
-        Gpu::AsyncFab ty_der(eybox, nCompTan); 
+        FArrayBox tx_der(exbox, nCompTan);
+        Elixir txeli = tx_der.elixir(); 
+        FArrayBox ty_der(eybox, nCompTan); 
+        Elixir tyeli = ty_der.elixir(); 
         auto const &tx = tx_der.array(); 
         auto const &ty = ty_der.array(); 
         // Tangential derivatives on faces only needed for velocity diffusion
