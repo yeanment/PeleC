@@ -9,19 +9,18 @@
 AMREX_GPU_DEVICE
 void PeleC_cmpTemp(const int i, const int j, const int k, amrex::Array4<amrex::Real> const& State)
 {
-    EOS eos_state; 
-    amrex::Real rho = State(i,j,k,URHO); 
-    amrex::Real rhoInv = 1.0/ rho; 
-    eos_state.rho = rho; 
-    eos_state.T = State(i,j,k,UTEMP); 
-    eos_state.e = State(i,j,k,UEINT)*rhoInv;
+    amrex::Real rhoInv = 1.0/State(i,j,k,URHO); 
+    amrex::Real T = State(i,j,k,UTEMP); 
+    amrex::Real e = State(i,j,k,UEINT)*rhoInv;
+    amrex::Real massfrac[NUM_SPECIES]; 
     for(int n = 0; n < NUM_SPECIES; ++n){
-         eos_state.massfrac[n] = State(i,j,k,UFS+n)*rhoInv;
+         massfrac[n] = State(i,j,k,UFS+n)*rhoInv;
     }
-    for(int n = 0; n < NUM_AUXILIARY; ++n) eos_state.aux[n] = State(i,j,k,UFX+n)*rhoInv; 
+// We don't really need this here. But maybe SRK does??? 
+//    for(int n = 0; n < NUM_AUXILIARY; ++n) eos_state.aux[n] = State(i,j,k,UFX+n)*rhoInv; 
     
-    eos_state.eos_re(); 
-    State(i,j,k,UTEMP) = eos_state.T; 
+    EOS::cmpT(e, massfrac, T); 
+    State(i,j,k,UTEMP) = T; 
 }
 
 AMREX_GPU_DEVICE

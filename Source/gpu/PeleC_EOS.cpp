@@ -58,6 +58,16 @@ void EOS::eos_wb()
     wbar = 1.0/summ; 
 }
 
+AMREX_GPU_HOST_DEVICE
+void EOS::eos_cmpT(amrex::Real e1, amrex::Real massfrac1[], amrex::Real &T1)
+{
+    //For Fuego this function is really just a wrapper for GET_T_GIVEN_EY
+    //In SRK this will be different probably 
+    int lierr = 0; 
+    GET_T_GIVEN_EY(&e1, massfrac1, &T1, &lierr); 
+}
+
+
 /*Prototype for moving EOS to be a namespace instead of a class */ 
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_ctop(amrex::Real massfrac1[], amrex::Real rho1,
