@@ -320,6 +320,9 @@ PeleC::variableSetUp ()
     {
         interp = &pc_interp;
     }
+    else if(state_interp_order == 2){
+        interp = &gp_interp; 
+    }
     else
     {
         if (lin_limit_state_interp == 1)
@@ -362,9 +365,15 @@ PeleC::variableSetUp ()
     // Component    NumSpec            is      rho.edot = (rho.eout-rho.ein)
 #ifdef REACTIONS
     store_in_checkpoint = true;
+    Interpolater* react_interp; 
+    if(state_interp_order == 2)
+        interp = &gp_interp; 
+    else 
+        interp = &cell_cons_interp; 
+        
     desc_lst.addDescriptor(Reactions_Type,IndexType::TheCellType(),
 			   StateDescriptor::Point,0,NumSpec+1,
-			   &cell_cons_interp,state_data_extrap,store_in_checkpoint);
+			   react_interp,state_data_extrap,store_in_checkpoint);
 #endif
 
     Vector<BCRec>       bcs(NUM_STATE);
