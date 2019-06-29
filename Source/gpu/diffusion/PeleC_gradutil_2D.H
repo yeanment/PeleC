@@ -10,7 +10,7 @@
 AMREX_GPU_DEVICE 
 inline
 void PeleC_compute_tangential_vel_derivs(const int i, const int j, const int k, 
-                                         const amrex::Array4<amrex::Real> &td, 
+                                         amrex::Real td[], 
                                          const amrex::Array4<const amrex::Real> &q, 
                                          const int dir, const amrex::Real dx) 
 {
@@ -18,13 +18,13 @@ void PeleC_compute_tangential_vel_derivs(const int i, const int j, const int k,
     //This is because it is a tangential velocity derivative.  
     if(dir == 0)
     {
-        td(i,j,k,0) = 0.25e0*dxinv*(q(i,j+1,k,QU) + q(i-1,j+1,k,QU) - q(i,j-1,k,QU) -q(i-1,j-1,k,QU));
-        td(i,j,k,1) = 0.25e0*dxinv*(q(i,j+1,k,QV) + q(i-1,j+1,k,QV) - q(i,j-1,k,QV) -q(i-1,j-1,k,QV)); 
+        td[0] = 0.25e0*dxinv*(q(i,j+1,k,QU) + q(i-1,j+1,k,QU) - q(i,j-1,k,QU) -q(i-1,j-1,k,QU));
+        td[1] = 0.25e0*dxinv*(q(i,j+1,k,QV) + q(i-1,j+1,k,QV) - q(i,j-1,k,QV) -q(i-1,j-1,k,QV)); 
     }
     if(dir == 1)
     {
-        td(i,j,k,0) = 0.25e0*dxinv*(q(i+1,j,k,QU) + q(i+1,j-1,k,QU) - q(i-1,j,k,QU) -q(i-1,j-1,k,QU));
-        td(i,j,k,1) = 0.25e0*dxinv*(q(i+1,j,k,QV) + q(i+1,j-1,k,QV) - q(i-1,j,k,QV) -q(i-1,j-1,k,QV)); 
+        td[0] = 0.25e0*dxinv*(q(i+1,j,k,QU) + q(i+1,j-1,k,QU) - q(i-1,j,k,QU) -q(i-1,j-1,k,QU));
+        td[1] = 0.25e0*dxinv*(q(i+1,j,k,QV) + q(i+1,j-1,k,QV) - q(i-1,j,k,QV) -q(i-1,j-1,k,QV)); 
     }
 }
 

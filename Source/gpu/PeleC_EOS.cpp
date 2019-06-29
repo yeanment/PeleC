@@ -59,7 +59,7 @@ void EOS::eos_wb()
 }
 
 AMREX_GPU_HOST_DEVICE
-void EOS::eos_cmpT(amrex::Real e1, amrex::Real massfrac1[], amrex::Real &T1)
+void EOS::cmpT(amrex::Real e1, amrex::Real massfrac1[], amrex::Real &T1)
 {
     //For Fuego this function is really just a wrapper for GET_T_GIVEN_EY
     //In SRK this will be different probably 

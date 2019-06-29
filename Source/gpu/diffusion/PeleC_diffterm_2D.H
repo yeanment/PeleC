@@ -16,8 +16,8 @@ AMREX_GPU_DEVICE
 inline
 void PeleC_diffusion_flux(const int i,const int j,const int k,
                           const amrex::Array4<const amrex::Real> &q, 
-                          const amrex::Array4<const amrex::Real> &coef, 
-                          const amrex::Array4<const amrex::Real> &t, 
+                          const amrex::Real coef[], 
+                          const amrex::Real t[], 
                           const amrex::Array4<const amrex::Real> &a,                 
                           const amrex::Array4<amrex::Real> &flx,
                           const amrex::Real delta, const int dir) 
@@ -28,18 +28,18 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
         amrex::Real dTdx = dxinv*(q(i,j,k,QTEMP) - q(i-1,j,k,QTEMP)); 
         amrex::Real dudx = dxinv*(q(i,j,k,QU) - q(i-1,j,k,QU));
         amrex::Real dvdx = dxinv*(q(i,j,k,QV) - q(i-1,j,k,QV)); 
-        amrex::Real dudy = t(i,j,k,0); 
-        amrex::Real dvdy = t(i,j,k,1); 
+        amrex::Real dudy = t[0]; 
+        amrex::Real dvdy = t[1]; 
         amrex::Real divu = dudx + dvdy; 
-        amrex::Real taux = coef(i,j,k,dComp_mu)*(2.e0*dudx - 2.0/3.0*divu)
-                      + coef(i,j,k,dComp_xi)*divu; 
-        amrex::Real tauy = coef(i,j,k,dComp_mu)*(dudy + dvdx); 
+        amrex::Real taux = coef[dComp_mu]*(2.e0*dudx - 2.0/3.0*divu)
+                      + coef[dComp_xi]*divu; 
+        amrex::Real tauy = coef[dComp_mu]*(dudy + dvdx); 
         flx(i,j,k,UMX) = -taux;
         flx(i,j,k,UMY) = -tauy; 
         flx(i,j,k,UMZ) = 0; 
         flx(i,j,k,UEDEN) = - taux*(0.5e0*(q(i,j,k,QU) + q(i-1,j,k,QU))) 
                            - tauy*(0.5e0*(q(i,j,k,QV) + q(i-1,j,k,QV))) 
-                           - coef(i,j,k,dComp_lambda)*dTdx;
+                           - coef[dComp_lambda]*dTdx;
 
         amrex::Real dlnp = dxinv*(q(i,j,k,QPRES) - q(i-1,j,k,QPRES))/
                                   (0.5e0*(q(i,j,k,QPRES) + q(i-1,j,k,QPRES))); 
@@ -70,7 +70,7 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
             amrex::Real Yface = 0.5e0*(eos.massfrac[ns] + eos_prev.massfrac[ns]); 
             amrex::Real hface = 0.5e0*(eos.hi[ns] + eos_prev.hi[ns]); 
             amrex::Real dXdx = dxinv*(eos.molefrac[ns] -eos_prev.molefrac[ns]); 
-            amrex::Real Vd = -coef(i,j,k,dComp_rhoD+ns)*(dXdx + (Xface - Yface)*dlnp); 
+            amrex::Real Vd = -coef[dComp_rhoD+ns]*(dXdx + (Xface - Yface)*dlnp); 
             flx(i,j,k,UFS+ns) = Vd; 
             Vc += Vd; 
             flx(i,j,k,UEDEN) += Vd*hface; 
@@ -95,18 +95,18 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
         amrex::Real dTdy = dxinv*(q(i,j,k,QTEMP) - q(i,j-1,k,QTEMP)); 
         amrex::Real dudy = dxinv*(q(i,j,k,QU) - q(i,j-1,k,QU)); 
         amrex::Real dvdy = dxinv*(q(i,j,k,QV) - q(i,j-1,k,QV)); 
-        amrex::Real dudx = t(i,j,k,0); 
-        amrex::Real dvdx = t(i,j,k,1); 
+        amrex::Real dudx = t[0]; 
+        amrex::Real dvdx = t[1]; 
         amrex::Real divu = dudx + dvdy; 
-        amrex::Real tauy = coef(i,j,k,dComp_mu)*(2.e0*dvdy - 2.0/3.0*divu)
-                          + coef(i,j,k,dComp_xi)*divu; 
-        amrex::Real taux = coef(i,j,k,dComp_mu)*(dudy + dvdx); 
+        amrex::Real tauy = coef[dComp_mu]*(2.e0*dvdy - 2.0/3.0*divu)
+                          + coef[dComp_xi]*divu; 
+        amrex::Real taux = coef[dComp_mu]*(dudy + dvdx); 
         flx(i,j,k,UMX) = -taux; 
         flx(i,j,k,UMY) = -tauy; 
         flx(i,j,k,UMZ) = 0; 
         flx(i,j,k,UEDEN) = - taux*(0.5e0*(q(i,j,k,QU) + q(i,j-1,k,QU))) 
                            - tauy*(0.5e0*(q(i,j,k,QV) + q(i,j-1,k,QV))) 
-                           - coef(i,j,k,dComp_lambda)*dTdy; 
+                           - coef[dComp_lambda]*dTdy; 
         amrex::Real dlnp = dxinv*(q(i,j,k,QPRES) - q(i,j-1,k,QPRES))/
                                   (0.5e0*(q(i,j,k,QPRES) + q(i,j-1,k,QPRES))); 
     
@@ -135,7 +135,7 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
             amrex::Real Yface = 0.5e0*(eos.massfrac[ns] + eos_prev.massfrac[ns]); 
             amrex::Real hface = 0.5e0*(eos.hi[ns] + eos_prev.hi[ns]); 
             amrex::Real dXdx = dxinv*(eos.molefrac[ns] -eos_prev.molefrac[ns]); 
-            amrex::Real Vd = -coef(i,j,k,dComp_rhoD+ns)*(dXdx + (Xface - Yface)*dlnp); 
+            amrex::Real Vd = -coef[dComp_rhoD+ns]*(dXdx + (Xface - Yface)*dlnp); 
             flx(i,j,k,UFS+ns) = Vd; 
             Vc += Vd; 
             flx(i,j,k,UEDEN) += Vd*hface; 

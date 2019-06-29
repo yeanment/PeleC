@@ -42,7 +42,7 @@ AMREX_GPU_HOST_DEVICE static void eos_ctop(amrex::Real massfrac1[], amrex::Real 
                                            amrex::Real &p1, amrex::Real &dpdr_e1,
                                            amrex::Real &dpde1, amrex::Real &gam11, amrex::Real &cs1, 
                                            amrex::Real &wbar1);
-AMREX_GPU_HOST_DEVICE static void eos_cmpT(amrex::Real e1, amrex::Real massfrac1[], amrex::Real &T1); 
+AMREX_GPU_HOST_DEVICE static void cmpT(amrex::Real e1, amrex::Real massfrac1[], amrex::Real &T1); 
 AMREX_GPU_HOST_DEVICE    void eos_mpr2wdot(amrex::Real wdot[]);  
 //TODO add more later!  
 };
