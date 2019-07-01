@@ -70,7 +70,7 @@ void EOS::cmpT(amrex::Real e1, amrex::Real massfrac1[], amrex::Real &T1)
 
 /*Prototype for moving EOS to be a namespace instead of a class */ 
 AMREX_GPU_HOST_DEVICE
-void EOS::eos_ctop(amrex::Real massfrac1[], amrex::Real rho1,
+void EOS::ctop(amrex::Real massfrac1[], amrex::Real rho1,
                    amrex::Real &e1, amrex::Real &T1, 
                    amrex::Real &p1, amrex::Real &dpdr_e1,
                    amrex::Real &dpde1, amrex::Real &gam11, amrex::Real &cs1, 
@@ -116,6 +116,12 @@ void EOS::eos_re()
 }
 
 AMREX_GPU_HOST_DEVICE
+void EOS::TrhoY2p(amrex::Real dens, amrex::Real T1, amrex::Real mass[], amrex::Real &pres)
+{
+    CKPY(&dens, &T1, mass, &pres); 
+}
+
+AMREX_GPU_HOST_DEVICE
 void EOS::eos_rt()
 {
     eos_wb(); 
@@ -126,19 +132,29 @@ void EOS::eos_rt()
     eos_bottom(); 
 }
 
-
 AMREX_GPU_HOST_DEVICE
-void EOS::eos_mpr2wdot(amrex::Real wdot[])
+void EOS::mpr2wdot(amrex::Real dens, amrex::Real T1, amrex::Real mass[], amrex::Real wdot[])
 {
-    CKWYR(&rho, &T, massfrac, wdot);
-    eos_rt(); 
+    CKWYR(&dens, &T1, mass, wdot); 
     amrex::Real mw[NUM_SPECIES]; 
     get_mw(mw); 
-    for(int n = 0; n < NUM_SPECIES; n++){
-        wdot[n] *= mw[n];
-    }  
+    for(int n = 0; n < NUM_SPECIES; n++) wdot[n] *= mw[n]; 
 }
 
+AMREX_GPU_HOST_DEVICE
+void EOS::get_ei(amrex::Real T1, amrex::Real enrgi[])
+{
+    CKUMS(&T1, enrgi); 
+}
+
+AMREX_GPU_HOST_DEVICE 
+void EOS::get_cv(amrex::Real mass[], amrex::Real T1, amrex::Real &cv1)
+{
+    cv1 = 0.e0; 
+    amrex::Real temp[NUM_SPECIES];
+    CKCVMS(&T1, temp); //here temp is cvi
+    for(int i = 0; i < NUM_SPECIES; ++i) cv1+= mass[i]*temp[i]; 
+}
 
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_rp()
@@ -151,10 +167,23 @@ void EOS::eos_rp()
     eos_bottom();     
 }
 
+
+AMREX_GPU_HOST_DEVICE 
+void EOS::ytx(amrex::Real mass[], amrex::Real mole[])
+{
+    CKYTX(mass, mole); 
+}
+
 AMREX_GPU_HOST_DEVICE
 void EOS::eos_ytx()
 {
     CKYTX(massfrac, molefrac); 
+}
+
+AMREX_GPU_HOST_DEVICE
+void EOS::get_hi(amrex::Real T1, amrex::Real enthalpy[])
+{
+   CKHMS(&T1, enthalpy);
 }
 
 AMREX_GPU_HOST_DEVICE

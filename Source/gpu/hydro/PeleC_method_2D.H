@@ -152,7 +152,6 @@ riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
  const amrex::Real rr, const amrex::Real ur, const amrex::Real vr,
  const amrex::Real v2r, const amrex::Real pr, const amrex::Real rer, 
  const amrex::Real gamcr,  const amrex::Real *spr,
- EOS &gdnv_state, 
  amrex::Real &uflx_rho, amrex::Real &uflx_u, 
  amrex::Real &uflx_v, amrex::Real &uflx_w,
  amrex::Real &uflx_eden, amrex::Real &uflx_eint,
@@ -278,7 +277,7 @@ riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
     uflx_eint = qint_iu*regdnv; 
 }
 
-
+#if 0 
 //Riemann_md 
 AMREX_GPU_DEVICE
 inline
@@ -450,7 +449,7 @@ riemann_md (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
         uflx_eden = qint_iu*(rhoetot + qint_gdpres); 
         uflx_eint = qint_iu*regd;              
 }
-
+#endif
 
 AMREX_GPU_DEVICE
 inline

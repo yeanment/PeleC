@@ -71,8 +71,6 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
                                  const int nsteps_guess, const amrex::Real errtol, 
                                  const int do_update) 
 {
-    EOS eos;
-
 #ifdef AMREX_USE_CUDA
 //having a global __constant__ variable is slower than having this in local memory. 
     const amrex::Real alpha_rk64[6] = 
@@ -147,20 +145,22 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
         for(int stage = 0; stage < 6; stage++)
         {
             rhoInv = 1.e0/urk[URHO]; 
+            amrex::Real massfrac[NUM_SPECIES]; 
             for(int n = 0; n < NUM_SPECIES; ++n)
-                 eos.massfrac[n] = urk[UFS+n]*rhoInv; 
+                 massfrac[n] = urk[UFS+n]*rhoInv;  
                   
             
-            eos.rho = urk[URHO]; 
-            eos.T = urk[UTEMP];
-            eos.eos_mpr2wdot(wdot); 
+            EOS::mpr2wdot(urk[URHO], urk[UTEMP], massfrac, wdot); //this is wdot*molecularweights  
             for(int n = 0; n < NUM_SPECIES; ++n) wdot[n] += rhoydot_ext[n]; 
-        
+            amrex::Real ei[NUM_SPECIES]; 
+            EOS::get_ei(urk[UTEMP], ei);  
             amrex::Real tempsrc = rhoedot_ext; 
             for(int n = 0; n < NUM_SPECIES; ++n){
-                 tempsrc -= wdot[n]*eos.ei[n];      
+                 tempsrc -= wdot[n]*ei[n];      
             }
-            tempsrc /= (urk[URHO]*eos.cv); 
+            amrex::Real cv; 
+            EOS::get_cv(massfrac, urk[UTEMP], cv); 
+            tempsrc /= (urk[URHO]*cv); 
 
 
  /*================== Update urk_err =================== */

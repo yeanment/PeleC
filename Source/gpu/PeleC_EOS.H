@@ -20,7 +20,7 @@ public:
     amrex::Real rho, T, p, e, h, s, f;
     amrex::Real massfrac[NUM_SPECIES], molefrac[NUM_SPECIES], aux[naux]; 
     amrex::Real dpdT, dpdr, dedT, dedr, dhdT, dhdr, dsdT, dsdr, dpde, dpdr_e;
-    amrex::Real cv,  cp, cpi[NUM_SPECIES], cvi[NUM_SPECIES], hi[NUM_SPECIES], ei[NUM_SPECIES], si[NUM_SPECIES]; 
+    amrex::Real cv,  cp, cpi[NUM_SPECIES], cvi[NUM_SPECIES],  hi[NUM_SPECIES], ei[NUM_SPECIES], si[NUM_SPECIES]; 
     amrex::Real wbar, mui[NUM_SPECIES], Acti[NUM_SPECIES], dedY[NUM_SPECIES], dhdY[NUM_SPECIES], gam1, cs; 
 // Quantaties for non-ideal eos
 /*    amrex::Real am, bm, damdYk[NUM_SPECIES], d2amdYkdT[NUM_SPECIES], dPdYk[NUM_SPECIES], damdT, d2amdT2;
@@ -37,13 +37,19 @@ AMREX_GPU_HOST_DEVICE    void eos_bottom();
 AMREX_GPU_HOST_DEVICE    void eos_ytx(); 
 AMREX_GPU_HOST_DEVICE    void eos_hi();
 AMREX_GPU_HOST_DEVICE    void eos_rt();
-AMREX_GPU_HOST_DEVICE static void eos_ctop(amrex::Real massfrac1[], amrex::Real rho1, 
+AMREX_GPU_HOST_DEVICE static void ctop(amrex::Real massfrac1[], amrex::Real rho1, 
                                            amrex::Real &e1, amrex::Real &T1, 
                                            amrex::Real &p1, amrex::Real &dpdr_e1,
                                            amrex::Real &dpde1, amrex::Real &gam11, amrex::Real &cs1, 
                                            amrex::Real &wbar1);
-AMREX_GPU_HOST_DEVICE static void cmpT(amrex::Real e1, amrex::Real massfrac1[], amrex::Real &T1); 
-AMREX_GPU_HOST_DEVICE    void eos_mpr2wdot(amrex::Real wdot[]);  
+AMREX_GPU_HOST_DEVICE static void cmpT(amrex::Real e1, amrex::Real massfrac1[], amrex::Real &T1);
+AMREX_GPU_HOST_DEVICE static void ytx(amrex::Real mass[], amrex::Real mol[]); 
+AMREX_GPU_HOST_DEVICE static void get_hi(amrex::Real T1, amrex::Real enthalpy[]);  
+AMREX_GPU_HOST_DEVICE static void mpr2wdot(amrex::Real dens, amrex::Real T1,
+                                           amrex::Real mass[], amrex::Real wdot[]);  
+AMREX_GPU_HOST_DEVICE static void get_ei(amrex::Real T1, amrex::Real enrgi[]); 
+AMREX_GPU_HOST_DEVICE static void get_cv(amrex::Real mass[], amrex::Real T1, amrex::Real &cv);
+AMREX_GPU_HOST_DEVICE static void TrhoY2p(amrex::Real dens, amrex::Real T1, amrex::Real mass[], amrex::Real &pres);  
 //TODO add more later!  
 };
 #endif

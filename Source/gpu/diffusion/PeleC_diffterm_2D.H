@@ -44,32 +44,29 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
         amrex::Real dlnp = dxinv*(q(i,j,k,QPRES) - q(i-1,j,k,QPRES))/
                                   (0.5e0*(q(i,j,k,QPRES) + q(i-1,j,k,QPRES))); 
 
-// ------------------- Construct EOS objects for i and i -1 ---------------------------------------- // 
-        EOS eos; 
+// ------------------- Get massfrac, molefrac, enthalpy for i and i -1 ---------------------------------------- // 
+        amrex::Real mass1[NUM_SPECIES], mass2[NUM_SPECIES]; 
+        amrex::Real mole1[NUM_SPECIES], mole2[NUM_SPECIES];  
+        amrex::Real hi1[NUM_SPECIES], hi2[NUM_SPECIES]; 
         for(int ns = 0; ns < NUM_SPECIES; ++ns) {
-            eos.massfrac[ns] = q(i,j,k,ns+QFS);
+            mass1[ns] = q(i,j,k,ns+QFS);
         }
-        eos.eos_ytx();
-        eos.T = q(i,j,k,QTEMP); 
-        eos.rho = q(i,j,k,QRHO); 
-        eos.p = q(i,j,k,QPRES);
-        eos.eos_hi();
-        EOS eos_prev; 
+        EOS::ytx(mass1, mole1);
+        amrex::Real T = q(i,j,k,QTEMP); 
+        EOS::get_hi(T, hi1);
         for(int ns = 0; ns < NUM_SPECIES; ++ns) {
-            eos_prev.massfrac[ns] = q(i-1,j,k,ns+QFS);
+            mass2[ns] = q(i-1,j,k,ns+QFS);
         }
-        eos_prev.T = q(i-1,j,k,QTEMP); 
-        eos_prev.rho = q(i-1,j,k,QRHO); 
-        eos_prev.p = q(i-1,j,k,QPRES); 
-        eos_prev.eos_ytx();
-        eos_prev.eos_hi(); 
+        T = q(i-1,j,k,QTEMP); 
+        EOS::ytx(mass2, mole2);
+        EOS::get_hi(T, hi2); 
 // ------------------ Get species/enthalpy diffusion, compute correction vel
         amrex::Real Vc = 0.e0; 
         for(int ns = 0; ns < NUM_SPECIES; ++ns){
-            amrex::Real Xface = 0.5e0*(eos.molefrac[ns] + eos_prev.molefrac[ns]);
-            amrex::Real Yface = 0.5e0*(eos.massfrac[ns] + eos_prev.massfrac[ns]); 
-            amrex::Real hface = 0.5e0*(eos.hi[ns] + eos_prev.hi[ns]); 
-            amrex::Real dXdx = dxinv*(eos.molefrac[ns] -eos_prev.molefrac[ns]); 
+            amrex::Real Xface = 0.5e0*(mole1[ns] + mole2[ns]);
+            amrex::Real Yface = 0.5e0*(mass1[ns] + mass2[ns]); 
+            amrex::Real hface = 0.5e0*(hi1[ns] + hi2[ns]); 
+            amrex::Real dXdx = dxinv*(mole1[ns] -mole2[ns]); 
             amrex::Real Vd = -coef[dComp_rhoD+ns]*(dXdx + (Xface - Yface)*dlnp); 
             flx(i,j,k,UFS+ns) = Vd; 
             Vc += Vd; 
@@ -77,8 +74,8 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
         }
 // ----------------- Add correction velocity to fluxes 
          for(int ns = 0; ns < NUM_SPECIES; ++ns){
-            amrex::Real Yface = 0.5e0*(eos.massfrac[ns] + eos_prev.massfrac[ns]); 
-            amrex::Real hface = 0.5e0*(eos.hi[ns] + eos_prev.hi[ns]); 
+            amrex::Real Yface = 0.5e0*(mass1[ns] + mass2[ns]); 
+            amrex::Real hface = 0.5e0*(hi1[ns] + hi2[ns]); 
             flx(i,j,k,UFS+ns) -= Yface*Vc; 
             flx(i,j,k,UEDEN) -= Yface*hface*Vc; 
         }
@@ -110,31 +107,29 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
         amrex::Real dlnp = dxinv*(q(i,j,k,QPRES) - q(i,j-1,k,QPRES))/
                                   (0.5e0*(q(i,j,k,QPRES) + q(i,j-1,k,QPRES))); 
     
-// ------------------- Construct EOS objects for j and j -1 ---------------------------------------- // 
-        EOS eos, eos_prev; 
+// ------------------- Construct massfrac, molefrac, enthalpy, for j and j -1 ---------------------------------------- // 
+        amrex::Real mass1[NUM_SPECIES], mass2[NUM_SPECIES]; 
+        amrex::Real mole1[NUM_SPECIES], mole2[NUM_SPECIES];  
+        amrex::Real hi1[NUM_SPECIES], hi2[NUM_SPECIES]; 
         for(int ns = 0; ns < NUM_SPECIES; ++ns) {
-            eos.massfrac[ns] = q(i,j,k,QFS+ns);
-        }   
-        eos.T = q(i,j,k,QTEMP); 
-        eos.rho = q(i,j,k,QRHO); 
-        eos.p = q(i,j,k,QPRES); 
-        eos.eos_ytx(); 
-        eos.eos_hi();       
+            mass1[ns] = q(i,j,k,ns+QFS);
+        }
+        EOS::ytx(mass1, mole1);
+        amrex::Real T = q(i,j,k,QTEMP); 
+        EOS::get_hi(T, hi1);
         for(int ns = 0; ns < NUM_SPECIES; ++ns) {
-            eos_prev.massfrac[ns] = q(i,j-1,k,QFS+ns);
-        }   
-        eos_prev.T = q(i,j-1,k,QTEMP); 
-        eos_prev.rho = q(i,j-1,k,QRHO); 
-        eos_prev.p = q(i,j-1,k,QPRES); 
-        eos_prev.eos_ytx(); 
-        eos_prev.eos_hi(); 
+            mass2[ns] = q(i,j-1,k,ns+QFS);
+        }
+        T = q(i,j-1,k,QTEMP); 
+        EOS::ytx(mass2, mole2);
+        EOS::get_hi(T, hi2); 
 // ------------------ Get species/enthalpy diffusion, compute correction vel
         amrex::Real Vc = 0.e0; 
         for(int ns = 0; ns < NUM_SPECIES; ++ns){
-            amrex::Real Xface = 0.5e0*(eos.molefrac[ns] + eos_prev.molefrac[ns]); 
-            amrex::Real Yface = 0.5e0*(eos.massfrac[ns] + eos_prev.massfrac[ns]); 
-            amrex::Real hface = 0.5e0*(eos.hi[ns] + eos_prev.hi[ns]); 
-            amrex::Real dXdx = dxinv*(eos.molefrac[ns] -eos_prev.molefrac[ns]); 
+            amrex::Real Xface = 0.5e0*(mole1[ns] + mole2[ns]);
+            amrex::Real Yface = 0.5e0*(mass1[ns] + mass2[ns]); 
+            amrex::Real hface = 0.5e0*(hi1[ns] + hi2[ns]); 
+            amrex::Real dXdx = dxinv*(mole1[ns] -mole2[ns]); 
             amrex::Real Vd = -coef[dComp_rhoD+ns]*(dXdx + (Xface - Yface)*dlnp); 
             flx(i,j,k,UFS+ns) = Vd; 
             Vc += Vd; 
@@ -142,8 +137,8 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
         }
 // ----------------- Add correction velocity to species fluxes and 
         for(int ns = 0; ns < NUM_SPECIES; ++ns){
-            amrex::Real Yface = 0.5e0*(eos.massfrac[ns] + eos_prev.massfrac[ns]); 
-            amrex::Real hface = 0.5e0*(eos.hi[ns] + eos_prev.hi[ns]); 
+            amrex::Real Yface = 0.5e0*(mass1[ns] + mass2[ns]); 
+            amrex::Real hface = 0.5e0*(hi1[ns] + hi2[ns]); 
             flx(i,j,k,UFS+ns) -= Yface*Vc; 
             flx(i,j,k,UEDEN) -= Yface*hface*Vc; 
         }

@@ -134,7 +134,6 @@ riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
  const amrex::Real rr, const amrex::Real ur, const amrex::Real vr,
  const amrex::Real v2r, const amrex::Real pr, const amrex::Real rer, 
  const amrex::Real gamcr,  const amrex::Real *spr,
- EOS &gdnv_state, 
  amrex::Real &uflx_rho, amrex::Real &uflx_u, 
  amrex::Real &uflx_v, amrex::Real &uflx_w,
  amrex::Real &uflx_eden, amrex::Real &uflx_eint,
@@ -260,8 +259,8 @@ riemannus (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
     uflx_eint = qint_iu*regdnv; 
 }
 
-
-//Riemann_md 
+#if 0
+//Riemann_md //TODO remove eos class for EOS namespace  
 AMREX_GPU_DEVICE
 inline
 void
@@ -432,7 +431,7 @@ riemann_md (const amrex::Real rl, const amrex::Real ul, const amrex::Real vl,
         uflx_eden = qint_iu*(rhoetot + qint_gdpres); 
         uflx_eint = qint_iu*regd;              
 }
-
+#endif 
 
 AMREX_GPU_DEVICE
 inline
@@ -445,7 +444,6 @@ PeleC_cmpflx(const int i, const int j, const int k,
 //     amrex::Array4<const int> const& bcMask,
      const int idir)
 {
-    EOS gdnv_state; 
     amrex::Real cav, ustar;
     amrex::Real spl[NUM_SPECIES];
     amrex::Real spr[NUM_SPECIES]; 
@@ -524,7 +522,7 @@ PeleC_cmpflx(const int i, const int j, const int k,
                  ql(i,j,k,QPRES), rel, gamcl, spl,   
                  qr(i,j,k,QRHO), ur, vr, v2r, 
                  qr(i,j,k,QPRES), rer, gamcr, spr,
-                 gdnv_state, flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
+                 flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
                  flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT),
                  q(i,j,k,GU), q(i,j,k,GV), q(i,j,k,GV2), q(i,j,k,GDPRES),
                  q(i,j,k,GDGAME), ustar, idir, qa(i,j,k,QCSML), cav);

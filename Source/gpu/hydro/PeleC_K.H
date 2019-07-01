@@ -65,7 +65,7 @@ void PeleC_ctoprim(const int i, const int j, const int k,
 //    for(int ax = 0; ax < naux; ++ax) aux[ax] = q(i,j,k,ax+QFX);
     amrex::Real dpdr_e, dpde, gam1, cs, wbar, p; 
 //  Use eos conversion;  
-    EOS::eos_ctop(massfrac, rho, e, T, p, dpdr_e, dpde, gam1, cs, wbar); 
+    EOS::ctop(massfrac, rho, e, T, p, dpdr_e, dpde, gam1, cs, wbar); 
     q(i,j,k,QTEMP) = T;
     q(i,j,k,QREINT) = e * rho;
     q(i,j,k,QPRES) = p;
@@ -157,15 +157,14 @@ inline
 amrex::Real  
 PeleC_pres(const int i , const int j, const int k, amrex::Array4<const amrex::Real> const &u)
 {
-    EOS state; 
-    amrex::Real rhoInv = 1.e0/ u(i,j,k,URHO); 
-    state.rho = u(i,j,k,URHO); 
-    state.T   = u(i,j,k,UTEMP); 
-    state.e   = u(i,j,k,UEINT)*rhoInv; 
-    for(int n = 0; n < NUM_SPECIES; ++n) state.massfrac[n] = u(i,j,k,UFS+n)*rhoInv; 
-    for(int n = 0; n < NUM_AUXILIARY; ++n) state.aux[n] = u(i,j,k,UFX+n)*rhoInv;
-    state.eos_re(); 
-    return state.p;  
+    amrex::Real rho = u(i,j,k,URHO); 
+    amrex::Real T   = u(i,j,k,UTEMP); 
+    amrex::Real massfrac[NUM_SPECIES]; 
+    amrex::Real rhoInv = 1.e0/rho; 
+    amrex::Real p; 
+    for(int n = 0; n < NUM_SPECIES; ++n) massfrac[n] = u(i,j,k,UFS+n)*rhoInv; 
+    EOS::TrhoY2p(rho, T, massfrac, p); 
+    return p;  
 }
 
 //======================================= Host functions ================================
