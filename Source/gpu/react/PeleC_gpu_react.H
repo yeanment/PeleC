@@ -3,7 +3,7 @@
 #include <PeleC_index_macros.H> 
 #include <AMReX_FArrayBox.H> 
 #include <PeleC_EOS.H> 
-
+#include <iomanip>
 #ifndef AMREX_USE_CUDA
     const amrex::Real alpha_rk64[6] = 
             {
@@ -134,32 +134,30 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
     amrex::Real urk[NVAR];
     amrex::Real urk_old[NVAR] = {};
     for(int n = 0; n < NVAR; ++n) urk[n] = uold(i,j,k,n);  
+    amrex::Real urk_err[NVAR] = {}; 
 
     //Do the RK! 
     while(updt_time < dt_react){ 
         for(int n = 0; n < NVAR; n++)  urk_old[n] = urk[n]; 
-        amrex::Real urk_err[NVAR] = {}; 
-        amrex::Real wdot[NVAR] = {};  
-       
+        amrex::Real wdot[NUM_SPECIES] = {};  
+        amrex::Real massfrac[NUM_SPECIES] = {};  
+        amrex::Real ei[NUM_SPECIES] = {}; 
         updt_time+= dt_rk; 
         for(int stage = 0; stage < 6; stage++)
         {
             rhoInv = 1.e0/urk[URHO]; 
-            amrex::Real massfrac[NUM_SPECIES]; 
             for(int n = 0; n < NUM_SPECIES; ++n)
                  massfrac[n] = urk[UFS+n]*rhoInv;  
-                  
             
             EOS::mpr2wdot(urk[URHO], urk[UTEMP], massfrac, wdot); //this is wdot*molecularweights  
             for(int n = 0; n < NUM_SPECIES; ++n) wdot[n] += rhoydot_ext[n]; 
-            amrex::Real ei[NUM_SPECIES]; 
             EOS::get_ei(urk[UTEMP], ei);  
             amrex::Real tempsrc = rhoedot_ext; 
             for(int n = 0; n < NUM_SPECIES; ++n){
                  tempsrc -= wdot[n]*ei[n];      
             }
             amrex::Real cv; 
-            EOS::get_cv(massfrac, urk[UTEMP], cv); 
+            EOS::get_cv(massfrac, urk[UTEMP], cv);
             tempsrc /= (urk[URHO]*cv); 
 
 
@@ -217,6 +215,14 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
     IR(i,j,k,NUM_SPECIES) = ((nrg*rho_old) + dt_react*rhoedot_ext 
                           + 0.5e0*(umnew*umnew + vmnew*vmnew + wmnew*wmnew)/urk[URHO] 
                           - uold(i,j,k,UEDEN))/dt_react - asrc(i,j,k,UEDEN);
+/*    if(i==22 && j == 23 && k == 208){
+        std::cout<<std::setprecision(17); 
+        amrex::Print()<< IR(i,j,k,NUM_SPECIES) << '\t' << (nrg*rho_old) + dt_react*rhoedot_ext 
+                                                + 0.5e0*(umnew*umnew + vmnew*vmnew + wmnew*wmnew)/urk[URHO] << '\t' 
+                                               << -uold(i,j,k,UEDEN) << '\t' << -asrc(i,j,k,UEDEN) << std::endl; 
+        std::cin.get(); 
+    } */ 
+
 }
 
 

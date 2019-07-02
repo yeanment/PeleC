@@ -106,8 +106,6 @@ PeleC::react_state_gpu(Real time, Real dt, bool react_init, MultiFab* A_aux)
             }
             else
             {
-            // Hard RK4 integration min and max, but dt will be found adaptively.
-            // We just include an initial guess. 
                const int nsubsteps_min=adaptrk_nsubsteps_min;
                const int nsubsteps_max=adaptrk_nsubsteps_max;
                const int nsubsteps_guess=adaptrk_nsubsteps_guess;  
