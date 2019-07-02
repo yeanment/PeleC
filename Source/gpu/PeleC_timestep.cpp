@@ -19,7 +19,6 @@ PeleC_estdt_hydro ( amrex::Box const& bx, amrex::FArrayBox const& statefab,
 #else 
     amrex::Real dt = 1.e37;
 #endif
-    EOS state;  
     amrex::Real rhoInv; 
     amrex::Real ux, dt1, c; 
 #if AMREX_SPACEDIM > 1
@@ -32,15 +31,13 @@ PeleC_estdt_hydro ( amrex::Box const& bx, amrex::FArrayBox const& statefab,
     for         (int k = lo.z; k <= hi.z; ++k){
         for     (int j = lo.y; j <= hi.y; ++j){
             for (int i = lo.x; i <= hi.x; ++i){
-                state.rho = u(i,j,k,URHO); 
-                rhoInv = 1.e0/state.rho; 
-                state.T   = u(i,j,k,UTEMP); 
-                state.e   = u(i,j,k,UEINT)*rhoInv; 
-                for(int n = 0; n < NUM_SPECIES; ++n) state.massfrac[n] = u(i,j,k,UFS+n)*rhoInv; 
-                for(int n = 0; n < NUM_AUXILIARY; ++n) state.aux[n] = u(i,j,k,UFX+n)*rhoInv; 
-                state.eos_re();
-
-                c = state.cs;
+                amrex::Real rho = u(i,j,k,URHO); 
+                rhoInv = 1.e0/rho; 
+                amrex::Real T   = u(i,j,k,UTEMP);
+                amrex::Real massfrac[NUM_SPECIES]; 
+                amrex::Real c;  
+                for(int n = 0; n < NUM_SPECIES; ++n) massfrac[n] = u(i,j,k,UFS+n)*rhoInv; 
+                EOS::get_cs(rho, T, massfrac, c);
                 ux = u(i,j,k,UMX)*rhoInv; 
                dt1 = dx/(c+std::abs(ux)); 
                 dt = amrex::min(dt, dt1); 
@@ -62,19 +59,20 @@ PeleC_estdt_hydro ( amrex::Box const& bx, amrex::FArrayBox const& statefab,
 
 AMREX_GPU_HOST_DEVICE
 inline
-void PeleC_trans4dt(const int which_trans,EOS eos, amrex::Real &D)
+void PeleC_trans4dt(const int which_trans, amrex::Real T, amrex::Real rho, 
+                    amrex::Real massfrac[], amrex::Real &D)
 {
     bool get_xi = false, get_mu = false, get_lam = false, get_Ddiag = false; 
     amrex::Real dum1 = 0., dum2 = 0.;
  
     if(which_trans==0){
         get_mu = true; 
-        PeleC_actual_transport(get_xi, get_mu, get_lam, get_Ddiag, eos.T, eos.rho, eos.massfrac, 
+        PeleC_actual_transport(get_xi, get_mu, get_lam, get_Ddiag, T, rho, massfrac, 
                                nullptr, D, dum1, dum2); 
     }
     else if(which_trans==1){
         get_lam = true; 
-        PeleC_actual_transport(get_xi, get_mu, get_lam, get_Ddiag, eos.T, eos.rho, eos.massfrac, 
+        PeleC_actual_transport(get_xi, get_mu, get_lam, get_Ddiag, T, rho, massfrac, 
                                nullptr, dum1, dum2, D);        
     }
 }
@@ -100,18 +98,18 @@ amrex::Real PeleC_estdt_veldif(amrex::Box const box, amrex::FArrayBox const& sta
     amrex::Real dt3;
 #endif
 #endif
-    EOS eos; 
     int which_trans= 0; 
     for         (int k = lo.z; k <= hi.z; ++k){
         for     (int j = lo.y; j <= hi.y; ++j){
             for (int i = lo.x; i <= hi.x; ++i){
-                eos.rho = u(i,j,k,URHO); 
-                rhoInv = 1.e0/eos.rho;         
+                amrex::Real rho = u(i,j,k,URHO); 
+                rhoInv = 1.e0/rho;         
+                amrex::Real massfrac[NUM_SPECIES]; 
                 for(int n = 0; n < NUM_SPECIES; ++n){
-                     eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
+                     massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
                 } 
-                eos.T = u(i,j,k,UTEMP);
-                PeleC_trans4dt(which_trans, eos, D);
+                amrex::Real T = u(i,j,k,UTEMP);
+                PeleC_trans4dt(which_trans, T, rho, massfrac, D);
                 D *= rhoInv; 
                 dt1 = 0.5e0*dx*dx/(AMREX_SPACEDIM*D);
                 dt  = amrex::min(dt, dt1);  
@@ -151,18 +149,19 @@ amrex::Real PeleC_estdt_tempdif(amrex::Box const bx, amrex::FArrayBox const& sta
     amrex::Real dt3;
 #endif
 #endif
-    EOS eos; 
     int which_trans = 1; 
     for         (int k = lo.z; k <= hi.z; ++k){
         for     (int j = lo.y; j <= hi.y; ++j){
             for (int i = lo.x; i <= hi.x; ++i){
-                eos.rho = u(i,j,k,URHO); 
-                rhoInv = 1.e0/eos.rho;         
-                for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
-                eos.T = u(i,j,k,UTEMP); 
-                PeleC_trans4dt(which_trans, eos, D);
-                eos.eos_cv(); 
-                D *= rhoInv/eos.cv; 
+                amrex::Real rho = u(i,j,k,URHO); 
+                rhoInv = 1.e0/rho;         
+                amrex::Real massfrac[NUM_SPECIES]; 
+                for(int n = 0; n < NUM_SPECIES; ++n) massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
+                amrex::Real T = u(i,j,k,UTEMP); 
+                PeleC_trans4dt(which_trans, T, rho, massfrac , D);
+                amrex::Real cv; 
+                EOS::get_cv(massfrac, T, cv); 
+                D *= rhoInv/cv; 
                 dt1 = 0.5e0*dx*dx/(AMREX_SPACEDIM*D);
                 dt  = amrex::min(dt, dt1);  
 #if AMREX_SPACEDIM > 1 
@@ -201,19 +200,19 @@ amrex::Real PeleC_estdt_enthdif(amrex::Box const bx, amrex::FArrayBox const& sta
     amrex::Real dt3;
 #endif
 #endif
-    EOS eos; 
     int which_trans = 1; 
     for         (int k = lo.z; k <= hi.z; ++k){
         for     (int j = lo.y; j <= hi.y; ++j){
             for (int i = lo.x; i <= hi.x; ++i){
-                eos.rho = u(i,j,k,URHO); 
-                rhoInv = 1.e0/eos.rho;         
-                for(int n = 0; n < NUM_SPECIES; ++n) eos.massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
-                eos.e = u(i,j,k,UEINT)*rhoInv; 
-                eos.T = u(i,j,k,UTEMP); 
-                eos.eos_re(); 
-                PeleC_trans4dt(which_trans, eos, D); 
-                D *= rhoInv/eos.cp; 
+                amrex::Real rho = u(i,j,k,URHO); 
+                rhoInv = 1.e0/rho;         
+                amrex::Real massfrac[NUM_SPECIES]; 
+                for(int n = 0; n < NUM_SPECIES; ++n) massfrac[n] = u(i,j,k,n+UFS) * rhoInv;    
+                amrex::Real T = u(i,j,k,UTEMP);                 
+                amrex::Real cp; 
+                EOS::get_cp(T, massfrac ,cp); 
+                PeleC_trans4dt(which_trans, T, rho, massfrac, D); 
+                D *= rhoInv/cp; 
                 dt1 = 0.5e0*dx*dx/(AMREX_SPACEDIM*D);
                 dt  = amrex::min(dt, dt1);  
 #if AMREX_SPACEDIM > 1 

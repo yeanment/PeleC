@@ -16,8 +16,6 @@ void PeleC_cmpTemp(const int i, const int j, const int k, amrex::Array4<amrex::R
     for(int n = 0; n < NUM_SPECIES; ++n){
          massfrac[n] = State(i,j,k,UFS+n)*rhoInv;
     }
-// We don't really need this here. But maybe SRK does??? 
-//    for(int n = 0; n < NUM_AUXILIARY; ++n) eos_state.aux[n] = State(i,j,k,UFX+n)*rhoInv; 
     
     EOS::cmpT(e, massfrac, T); 
     State(i,j,k,UTEMP) = T; 

@@ -1,4 +1,3 @@
-CEXE_sources += PeleC_EOS.cpp 
 CEXE_sources += PeleC_timestep.cpp
 
 CEXE_headers += PeleC_EOS.H
