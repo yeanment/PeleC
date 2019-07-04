@@ -462,7 +462,6 @@ PeleC_cmpflx(const int i, const int j, const int k,
 //     amrex::Array4<const int> const& bcMask,
      const int idir)
 {
-    EOS gdnv_state; 
     amrex::Real cav, ustar;
     amrex::Real spl[NUM_SPECIES];
     amrex::Real spr[NUM_SPECIES]; 
@@ -528,7 +527,7 @@ PeleC_cmpflx(const int i, const int j, const int k,
                  ql(i,j,k,QPRES), rel, gamcl, spl,   
                  qr(i,j,k,QRHO), ur, vr, v2r, 
                  qr(i,j,k,QPRES), rer, gamcr, spr,
-                 gdnv_state, flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
+                 flx(i,j,k,URHO), flx(i,j,k,UMX), flx(i,j,k,UMY), 
                  flx(i,j,k,UMZ), flx(i,j,k,UEDEN), flx(i,j,k,UEINT),
                  q(i,j,k,GU), q(i,j,k,GV), q(i,j,k,GV2), q(i,j,k,GDPRES),
                  q(i,j,k,GDGAME), ustar, idir, qa(i,j,k,QCSML), cav);
