@@ -36,7 +36,7 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
         amrex::Real dwdz = t[3]; 
         amrex::Real divu = dudx + dvdy + dwdz; 
         amrex::Real taux = coef[dComp_mu]*(2.e0*dudx - 2.0/3.0*divu)
-                      + coef[dComp_xi]*divu; 
+                         + coef[dComp_xi]*divu; 
         amrex::Real tauy = coef[dComp_mu]*(dudy + dvdx); 
         amrex::Real tauz = coef[dComp_mu]*(dudz + dwdx); 
         flx(i,j,k,UMX) = -taux;
@@ -106,7 +106,7 @@ void PeleC_diffusion_flux(const int i,const int j,const int k,
         amrex::Real dwdz = t[3]; 
         amrex::Real divu = dudx + dvdy + dwdz; 
         amrex::Real tauy = coef[dComp_mu]*(2.e0*dvdy - 2.0/3.0*divu)
-                          + coef[dComp_xi]*divu; 
+                         + coef[dComp_xi]*divu; 
         amrex::Real taux = coef[dComp_mu]*(dudy + dvdx); 
         amrex::Real tauz = coef[dComp_mu]*(dwdy + dvdz); 
         flx(i,j,k,UMX) = -taux; 

@@ -29,8 +29,8 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
             //X
             BL_PROFILE("PeleC::diffusion_flux()"); 
             AMREX_PARALLEL_FOR_3D(exbox, i, j, k,  {
-                amrex::Real tx[4]; 
-                amrex::Real cx[dComp_lambda+1];
+                amrex::Real tx[4]={}; 
+                amrex::Real cx[dComp_lambda+1]={};
                 for(int n = 0; n < dComp_lambda+1; n++) 
                     PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cx, 0, do_harmonic); 
                 PeleC_compute_tangential_vel_derivs(i,j,k,tx,q,0,dy,dz); 
@@ -38,8 +38,8 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
             });
             //Y
             AMREX_PARALLEL_FOR_3D(eybox, i, j, k,  {
-                amrex::Real ty[4]; 
-                amrex::Real cy[dComp_lambda+1];
+                amrex::Real ty[4]={}; 
+                amrex::Real cy[dComp_lambda+1]={};
                 for(int n = 0; n < dComp_lambda+1; n++) 
                     PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cy, 1, do_harmonic);
                 PeleC_compute_tangential_vel_derivs(i,j,k,ty, q, 1, dx, dz); 
@@ -47,8 +47,8 @@ PeleC_compute_diffusion_flux(const Box& box, const amrex::Array4<const amrex::Re
             });
             //Z
             AMREX_PARALLEL_FOR_3D(ezbox, i, j, k,  {
-                amrex::Real tz[4]; 
-                amrex::Real cz[dComp_lambda+1];
+                amrex::Real tz[4]={}; 
+                amrex::Real cz[dComp_lambda+1]={};
                 for(int n = 0; n < dComp_lambda+1; n++) 
                     PeleC_move_transcoefs_to_ec(i,j,k,n, coef, cz, 2, do_harmonic);  
                 PeleC_compute_tangential_vel_derivs(i,j,k,tz, q, 2, dx, dy); 
