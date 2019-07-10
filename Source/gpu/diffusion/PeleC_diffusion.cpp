@@ -251,7 +251,7 @@ PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
 #endif
       }
 
-      if (diffuse_vel  == 0) {
+      if (diffuse_vel == 0) {
         setC(cbox, Xmom, Xmom + 3, Dterm, 0.0);
         setC(cbox, Xmom, Xmom + 3, flx1, 0.0);  
 #if AMREX_SPACEDIM > 1 

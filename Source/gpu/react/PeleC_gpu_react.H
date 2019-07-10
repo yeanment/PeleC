@@ -138,7 +138,10 @@ inline void PeleC_expl_reactions(const int i, const int j, const int k,
 
     //Do the RK! 
     while(updt_time < dt_react){ 
-        for(int n = 0; n < NVAR; n++)  urk_old[n] = urk[n]; 
+        for(int n = 0; n < NVAR; n++){
+            urk_old[n] = urk[n]; 
+            urk_err[n] = 0.e0; 
+        }
         amrex::Real wdot[NUM_SPECIES] = {};  
         amrex::Real massfrac[NUM_SPECIES] = {};  
         amrex::Real ei[NUM_SPECIES] = {}; 
