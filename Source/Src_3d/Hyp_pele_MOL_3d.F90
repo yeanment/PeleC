@@ -54,7 +54,7 @@ module hyp_advection_module
                                    small_dens, small_pres
     use slope_module, only : slopex, slopey, slopez
     use actual_network, only : naux
-    use eos_module, only : eos_rp1
+    use eos_module, only : eos_rp_gpu
     use chemistry_module, only: Ru
 
     implicit none
@@ -245,14 +245,14 @@ module hyp_advection_module
              eos_state_rho = qtempl(R_RHO)
              eos_state_p = qtempl(R_P)
              eos_state_massfrac = qtempl(R_Y:R_Y-1+nspec_2)
-             call eos_rp1(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
+             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
              rhoe_l = eos_state_rho * eos_state_e
              gamc_l = eos_state_gam1
 
              eos_state_rho = qtempr(R_RHO)
              eos_state_p = qtempr(R_P)
              eos_state_massfrac = qtempr(R_Y:R_Y-1+nspec_2)
-             call eos_rp1(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
+             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
              rhoe_r = eos_state_rho * eos_state_e
              gamc_r = eos_state_gam1
 
@@ -353,14 +353,14 @@ module hyp_advection_module
              eos_state_rho = qtempl(R_RHO)
              eos_state_p = qtempl(R_P)
              eos_state_massfrac = qtempl(R_Y:R_Y-1+nspec_2)
-             call eos_rp1(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
+             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
              rhoe_l = eos_state_rho * eos_state_e
              gamc_l = eos_state_gam1
 
              eos_state_rho = qtempr(R_RHO)
              eos_state_p = qtempr(R_P)
              eos_state_massfrac = qtempr(R_Y:R_Y-1+nspec_2)
-             call eos_rp1(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
+             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
              rhoe_r = eos_state_rho * eos_state_e
              gamc_r = eos_state_gam1
 
@@ -463,14 +463,14 @@ module hyp_advection_module
              eos_state_rho = qtempl(R_RHO)
              eos_state_p = qtempl(R_P)
              eos_state_massfrac = qtempl(R_Y:R_Y-1+nspec_2)
-             call eos_rp1(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
+             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
              rhoe_l = eos_state_rho * eos_state_e
              gamc_l = eos_state_gam1
 
              eos_state_rho = qtempr(R_RHO)
              eos_state_p = qtempr(R_P)
              eos_state_massfrac = qtempr(R_Y:R_Y-1+nspec_2)
-             call eos_rp1(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
+             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, nspec_2)
              rhoe_r = eos_state_rho * eos_state_e
              gamc_r = eos_state_gam1
 

@@ -826,10 +826,10 @@ contains
        uflx_rho, uflx_u, uflx_v, uflx_w, uflx_eden, uflx_eint, &
        bc_test_val, csmall, cav, VECLEN)
 
-    !$acc routine(eos_rp1) seq
+    !$acc routine(eos_rp_gpu) seq
     !$acc routine(riemann_md_vec) seq
 
-    USE eos_module, ONLY: eos_rp1
+    USE eos_module, ONLY: eos_rp_gpu
 
     implicit none
 
@@ -866,13 +866,13 @@ contains
     gdnv_state_rho = rl
     gdnv_state_p = pl
     gdnv_state_massfrac = spl(:)
-    call eos_rp1(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
     csl = gdnv_state_cs
 
     gdnv_state_rho = rr
     gdnv_state_p = pr
     gdnv_state_massfrac = spr(:)
-    call eos_rp1(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
     csr = gdnv_state_cs
 
     wl = sqrt(abs(gamcl*pl*rl))
@@ -905,7 +905,7 @@ contains
     gdnv_state_rho = ro
     gdnv_state_p = po
     gdnv_state_massfrac = sp(:)
-    call eos_rp1(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
     reo = gdnv_state_rho * gdnv_state_e
     co = gdnv_state_cs
 
@@ -916,7 +916,7 @@ contains
     gdnv_state_rho = rstar
     gdnv_state_p = pstar
     gdnv_state_massfrac = sp(:)
-    call eos_rp1(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
     cstar = gdnv_state_cs
     estar = gdnv_state_rho * gdnv_state_e
 
@@ -948,7 +948,7 @@ contains
     gdnv_state_rho = rgd
     gdnv_state_p = qint_gdpres
     gdnv_state_massfrac = sp(:)
-    call eos_rp1(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
     regd = gdnv_state_rho * gdnv_state_e
 
     mask = spout < 0.d0
@@ -966,7 +966,7 @@ contains
     gdnv_state_rho = rgd
     gdnv_state_p = qint_gdpres
     gdnv_state_massfrac = sp(:)
-    call eos_rp1(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
     regd = gdnv_state_rho * gdnv_state_e
 
     qint_gdgame = qint_gdpres/regd + 1.d0
