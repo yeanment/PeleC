@@ -181,7 +181,7 @@ module hyp_advection_module
     !$acc update device(ru,naux,plm_iorder,qvar,nvar,qpres,qrho,qu,qv,qw,qfs,qc,qcsml,nqaux,nadv,urho,umx,umy,umz,ueden,ueint,ufs,utemp,ufx,ufa)
     !$acc enter data create(dqx,dqy,dqz) copyin(flux1,flux2,flux3,d) copyin(v,ax,ay,az,q,flatn,qd_lo,qd_hi,qt_lo,qt_hi,domlo,domhi,qaux,qa_lo,qa_hi,flag,fglo,fghi,lo,hi)
 
-    !$acc parallel loop gang vector collapse(4) present(qt_lo,qt_hi,dqx)
+    !$acc parallel loop gang vector collapse(4) default(present)
     do n = 1, qvar
        do k = qt_lo(3), qt_hi(3)
           do j = qt_lo(2), qt_hi(2)
@@ -202,7 +202,7 @@ module hyp_advection_module
                   flag,fglo,fghi)
     end if
 
-    !$acc kernels present(q,qaux,dqx,ax,flux1)
+    !$acc kernels default(present)
     !$acc loop gang vector collapse(3) private(n,qtempl,qtempr,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp, csmall, cavg, vic, ivar) 
     do k = ilo3, ihi3
        do j = ilo2, ihi2
@@ -287,7 +287,7 @@ module hyp_advection_module
     enddo
     !$acc end kernels
 
-    !$acc parallel loop gang vector collapse(4) present(qt_lo,qt_hi,dqy)
+    !$acc parallel loop gang vector collapse(4) default(present)
     do n = 1, qvar
        do k = qt_lo(3), qt_hi(3)
           do j = qt_lo(2), qt_hi(2)
@@ -308,7 +308,7 @@ module hyp_advection_module
                   flag,fglo,fghi)
     end if
 
-    !$acc kernels present(dqy,qaux,q,ay,flux2)
+    !$acc kernels default(present)
     !$acc loop gang vector collapse(3) private(n,qtempl,qtempr,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp, csmall, cavg, vic, ivar) 
     do k = ilo3, ihi3
        do j = ilo2+1, ihi2
@@ -394,7 +394,7 @@ module hyp_advection_module
     enddo
     !$acc end kernels
 
-    !$acc parallel loop gang vector collapse(4) present(qt_lo,qt_hi,dqz)
+    !$acc parallel loop gang vector collapse(4) default(present)
     do n = 1, qvar
        do k = qt_lo(3), qt_hi(3)
           do j = qt_lo(2), qt_hi(2)
@@ -415,7 +415,7 @@ module hyp_advection_module
                   flag,fglo,fghi)
     end if
 
-    !$acc kernels present(q,qaux,dqz,az,flux3)
+    !$acc kernels default(present)
     !$acc loop gang vector collapse(3) private(n,qtempl,qtempr,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp, csmall, cavg, vic, ivar)
     do k = ilo3+1, ihi3
        do j = ilo2, ihi2
@@ -504,7 +504,7 @@ module hyp_advection_module
     enddo
     !$acc end kernels
 
-    !$acc parallel loop gang vector collapse(4) present(lo,hi,d,flux1,flux2,flux3,v)
+    !$acc parallel loop gang vector collapse(4) default(present)
     do ivar=1,NVAR
        do k = lo(3)-nextra+1, hi(3)+nextra-1
           do j = lo(2)-nextra+1, hi(2)+nextra-1

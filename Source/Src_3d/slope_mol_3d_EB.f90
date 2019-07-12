@@ -49,7 +49,7 @@ contains
       integer :: nbr(-1:1,-1:1,-1:1)
       logical :: flagArrayL, flagArrayR
 
-      !$acc kernels present(dqx,q,qd_lo,qd_hi,qt_lo,qt_hi,domlo,domhi,qaux,qa_lo,qa_hi,flag,fglo,fghi)
+      !$acc kernels default(present)
       !$acc loop gang vector collapse(3) private(nbr,dlft,drgt,flagarrayl,flagarrayr,n,dcen,dlim)
       do k = ilo3, ihi3
          do j = ilo2, ihi2
@@ -128,7 +128,7 @@ contains
       integer :: nbr(-1:1,-1:1,-1:1)
       logical :: flagArrayL, flagArrayR
 
-      !$acc kernels present(dqy,q,qd_lo,qd_hi,qt_lo,qt_hi,domlo,domhi,qaux,qa_lo,qa_hi,flag,fglo,fghi)
+      !$acc kernels default(present)
       !$acc loop gang vector collapse(3) private(nbr,dlft,drgt,flagarrayl,flagarrayr,n,dcen,dlim)
       do k = ilo3, ihi3
          do j = ilo2, ihi2
@@ -207,7 +207,7 @@ contains
       integer :: nbr(-1:1,-1:1,-1:1)
       logical :: flagArrayL, flagArrayR
 
-      !$acc kernels present(dqz,q,qd_lo,qd_hi,qt_lo,qt_hi,domlo,domhi,qaux,qa_lo,qa_hi,flag,fglo,fghi)
+      !$acc kernels default(present)
       !$acc loop gang vector collapse(3) private(nbr,dlft,drgt,flagarrayl,flagarrayr,n,dcen,dlim)
       do k = ilo3, ihi3
          do j = ilo2, ihi2

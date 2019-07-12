@@ -394,7 +394,7 @@ contains
 
     use fundamental_constants_module, only: k_B, n_A
     use actual_network, only : nspec, naux
-    use eos_module, only : eos_re
+    use eos_module, only : eos_re_gpu
     use eos_type_module
     use meth_params_module, only : NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, &
                                    QVAR, QRHO, QU, QV, QW, &
@@ -418,17 +418,31 @@ contains
     integer          :: i, j, k
     integer          :: n, nq, ipassive
     double precision :: kineng, rhoinv
-    double precision :: vel(3)
 
-    type (eos_t) :: eos_state
+    double precision :: eos_state_T
+    double precision :: eos_state_rho
+    double precision :: eos_state_e
+    double precision :: eos_state_massfrac(1:nspec)
+    double precision :: eos_state_aux(1:nspec)
+    double precision :: eos_state_p
+    double precision :: eos_state_dpdr_e
+    double precision :: eos_state_dpde
+    double precision :: eos_state_gam1
+    double precision :: eos_state_cs
+    double precision :: eos_state_wbar
 
+    !$acc routine(eos_re_gpu) seq
+
+    !$acc update device(NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, QVAR, QRHO, QU, QV, QW, QREINT, QPRES, QTEMP, QGAME, QFS, QFX, QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, npassive, upass_map, qpass_map)
+    !$acc enter data copyin(lo,hi,uin,q,qaux)
+    !$acc kernels default(present)
+    !$acc loop collapse(3) private(rhoinv,kineng)
     do k = lo(3), hi(3)
        do j = lo(2), hi(2)
           do i = lo(1), hi(1)
              q(i,j,k,QRHO) = uin(i,j,k,URHO)
              rhoinv = 1.d0/q(i,j,k,QRHO)
-             vel = uin(i,j,k,UMX:UMZ) * rhoinv
-             q(i,j,k,QU:QW) = vel
+             q(i,j,k,QU:QW) = uin(i,j,k,UMX:UMZ) * rhoinv
              kineng = 0.5d0 * q(i,j,k,QRHO) * (q(i,j,k,QU)**2 + q(i,j,k,QV)**2 + q(i,j,k,QW)**2)
              q(i,j,k,QREINT) = (uin(i,j,k,UEDEN) - kineng) * rhoinv
              q(i,j,k,QTEMP) = uin(i,j,k,UTEMP)
@@ -437,9 +451,11 @@ contains
     enddo
 
     ! Load passively advected quatities into q
+    !$acc loop seq
     do ipassive = 1, npassive
        n  = upass_map(ipassive)
        nq = qpass_map(ipassive)
+       !$acc loop collapse(3)
        do k = lo(3),hi(3)
           do j = lo(2),hi(2)
              do i = lo(1),hi(1)
@@ -449,39 +465,38 @@ contains
        enddo
     enddo
 
-    call build(eos_state)
-
     ! get gamc, p, T, c, csml using q state
+    !$acc loop seq
     do k = lo(3), hi(3)
+       !$acc loop seq
        do j = lo(2), hi(2)
+          !$acc loop vector private(eos_state_T, eos_state_rho, eos_state_e, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar, eos_state_massfrac, eos_state_aux)
           do i = lo(1), hi(1)
-             eos_state % T        = q(i,j,k,QTEMP )
-             eos_state % rho      = q(i,j,k,QRHO  )
-             eos_state % e        = q(i,j,k,QREINT)
-             eos_state % massfrac = q(i,j,k,QFS:QFS+nspec-1)
-             eos_state % aux      = q(i,j,k,QFX:QFX+naux-1)
+             eos_state_T        = q(i,j,k,QTEMP )
+             eos_state_rho      = q(i,j,k,QRHO  )
+             eos_state_e        = q(i,j,k,QREINT)
+             eos_state_massfrac = q(i,j,k,QFS:QFS+nspec-1)
+             eos_state_aux      = q(i,j,k,QFX:QFX+naux-1)
 
-             call eos_re(eos_state)
+             call eos_re_gpu(eos_state_T, eos_state_rho, eos_state_e, eos_state_massfrac, eos_state_aux, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar)
 
-             q(i,j,k,QTEMP)  = eos_state % T
-             q(i,j,k,QREINT) = eos_state % e * q(i,j,k,QRHO)
-             q(i,j,k,QPRES)  = eos_state % p
+             q(i,j,k,QTEMP)  = eos_state_T
+             q(i,j,k,QREINT) = eos_state_e * q(i,j,k,QRHO)
+             q(i,j,k,QPRES)  = eos_state_p
              q(i,j,k,QGAME)  = q(i,j,k,QPRES) / q(i,j,k,QREINT) + 1.d0
-             qaux(i,j,k,QDPDR)  = eos_state % dpdr_e
-             qaux(i,j,k,QDPDE)  = eos_state % dpde
-             qaux(i,j,k,QGAMC)  = eos_state % gam1
-             qaux(i,j,k,QC   )  = eos_state % cs
+             qaux(i,j,k,QDPDR)  = eos_state_dpdr_e
+             qaux(i,j,k,QDPDE)  = eos_state_dpde
+             qaux(i,j,k,QGAMC)  = eos_state_gam1
+             qaux(i,j,k,QC   )  = eos_state_cs
              qaux(i,j,k,QCSML)  = max(small, small * qaux(i,j,k,QC))
-             qaux(i,j,k,QRSPEC)  = R/eos_state % wbar
+             qaux(i,j,k,QRSPEC)  = R/eos_state_wbar
           enddo
        enddo
     enddo
-
-    call destroy(eos_state)
+    !$acc end kernels
+    !$acc exit data copyout(q,qaux) delete(lo,hi,uin)
 
   end subroutine ctoprim
-
-
 
   subroutine srctoprim(lo, hi, &
                        q,     q_lo,   q_hi, &

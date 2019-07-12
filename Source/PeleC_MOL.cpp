@@ -120,18 +120,18 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
     FArrayBox dm_as_fine(Box::TheUnitBox(), NUM_STATE);
     FArrayBox fab_drho_as_crse(Box::TheUnitBox(), NUM_STATE);
     IArrayBox fab_rrflag_as_crse(Box::TheUnitBox());
-    
 
     int flag_nscbc_isAnyPerio = (geom.isAnyPeriodic()) ? 1 : 0; 
     int flag_nscbc_perio[BL_SPACEDIM]; // For 3D, we will know which corners have a periodicity
     for (int d=0; d<BL_SPACEDIM; ++d) {
         flag_nscbc_perio[d] = (DefaultGeometry().isPeriodic(d)) ? 1 : 0;
     }
-	  const int*  domain_lo = geom.Domain().loVect();
-	  const int*  domain_hi = geom.Domain().hiVect();
+    const int*  domain_lo = geom.Domain().loVect();
+    const int*  domain_hi = geom.Domain().hiVect();
 
     for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true));
          mfi.isValid(); ++mfi) {
+
 #ifdef PELE_USE_EB
       Real wt = ParallelDescriptor::second();
 #endif
@@ -143,7 +143,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       const Box& dbox = geom.Domain();
       
       const int* lo = vbox.loVect();
-	  const int* hi = vbox.hiVect();
+      const int* hi = vbox.hiVect();
 
 #ifdef PELE_USE_EB
       const EBFArrayBox& Sfab = static_cast<const EBFArrayBox&>(S[mfi]);
@@ -181,26 +181,23 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                 Qaux.dataPtr(), ARLIM_3D(Qaux.loVect()), ARLIM_3D(Qaux.hiVect()));
       }
       
-      
-      
       for (int i = 0; i < BL_SPACEDIM ; i++)  {
-		    const Box& bxtmp = amrex::surroundingNodes(vbox,i);
+        const Box& bxtmp = amrex::surroundingNodes(vbox,i);
         Box TestBox(bxtmp);
         for(int d=0; d<BL_SPACEDIM; ++d) {
           if (i!=d) TestBox.grow(d,1);
         }
-        
-		    bcMask[i].resize(TestBox,1);
+        bcMask[i].resize(TestBox,1);
         bcMask[i].setVal(0);
-	    }
+      }
       
       // Becase bcMask is read in the Riemann solver in any case,
       // here we put physbc values in the appropriate faces for the non-nscbc case
       set_bc_mask(lo, hi, domain_lo, domain_hi,
                   D_DECL(BL_TO_FORTRAN(bcMask[0]),
-	                       BL_TO_FORTRAN(bcMask[1]),
+                         BL_TO_FORTRAN(bcMask[1]),
                          BL_TO_FORTRAN(bcMask[2])));
-
+/*
       if (nscbc_diff == 1)
       {
         impose_NSCBC(lo, hi, domain_lo, domain_hi,
@@ -208,12 +205,12 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                      BL_TO_FORTRAN(Qfab),
                      BL_TO_FORTRAN(Qaux),
                      D_DECL(BL_TO_FORTRAN(bcMask[0]),
-	                          BL_TO_FORTRAN(bcMask[1]),
+                            BL_TO_FORTRAN(bcMask[1]),
                             BL_TO_FORTRAN(bcMask[2])),
                      &flag_nscbc_isAnyPerio, flag_nscbc_perio, 
                      &time, dx, &dt);
       }
-      
+*/     
       // Compute transport coefficients, coincident with Q
       {
         BL_PROFILE("PeleC::get_transport_coeffs call");
@@ -467,13 +464,13 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 #endif
 
 #ifdef PELEC_USE_EB
-      if (typ == FabType::singlevalued) {
-        /* Interpolate fluxes from face centers to face centroids
-         * Note that hybrid divergence and redistribution algorithms require that we
-         *   be able to compute the conservative divergence on 2 grow cells, so we
-         *   need interpolated fluxes on 2 grow cells, and therefore we need face
-         *   centered fluxes on 3.
-         */
+/*      if (typ == FabType::singlevalued) {
+        // Interpolate fluxes from face centers to face centroids
+        // Note that hybrid divergence and redistribution algorithms require that we
+        //   be able to compute the conservative divergence on 2 grow cells, so we
+        //   need interpolated fluxes on 2 grow cells, and therefore we need face
+        //   centered fluxes on 3.
+        
 
         for (int idir=0; idir < BL_SPACEDIM; ++idir) {
           int Nsten = flux_interp_stencil[idir][local_i].size();
@@ -577,6 +574,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       } else if (typ != FabType::regular) {  // Single valued if loop
         amrex::Abort("multi-valued eb boundary fluxes to be implemented");
       }
+*/
 #endif  //  PELEC_USE_EB ifdef
 
       MOLSrcTerm[mfi].setVal(0, vbox, 0, NUM_STATE);
@@ -586,7 +584,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       // do regular flux reg ops
       if (do_reflux && flux_factor != 0 && typ == FabType::regular) 
 #else
-        if (do_reflux && flux_factor != 0)  // no eb in problem
+      if (do_reflux && flux_factor != 0)  // no eb in problem
 #endif
         {
           for (int d = 0; d < BL_SPACEDIM ; d++) {

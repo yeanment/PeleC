@@ -141,8 +141,8 @@ module meth_params_module
   !$acc create(NVAR) &
   !$acc create(URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, UFA, UFS,UFX) &
   !$acc create(QVAR) &
-  !$acc create(QRHO, QU, QV, QW, QPRES, QREINT, QTEMP, QGAME, QFS) &
-  !$acc create(nqaux, qc, qcsml, nadv)
+  !$acc create(QRHO, QU, QV, QW, QPRES, QREINT, QTEMP, QGAME, QFS, QFX) &
+  !$acc create(QGAMC, QDPDR, QDPDE, QRSPEC, npassive, upass_map, qpass_map, nqaux, qc, qcsml, nadv)
 
   !$acc declare create(plm_iorder)
 
