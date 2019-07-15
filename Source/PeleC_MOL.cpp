@@ -167,10 +167,23 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       const FArrayBox& Sfab = S[mfi];
 #endif
 
+      // Container on grown region, for hybrid divergence & redistribution
+      Dterm.resize(cbox, NUM_STATE);
+
       BL_PROFILE_VAR_START(diff);
       Qfab.resize(gbox, QVAR);
       int nqaux = NQAUX > 0 ? NQAUX : 1;
       Qaux.resize(gbox, nqaux);
+
+      for (int d=0; d<BL_SPACEDIM; ++d) {
+        Box ebox = amrex::surroundingNodes(cbox,d);
+        coeff_ec[d].resize(ebox,nCompTr);
+        flux_ec[d].resize(ebox,NUM_STATE);
+        flux_ec[d].setVal(0);
+        int nCompTan = AMREX_D_PICK(1, 2, 6);
+        tander_ec[d].resize(ebox, nCompTan); tander_ec[d].setVal(0);
+      }
+
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
       {
@@ -180,7 +193,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                 Qfab.dataPtr(), ARLIM_3D(Qfab.loVect()), ARLIM_3D(Qfab.hiVect()),
                 Qaux.dataPtr(), ARLIM_3D(Qaux.loVect()), ARLIM_3D(Qaux.hiVect()));
       }
-      
+ /*     
       for (int i = 0; i < BL_SPACEDIM ; i++)  {
         const Box& bxtmp = amrex::surroundingNodes(vbox,i);
         Box TestBox(bxtmp);
@@ -197,7 +210,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                   D_DECL(BL_TO_FORTRAN(bcMask[0]),
                          BL_TO_FORTRAN(bcMask[1]),
                          BL_TO_FORTRAN(bcMask[2])));
-/*
+
       if (nscbc_diff == 1)
       {
         impose_NSCBC(lo, hi, domain_lo, domain_hi,
@@ -226,14 +239,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                              BL_TO_FORTRAN_N_3D(coeff_cc, dComp_lambda));
       }
 
-      // Container on grown region, for hybrid divergence & redistribution
-      Dterm.resize(cbox, NUM_STATE);
-
       for (int d=0; d<BL_SPACEDIM; ++d) {
-        Box ebox = amrex::surroundingNodes(cbox,d);
-        coeff_ec[d].resize(ebox,nCompTr);
-        flux_ec[d].resize(ebox,NUM_STATE);
-        flux_ec[d].setVal(0);
         // Get face-centered transport coefficients
         {
           BL_PROFILE("PeleC::pc_move_transport_coeffs_to_ec call");
@@ -246,12 +252,10 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                                          &d, &nCompTr, &do_harmonic);
         }
 #if (BL_SPACEDIM > 1)
-        int nCompTan = AMREX_D_PICK(1, 2, 6);
-        tander_ec[d].resize(ebox, nCompTan); tander_ec[d].setVal(0);
         // Tangential derivatives on faces only needed for velocity diffusion
-        if (diffuse_vel == 0) {
-          tander_ec[d].setVal(0);
-        } else {
+        //if (diffuse_vel == 0) {
+        //  tander_ec[d].setVal(0);
+        //} else {
           {
             BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs call");
             pc_compute_tangential_vel_derivs(cbox.loVect(),
@@ -283,7 +287,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
             amrex::Abort("multi-valued eb tangential derivatives to be implemented");
           }*/
 #endif
-        }  // diffuse_vel
+        //}  // diffuse_vel
 #endif
       }  // loop over dimension
 
@@ -333,7 +337,9 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       //      test for diffusion works by diffusing only temperature through
       //      this process.  Ideally, we'd redo that test to diffuse a passive
       //      scalar instead....
-          
+
+      // Not yet addressed for ACC
+/*
       if (diffuse_temp == 0 && diffuse_enth == 0) {
         Dterm.setVal(0, Eden);
         Dterm.setVal(0, Eint);
@@ -355,7 +361,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
           flux_ec[d].setVal(0, flux_ec[d].box(), Xmom, 3);
         }
       }
-
+*/
 #ifdef PELE_USE_EB
       //  Set extensive flux at embedded boundary, potentially
       //  non-zero only for heat flux on isothermal boundaries,
