@@ -185,6 +185,11 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
         tander_ec[d].resize(ebox, nCompTan); tander_ec[d].setVal(0);
       }
 
+      unsigned long coeff_size = coeff_cc.size();
+      double* coeff_array = coeff_cc.dataPtr();
+
+      #pragma acc enter data copyin(coeff_array[0:coeff_size])
+
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
       {
@@ -290,6 +295,8 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
         //}  // diffuse_vel
 #endif
       }  // loop over dimension
+
+      #pragma acc exit data copyout(coeff_array[0:coeff_size])
 
       // Compute extensive diffusion fluxes, F.A and (1/Vol).Div(F.A)
       {
