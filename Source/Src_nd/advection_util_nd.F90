@@ -494,7 +494,8 @@ contains
        enddo
     enddo
     !$acc end kernels
-    !$acc exit data copyout(q,qaux) delete(lo,hi,uin)
+    !$acc exit data copyout(qaux) delete(lo,hi,uin)
+    !$acc update host(q)
 
   end subroutine ctoprim
 
