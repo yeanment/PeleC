@@ -422,8 +422,8 @@ contains
     double precision :: eos_state_T
     double precision :: eos_state_rho
     double precision :: eos_state_e
-    double precision :: eos_state_massfrac(1:nspec)
-    double precision :: eos_state_aux(1:nspec)
+    double precision :: eos_state_massfrac(1:9)
+    double precision :: eos_state_aux(1:9)
     double precision :: eos_state_p
     double precision :: eos_state_dpdr_e
     double precision :: eos_state_dpde
@@ -452,7 +452,7 @@ contains
 
     ! Load passively advected quatities into q
     !$acc parallel default(present)
-    !$acc loop gang
+    !$acc loop gang private(n,nq)
     do ipassive = 1, npassive
        n  = upass_map(ipassive)
        nq = qpass_map(ipassive)
