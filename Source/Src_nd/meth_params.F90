@@ -137,14 +137,8 @@ module meth_params_module
 
   ! Create versions of these variables on the GPU
   ! the device update is then done in PeleC_nd.f90
-  !$acc declare &
-  !$acc create(NVAR) &
-  !$acc create(URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, UFA, UFS,UFX) &
-  !$acc create(QVAR) &
-  !$acc create(QRHO, QU, QV, QW, QPRES, QREINT, QTEMP, QGAME, QFS, QFX) &
-  !$acc create(QGAMC, QDPDR, QDPDE, QRSPEC, npassive, upass_map, qpass_map, nqaux, qc, qcsml, nadv)
 
-  !$acc declare create(plm_iorder)
+  !$acc declare create(ntherm,nvar,nq,urho,umx,umy,umz,ueden,ueint,utemp,ufa,ufs,ufx,ushk,qtherm,qvar,qrho,qu,qv,qw,qpres,qreint,qtemp,qgame,qfa,qfs,qfx,nqaux,qgamc,qc,qcsml,qdpdr,qdpde,qrspec,small_dens,small_temp,npassive,upass_map,qpass_map,nqaux,qc,qcsml,nadv,plm_iorder)
 
   ! End the declarations of the ParmParse parameters
 
@@ -289,11 +283,6 @@ contains
     call pp%query("disable_shock_burning", disable_shock_burning)
     call pp%query("do_acc", do_acc)
     call pp%query("track_grid_losses", track_grid_losses)
-
-    ! Create versions of these variables on the GPU
-    ! the device update is then done in PeleC_nd.f90
-    !$acc update device(QRHO, QU, QV, QW, QPRES, QREINT, QTEMP, QGAME, QFS)
-    !$acc update device(plm_iorder)
 
     ! now set the external BC flags
     select case (xl_ext_bc_type)

@@ -127,7 +127,6 @@ contains
     gfacj = dxinv(2)
     gfack = dxinv(3)
 
-    !$acc update device(nvar,umx,umy,umz,ueden,ufs,qvar,qu,qv,qw,qpres,qtemp,qfs,qrho)
     !$acc enter data copyin(hi,lo,gfaci,gfacj,gfack,dxinv,dmnlo,dmnhi,physbc_lo,physbc_hi) create(hii,x,vc)
 
     !$acc parallel default(present)

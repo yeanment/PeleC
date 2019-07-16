@@ -433,7 +433,6 @@ contains
 
     !$acc routine(eos_re_gpu) seq
 
-    !$acc update device(NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, QVAR, QRHO, QU, QV, QW, QREINT, QPRES, QTEMP, QGAME, QFS, QFX, QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, npassive, upass_map, qpass_map)
     !$acc enter data copyin(lo,hi) create(eos_state_aux,eos_state_massfrac)
     !$acc parallel loop gang vector collapse(3) private(rhoinv,kineng) default(present)
     do k = lo(3), hi(3)

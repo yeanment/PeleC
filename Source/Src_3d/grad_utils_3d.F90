@@ -44,7 +44,6 @@ contains
 
     dxinv = 1.d0/deltax
 
-    !$acc update device(qvar,qu,qv,qw)
     !$acc enter data copyin(dxinv,lo,hi)
     if (idir .eq. 0) then
        !$acc parallel loop gang vector collapse(3) default(present)
