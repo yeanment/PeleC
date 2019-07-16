@@ -223,24 +223,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       const unsigned long dterm_size = Dterm.size();
       const double* dterm_array = Dterm.dataPtr();
 
-      #pragma acc enter data copyin(coeff_array[0:coeff_size])
-      #pragma acc enter data copyin(sfab_array[0:sfab_size])
-      #pragma acc enter data copyin(qfab_array[0:qfab_size])
-      #pragma acc enter data copyin(qaux_array[0:qaux_size])
-      #pragma acc enter data copyin(coeff_ec_array_0[0:coeff_ec_size_0])
-      #pragma acc enter data copyin(coeff_ec_array_1[0:coeff_ec_size_1])
-      #pragma acc enter data copyin(coeff_ec_array_2[0:coeff_ec_size_2])
-      #pragma acc enter data copyin(tander_ec_array_0[0:tander_ec_size_0])
-      #pragma acc enter data copyin(tander_ec_array_1[0:tander_ec_size_1])
-      #pragma acc enter data copyin(tander_ec_array_2[0:tander_ec_size_2])
-      #pragma acc enter data copyin(area_array_0[0:area_size_0])
-      #pragma acc enter data copyin(area_array_1[0:area_size_1])
-      #pragma acc enter data copyin(area_array_2[0:area_size_2])
-      #pragma acc enter data copyin(flux_array_0[0:flux_size_0])
-      #pragma acc enter data copyin(flux_array_1[0:flux_size_1])
-      #pragma acc enter data copyin(flux_array_2[0:flux_size_2])
-      #pragma acc enter data copyin(volume_array[0:volume_size])
-      #pragma acc enter data copyin(dterm_array[0:dterm_size])
+      #pragma acc enter data copyin(sfab_array[0:sfab_size], area_array_0[0:area_size_0], area_array_1[0:area_size_1], area_array_2[0:area_size_2], volume_array[0:volume_size]) create(qfab_array[0:qfab_size], qaux_array[0:qaux_size], coeff_ec_array_0[0:coeff_ec_size_0], coeff_ec_array_1[0:coeff_ec_size_1], coeff_ec_array_2[0:coeff_ec_size_2], tander_ec_array_0[0:tander_ec_size_0], tander_ec_array_1[0:tander_ec_size_1], tander_ec_array_2[0:tander_ec_size_2], coeff_array[0:coeff_size], flux_array_0[0:flux_size_0], flux_array_1[0:flux_size_1], flux_array_2[0:flux_size_2], dterm_array[0:dterm_size])
 
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
@@ -388,25 +371,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                     geom.CellSize());
       }
 
-      #pragma acc exit data delete(coeff_array[0:coeff_size])
-      #pragma acc exit data delete(sfab_array[0:sfab_size])
-      #pragma acc exit data delete(qfab_array[0:qfab_size])
-      #pragma acc exit data delete(qaux_array[0:qaux_size])
-      #pragma acc exit data delete(coeff_ec_array_0[0:coeff_ec_size_0])
-      #pragma acc exit data delete(coeff_ec_array_1[0:coeff_ec_size_1])
-      #pragma acc exit data delete(coeff_ec_array_2[0:coeff_ec_size_2])
-      #pragma acc exit data delete(tander_ec_array_0[0:tander_ec_size_0])
-      #pragma acc exit data delete(tander_ec_array_1[0:tander_ec_size_1])
-      #pragma acc exit data delete(tander_ec_array_2[0:tander_ec_size_2])
-      #pragma acc exit data delete(area_array_0[0:area_size_0])
-      #pragma acc exit data delete(area_array_1[0:area_size_1])
-      #pragma acc exit data delete(area_array_2[0:area_size_2])
-      #pragma acc exit data copyout(flux_array_0[0:flux_size_0])
-      #pragma acc exit data copyout(flux_array_1[0:flux_size_1])
-      #pragma acc exit data copyout(flux_array_2[0:flux_size_2])
-      #pragma acc exit data delete(volume_array[0:volume_size])
-      #pragma acc exit data copyout(dterm_array[0:dterm_size])
-      #pragma acc exit data finalize
+      #pragma acc exit data delete(coeff_array[0:coeff_size], sfab_array[0:sfab_size], qfab_array[0:qfab_size], qaux_array[0:qaux_size], coeff_ec_array_0[0:coeff_ec_size_0], coeff_ec_array_1[0:coeff_ec_size_1], coeff_ec_array_2[0:coeff_ec_size_2], tander_ec_array_0[0:tander_ec_size_0], tander_ec_array_1[0:tander_ec_size_1], tander_ec_array_2[0:tander_ec_size_2], area_array_0[0:area_size_0], area_array_1[0:area_size_1], area_array_2[0:area_size_2], volume_array[0:volume_size]) copyout(flux_array_0[0:flux_size_0], flux_array_1[0:flux_size_1], flux_array_2[0:flux_size_2], dterm_array[0:dterm_size]) finalize
   
       // Shut off unwanted diffusion after the fact
       //    ick! Under normal conditions, you either have diffusion on all or
