@@ -169,6 +169,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 
       // Container on grown region, for hybrid divergence & redistribution
       Dterm.resize(cbox, NUM_STATE);
+      Dterm.setVal(0);
 
       BL_PROFILE_VAR_START(diff);
       Qfab.resize(gbox, QVAR);
@@ -185,10 +186,61 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
         tander_ec[d].resize(ebox, nCompTan); tander_ec[d].setVal(0);
       }
 
-      unsigned long coeff_size = coeff_cc.size();
-      double* coeff_array = coeff_cc.dataPtr();
+      const unsigned long coeff_size = coeff_cc.size();
+      const double* coeff_array = coeff_cc.dataPtr();
+      const unsigned long sfab_size = Sfab.size();
+      const double* sfab_array = Sfab.dataPtr();
+      const unsigned long qfab_size = Qfab.size();
+      const double* qfab_array = Qfab.dataPtr();
+      const unsigned long qaux_size = Qaux.size();
+      const double* qaux_array = Qaux.dataPtr();
+      const unsigned long coeff_ec_size_0 = coeff_ec[0].size();
+      const double* coeff_ec_array_0 = coeff_ec[0].dataPtr();
+      const unsigned long coeff_ec_size_1 = coeff_ec[1].size();
+      const double* coeff_ec_array_1 = coeff_ec[1].dataPtr();
+      const unsigned long coeff_ec_size_2 = coeff_ec[2].size();
+      const double* coeff_ec_array_2 = coeff_ec[2].dataPtr();
+      const unsigned long tander_ec_size_0 = tander_ec[0].size();
+      const double* tander_ec_array_0 = tander_ec[0].dataPtr();
+      const unsigned long tander_ec_size_1 = tander_ec[1].size();
+      const double* tander_ec_array_1 = tander_ec[1].dataPtr();
+      const unsigned long tander_ec_size_2 = tander_ec[2].size();
+      const double* tander_ec_array_2 = tander_ec[2].dataPtr();
+      const unsigned long area_size_0 = area[0][mfi].size();
+      const double* area_array_0 = area[0][mfi].dataPtr();
+      const unsigned long area_size_1 = area[1][mfi].size();
+      const double* area_array_1 = area[1][mfi].dataPtr();
+      const unsigned long area_size_2 = area[2][mfi].size();
+      const double* area_array_2 = area[2][mfi].dataPtr();
+      const unsigned long flux_size_0 = flux_ec[0].size();
+      const double* flux_array_0 = flux_ec[0].dataPtr();
+      const unsigned long flux_size_1 = flux_ec[1].size();
+      const double* flux_array_1 = flux_ec[1].dataPtr();
+      const unsigned long flux_size_2 = flux_ec[2].size();
+      const double* flux_array_2 = flux_ec[2].dataPtr();
+      const unsigned long volume_size = volume[mfi].size();
+      const double* volume_array = volume[mfi].dataPtr();
+      const unsigned long dterm_size = Dterm.size();
+      const double* dterm_array = Dterm.dataPtr();
 
       #pragma acc enter data copyin(coeff_array[0:coeff_size])
+      #pragma acc enter data copyin(sfab_array[0:sfab_size])
+      #pragma acc enter data copyin(qfab_array[0:qfab_size])
+      #pragma acc enter data copyin(qaux_array[0:qaux_size])
+      #pragma acc enter data copyin(coeff_ec_array_0[0:coeff_ec_size_0])
+      #pragma acc enter data copyin(coeff_ec_array_1[0:coeff_ec_size_1])
+      #pragma acc enter data copyin(coeff_ec_array_2[0:coeff_ec_size_2])
+      #pragma acc enter data copyin(tander_ec_array_0[0:tander_ec_size_0])
+      #pragma acc enter data copyin(tander_ec_array_1[0:tander_ec_size_1])
+      #pragma acc enter data copyin(tander_ec_array_2[0:tander_ec_size_2])
+      #pragma acc enter data copyin(area_array_0[0:area_size_0])
+      #pragma acc enter data copyin(area_array_1[0:area_size_1])
+      #pragma acc enter data copyin(area_array_2[0:area_size_2])
+      #pragma acc enter data copyin(flux_array_0[0:flux_size_0])
+      #pragma acc enter data copyin(flux_array_1[0:flux_size_1])
+      #pragma acc enter data copyin(flux_array_2[0:flux_size_2])
+      #pragma acc enter data copyin(volume_array[0:volume_size])
+      #pragma acc enter data copyin(dterm_array[0:dterm_size])
 
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
@@ -296,8 +348,6 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 #endif
       }  // loop over dimension
 
-      #pragma acc exit data copyout(coeff_array[0:coeff_size])
-
       // Compute extensive diffusion fluxes, F.A and (1/Vol).Div(F.A)
       {
         BL_PROFILE("PeleC::pc_diffterm()");
@@ -338,6 +388,26 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                     geom.CellSize());
       }
 
+      #pragma acc exit data delete(coeff_array[0:coeff_size])
+      #pragma acc exit data delete(sfab_array[0:sfab_size])
+      #pragma acc exit data delete(qfab_array[0:qfab_size])
+      #pragma acc exit data delete(qaux_array[0:qaux_size])
+      #pragma acc exit data delete(coeff_ec_array_0[0:coeff_ec_size_0])
+      #pragma acc exit data delete(coeff_ec_array_1[0:coeff_ec_size_1])
+      #pragma acc exit data delete(coeff_ec_array_2[0:coeff_ec_size_2])
+      #pragma acc exit data delete(tander_ec_array_0[0:tander_ec_size_0])
+      #pragma acc exit data delete(tander_ec_array_1[0:tander_ec_size_1])
+      #pragma acc exit data delete(tander_ec_array_2[0:tander_ec_size_2])
+      #pragma acc exit data delete(area_array_0[0:area_size_0])
+      #pragma acc exit data delete(area_array_1[0:area_size_1])
+      #pragma acc exit data delete(area_array_2[0:area_size_2])
+      #pragma acc exit data copyout(flux_array_0[0:flux_size_0])
+      #pragma acc exit data copyout(flux_array_1[0:flux_size_1])
+      #pragma acc exit data copyout(flux_array_2[0:flux_size_2])
+      #pragma acc exit data delete(volume_array[0:volume_size])
+      #pragma acc exit data copyout(dterm_array[0:dterm_size])
+      #pragma acc exit data finalize
+  
       // Shut off unwanted diffusion after the fact
       //    ick! Under normal conditions, you either have diffusion on all or
       //      none, so this shouldn't be done this way.  However, the regression

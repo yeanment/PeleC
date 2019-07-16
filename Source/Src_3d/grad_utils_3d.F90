@@ -45,7 +45,7 @@ contains
     dxinv = 1.d0/deltax
 
     !$acc update device(qvar,qu,qv,qw)
-    !$acc enter data copyin(q,dxinv,lo,hi,dlo,dhi) create(td)
+    !$acc enter data copyin(dxinv,lo,hi)
     if (idir .eq. 0) then
        !$acc parallel loop gang vector collapse(3) default(present)
        do k=lo(3),hi(3)
@@ -94,7 +94,7 @@ contains
        enddo
        !$acc end parallel
     endif
-    !$acc exit data copyout(td) delete(q,dxinv,lo,hi,dlo,dhi) 
+    !$acc exit data delete(dxinv,lo,hi)
   end subroutine pc_compute_tangential_vel_derivs
 
 #ifdef PELEC_USE_EB

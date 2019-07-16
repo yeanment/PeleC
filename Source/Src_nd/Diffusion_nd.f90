@@ -319,7 +319,7 @@ contains
     ! local variables
     integer          :: i, j, k, n
 
-    !$acc enter data copyin(lo,hi) create(efab)
+    !$acc enter data copyin(lo,hi)
     if (do_harmonic .eq. 0) then
        if (dir .EQ. 0) then
           !$acc parallel loop gang vector collapse(4) default(present)
@@ -406,7 +406,7 @@ contains
           !$acc end parallel
        end if
     end if
-    !$acc exit data copyout(efab) delete(lo,hi)
+    !$acc exit data delete(lo,hi)
 
   end subroutine pc_move_transport_coeffs_to_ec
 

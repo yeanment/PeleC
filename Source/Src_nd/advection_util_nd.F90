@@ -434,7 +434,7 @@ contains
     !$acc routine(eos_re_gpu) seq
 
     !$acc update device(NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, QVAR, QRHO, QU, QV, QW, QREINT, QPRES, QTEMP, QGAME, QFS, QFX, QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, npassive, upass_map, qpass_map)
-    !$acc enter data copyin(lo,hi,uin,q,qaux)
+    !$acc enter data copyin(lo,hi) create(eos_state_aux,eos_state_massfrac)
     !$acc kernels default(present)
     !$acc loop collapse(3) private(rhoinv,kineng)
     do k = lo(3), hi(3)
@@ -494,8 +494,7 @@ contains
        enddo
     enddo
     !$acc end kernels
-    !$acc exit data copyout(qaux) delete(lo,hi,uin)
-    !$acc update host(q)
+    !$acc exit data delete(lo,hi) delete(eos_state_aux,eos_state_massfrac)
 
   end subroutine ctoprim
 
