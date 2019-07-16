@@ -128,7 +128,7 @@ contains
     gfack = dxinv(3)
 
     !$acc update device(nvar,umx,umy,umz,ueden,ufs,qvar,qu,qv,qw,qpres,qtemp,qfs,qrho)
-    !$acc enter data copyin(hi,lo,dx,dy,dz,gfaci,gfacj,gfack,dxinv,hii,x,dmnlo,dmnhi,physbc_lo,physbc_hi) create(vc)
+    !$acc enter data copyin(hi,lo,gfaci,gfacj,gfack,dxinv,dmnlo,dmnhi,physbc_lo,physbc_hi) create(hii,x,vc)
 
     !$acc parallel default(present)
     call eos_ytx_vec_gpu(q,x,lo,hi,nspec_2,qfs,qvar)
@@ -419,7 +419,7 @@ contains
        end do
     end do
     !$acc end kernels
-    !$acc exit data delete(hi,lo,dx,dy,dz,gfaci,gfacj,gfack,dxinv,hii,x,q,dmnlo,dmnhi,physbc_lo,physbc_hi,vc)
+    !$acc exit data delete(hi,lo,gfaci,gfacj,gfack,dxinv,hii,x,q,dmnlo,dmnhi,physbc_lo,physbc_hi,vc)
 
   end subroutine pc_diffterm
 
