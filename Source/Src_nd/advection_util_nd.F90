@@ -435,8 +435,7 @@ contains
 
     !$acc update device(NVAR, URHO, UMX, UMZ, UEDEN, UTEMP, QVAR, QRHO, QU, QV, QW, QREINT, QPRES, QTEMP, QGAME, QFS, QFX, QC, QCSML, QGAMC, QDPDR, QDPDE, QRSPEC, NQAUX, npassive, upass_map, qpass_map)
     !$acc enter data copyin(lo,hi) create(eos_state_aux,eos_state_massfrac)
-    !$acc kernels default(present)
-    !$acc loop collapse(3) private(rhoinv,kineng)
+    !$acc parallel loop gang vector collapse(3) private(rhoinv,kineng) default(present)
     do k = lo(3), hi(3)
        do j = lo(2), hi(2)
           do i = lo(1), hi(1)
@@ -449,13 +448,15 @@ contains
           enddo
        enddo
     enddo
+    !$acc end parallel
 
     ! Load passively advected quatities into q
-    !$acc loop seq
+    !$acc parallel default(present)
+    !$acc loop gang
     do ipassive = 1, npassive
        n  = upass_map(ipassive)
        nq = qpass_map(ipassive)
-       !$acc loop collapse(3)
+       !$acc loop vector collapse(3)
        do k = lo(3),hi(3)
           do j = lo(2),hi(2)
              do i = lo(1),hi(1)
@@ -464,13 +465,12 @@ contains
           enddo
        enddo
     enddo
+    !$acc end parallel
 
     ! get gamc, p, T, c, csml using q state
-    !$acc loop seq
+    !$acc parallel loop gang vector collapse(3) private(eos_state_T, eos_state_rho, eos_state_e, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar, eos_state_massfrac, eos_state_aux) default(present)
     do k = lo(3), hi(3)
-       !$acc loop seq
        do j = lo(2), hi(2)
-          !$acc loop vector private(eos_state_T, eos_state_rho, eos_state_e, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar, eos_state_massfrac, eos_state_aux)
           do i = lo(1), hi(1)
              eos_state_T        = q(i,j,k,QTEMP )
              eos_state_rho      = q(i,j,k,QRHO  )
@@ -493,7 +493,7 @@ contains
           enddo
        enddo
     enddo
-    !$acc end kernels
+    !$acc end parallel
     !$acc exit data delete(lo,hi) delete(eos_state_aux,eos_state_massfrac)
 
   end subroutine ctoprim
