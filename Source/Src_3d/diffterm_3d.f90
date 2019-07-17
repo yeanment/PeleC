@@ -109,9 +109,7 @@ contains
     double precision :: pface, hface, Xface, Yface
     double precision :: dTdx, dTdy, dTdz, dXdx, dXdy, dXdz, Vd
     double precision :: Vc(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
-    double precision :: dlnpi
-    double precision :: dlnpj
-    double precision :: dlnpk
+    double precision :: dlnpi, dlnpj, dlnpk
     double precision :: X(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec_2)
     double precision :: hii(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec_2)
     double precision, parameter :: twoThirds = 2.d0/3.d0
@@ -124,7 +122,7 @@ contains
     dxinv2 = 1.d0/deltax(2)
     dxinv3 = 1.d0/deltax(3)
 
-    !$acc enter data copyin(hi,lo,dmnlo,dmnhi) create(hii,x,vc)
+    !$acc enter data copyin(hi,lo) create(hii,x,vc)
 
     !$acc parallel default(present)
     call eos_ytx_vec_gpu(q,x,lo,hi,nspec_2,qfs,qvar)
@@ -415,7 +413,7 @@ contains
        end do
     end do
     !$acc end kernels
-    !$acc exit data delete(hi,lo,hii,x,q,dmnlo,dmnhi,vc)
+    !$acc exit data delete(hi,lo,hii,x,q,vc)
 
   end subroutine pc_diffterm
 
