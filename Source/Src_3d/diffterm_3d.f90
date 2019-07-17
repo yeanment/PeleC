@@ -110,9 +110,9 @@ contains
     double precision :: pface, hface, Xface, Yface
     double precision :: dTdx, dTdy, dTdz, dXdx, dXdy, dXdz, Vd
     double precision :: Vc(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
-    double precision :: dlnpi, gfaci(lo(1):hi(1)+1)
-    double precision :: dlnpj, gfacj(lo(2):hi(2)+1)
-    double precision :: dlnpk, gfack(lo(3):hi(3)+1)
+    double precision :: dlnpi
+    double precision :: dlnpj
+    double precision :: dlnpk
     double precision :: X(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec_2)
     double precision :: hii(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec_2)
     double precision, parameter :: twoThirds = 2.d0/3.d0
@@ -123,11 +123,7 @@ contains
 
     dxinv = 1.d0/deltax
 
-    gfaci = dxinv(1)
-    gfacj = dxinv(2)
-    gfack = dxinv(3)
-
-    !$acc enter data copyin(hi,lo,gfaci,gfacj,gfack,dxinv,dmnlo,dmnhi,physbc_lo,physbc_hi) create(hii,x,vc)
+    !$acc enter data copyin(hi,lo,dxinv,dmnlo,dmnhi,physbc_lo,physbc_hi) create(hii,x,vc)
 
     !$acc parallel default(present)
     call eos_ytx_vec_gpu(q,x,lo,hi,nspec_2,qfs,qvar)
@@ -139,10 +135,10 @@ contains
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)+1
-             dTdx = gfaci(i) * (Q(i,j,k,QTEMP) - Q(i-1,j,k,QTEMP))
-             dudx = gfaci(i) * (Q(i,j,k,QU)    - Q(i-1,j,k,QU))
-             dvdx = gfaci(i) * (Q(i,j,k,QV)    - Q(i-1,j,k,QV))
-             dwdx = gfaci(i) * (Q(i,j,k,QW)    - Q(i-1,j,k,QW))
+             dTdx = dxinv(1) * (Q(i,j,k,QTEMP) - Q(i-1,j,k,QTEMP))
+             dudx = dxinv(1) * (Q(i,j,k,QU)    - Q(i-1,j,k,QU))
+             dvdx = dxinv(1) * (Q(i,j,k,QV)    - Q(i-1,j,k,QV))
+             dwdx = dxinv(1) * (Q(i,j,k,QW)    - Q(i-1,j,k,QW))
              dudy = tx(i,j,k,1)
              dvdy = tx(i,j,k,2)
              dudz = tx(i,j,k,4)
@@ -176,11 +172,11 @@ contains
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)+1
                 pface = 0.5d0*(Q(i,j,k,QPRES) + Q(i-1,j,k,QPRES))
-                dlnpi = gfaci(i) * (Q(i,j,k,QPRES) - Q(i-1,j,k,QPRES)) / pface
+                dlnpi = dxinv(1) * (Q(i,j,k,QPRES) - Q(i-1,j,k,QPRES)) / pface
                 Xface = 0.5d0*(X(i,j,k,n) + X(i-1,j,k,n))
                 Yface = 0.5d0*(Q(i,j,k,QFS+n-1) + Q(i-1,j,k,QFS+n-1))
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i-1,j,k,n))
-                dXdx = gfaci(i) * (X(i,j,k,n) - X(i-1,j,k,n))
+                dXdx = dxinv(1) * (X(i,j,k,n) - X(i-1,j,k,n))
                 Vd = -Dx(i,j,k,n)*(dXdx + (Xface - Yface) * dlnpi)
                 Vc(i,j,k) = Vc(i,j,k) + Vd
                 fx(i,j,k,UFS+n-1) = Vd
@@ -229,10 +225,10 @@ contains
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)+1
           do i=lo(1),hi(1)
-             dTdy = gfacj(j) * (Q(i,j,k,QTEMP) - Q(i,j-1,k,QTEMP))
-             dudy = gfacj(j) * (Q(i,j,k,QU)    - Q(i,j-1,k,QU))
-             dvdy = gfacj(j) * (Q(i,j,k,QV)    - Q(i,j-1,k,QV))
-             dwdy = gfacj(j) * (Q(i,j,k,QW)    - Q(i,j-1,k,QW))
+             dTdy = dxinv(2) * (Q(i,j,k,QTEMP) - Q(i,j-1,k,QTEMP))
+             dudy = dxinv(2) * (Q(i,j,k,QU)    - Q(i,j-1,k,QU))
+             dvdy = dxinv(2) * (Q(i,j,k,QV)    - Q(i,j-1,k,QV))
+             dwdy = dxinv(2) * (Q(i,j,k,QW)    - Q(i,j-1,k,QW))
              dudx = ty(i,j,k,1)
              dvdx = ty(i,j,k,2)
              dvdz = ty(i,j,k,5)
@@ -266,11 +262,11 @@ contains
           do j=lo(2),hi(2)+1
              do i=lo(1),hi(1)
                 pface = 0.5d0*(Q(i,j,k,QPRES) + Q(i,j-1,k,QPRES))
-                dlnpj = gfacj(j) * (Q(i,j,k,QPRES) - Q(i,j-1,k,QPRES)) / pface
+                dlnpj = dxinv(2) * (Q(i,j,k,QPRES) - Q(i,j-1,k,QPRES)) / pface
                 Xface = 0.5d0*(X(i,j,k,n) + X(i,j-1,k,n))
                 Yface = 0.5d0*(Q(i,j,k,QFS+n-1) + Q(i,j-1,k,QFS+n-1))
                 hface = 0.5d0*(hii(i,j,k,n)   + hii(i,j-1,k,n))
-                dXdy = gfacj(j) * (X(i,j,k,n) - X(i,j-1,k,n))
+                dXdy = dxinv(2) * (X(i,j,k,n) - X(i,j-1,k,n))
                 Vd = -Dy(i,j,k,n)*(dXdy + (Xface - Yface) * dlnpj)
                 Vc(i,j,k) = Vc(i,j,k) + Vd
                 fy(i,j,k,UFS+n-1) = Vd
@@ -319,10 +315,10 @@ contains
     do k=lo(3),hi(3)+1
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
-             dTdz = gfack(k) * (Q(i,j,k,QTEMP) - Q(i,j,k-1,QTEMP))
-             dudz = gfack(k) * (Q(i,j,k,QU)    - Q(i,j,k-1,QU))
-             dvdz = gfack(k) * (Q(i,j,k,QV)    - Q(i,j,k-1,QV))
-             dwdz = gfack(k) * (Q(i,j,k,QW)    - Q(i,j,k-1,QW))
+             dTdz = dxinv(3) * (Q(i,j,k,QTEMP) - Q(i,j,k-1,QTEMP))
+             dudz = dxinv(3) * (Q(i,j,k,QU)    - Q(i,j,k-1,QU))
+             dvdz = dxinv(3) * (Q(i,j,k,QV)    - Q(i,j,k-1,QV))
+             dwdz = dxinv(3) * (Q(i,j,k,QW)    - Q(i,j,k-1,QW))
              dudx = tz(i,j,k,1)
              dwdx = tz(i,j,k,3)
              dvdy = tz(i,j,k,5)
@@ -356,7 +352,7 @@ contains
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)
                 pface = 0.5d0*(Q(i,j,k,QPRES) + Q(i,j,k-1,QPRES))
-                dlnpk = gfack(k) * (Q(i,j,k,QPRES) - Q(i,j,k-1,QPRES)) / pface
+                dlnpk = dxinv(3) * (Q(i,j,k,QPRES) - Q(i,j,k-1,QPRES)) / pface
                 Xface = 0.5d0*(X(i,j,k,n) + X(i,j,k-1,n))
                 Yface = 0.5d0*(Q(i,j,k,QFS+n-1) + Q(i,j,k-1,QFS+n-1))
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i,j,k-1,n))
@@ -418,7 +414,7 @@ contains
        end do
     end do
     !$acc end kernels
-    !$acc exit data delete(hi,lo,gfaci,gfacj,gfack,dxinv,hii,x,q,dmnlo,dmnhi,physbc_lo,physbc_hi,vc)
+    !$acc exit data delete(hi,lo,dxinv,hii,x,q,dmnlo,dmnhi,physbc_lo,physbc_hi,vc)
 
   end subroutine pc_diffterm
 
