@@ -39,23 +39,31 @@ contains
     real(rt), intent(inout) :: td(tdlo(1):tdhi(1),tdlo(2):tdhi(2),tdlo(3):tdhi(3),6)
     real(rt), intent(in   ) :: deltax(3)
 
-    integer :: i, j, k
-    real(rt) :: dxinv(3)
+    integer :: i, j, k, lo1, lo2, lo3, hi1, hi2, hi3
+    real(rt) :: dxinv1, dxinv2, dxinv3
 
-    dxinv = 1.d0/deltax
+    dxinv1 = 1.d0/deltax(1)
+    dxinv2 = 1.d0/deltax(2)
+    dxinv3 = 1.d0/deltax(3)
 
-    !$acc enter data copyin(dxinv,lo,hi)
+    lo1 = lo(1)
+    lo2 = lo(2)
+    lo3 = lo(3)
+    hi1 = hi(1)
+    hi2 = hi(2)
+    hi3 = hi(3)
+
     if (idir .eq. 0) then
        !$acc parallel loop gang vector collapse(3) default(present)
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)+1
-                td(i,j,k,1) = 0.25d0*dxinv(2)*(Q(i,j+1,k,QU)+Q(i-1,j+1,k,QU)-Q(i,j-1,k,QU)-Q(i-1,j-1,k,QU))
-                td(i,j,k,2) = 0.25d0*dxinv(2)*(Q(i,j+1,k,QV)+Q(i-1,j+1,k,QV)-Q(i,j-1,k,QV)-Q(i-1,j-1,k,QV))
-                td(i,j,k,3) = 0.25d0*dxinv(2)*(Q(i,j+1,k,QW)+Q(i-1,j+1,k,QW)-Q(i,j-1,k,QW)-Q(i-1,j-1,k,QW))
-                td(i,j,k,4) = 0.25d0*dxinv(3)*(Q(i,j,k+1,QU)+Q(i-1,j,k+1,QU)-Q(i,j,k-1,QU)-Q(i-1,j,k-1,QU))
-                td(i,j,k,5) = 0.25d0*dxinv(3)*(Q(i,j,k+1,QV)+Q(i-1,j,k+1,QV)-Q(i,j,k-1,QV)-Q(i-1,j,k-1,QV))
-                td(i,j,k,6) = 0.25d0*dxinv(3)*(Q(i,j,k+1,QW)+Q(i-1,j,k+1,QW)-Q(i,j,k-1,QW)-Q(i-1,j,k-1,QW))
+       do k=lo3,hi3
+          do j=lo2,hi2
+             do i=lo1,hi1+1
+                td(i,j,k,1) = 0.25d0*dxinv2*(Q(i,j+1,k,QU)+Q(i-1,j+1,k,QU)-Q(i,j-1,k,QU)-Q(i-1,j-1,k,QU))
+                td(i,j,k,2) = 0.25d0*dxinv2*(Q(i,j+1,k,QV)+Q(i-1,j+1,k,QV)-Q(i,j-1,k,QV)-Q(i-1,j-1,k,QV))
+                td(i,j,k,3) = 0.25d0*dxinv2*(Q(i,j+1,k,QW)+Q(i-1,j+1,k,QW)-Q(i,j-1,k,QW)-Q(i-1,j-1,k,QW))
+                td(i,j,k,4) = 0.25d0*dxinv3*(Q(i,j,k+1,QU)+Q(i-1,j,k+1,QU)-Q(i,j,k-1,QU)-Q(i-1,j,k-1,QU))
+                td(i,j,k,5) = 0.25d0*dxinv3*(Q(i,j,k+1,QV)+Q(i-1,j,k+1,QV)-Q(i,j,k-1,QV)-Q(i-1,j,k-1,QV))
+                td(i,j,k,6) = 0.25d0*dxinv3*(Q(i,j,k+1,QW)+Q(i-1,j,k+1,QW)-Q(i,j,k-1,QW)-Q(i-1,j,k-1,QW))
              enddo
           enddo
        enddo
@@ -63,15 +71,15 @@ contains
 
     else if (idir .eq. 1) then
        !$acc parallel loop gang vector collapse(3) default(present)
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)+1
-             do i=lo(1),hi(1)
-                td(i,j,k,1) = 0.25d0*dxinv(1)*(Q(i+1,j,k,QU)+Q(i+1,j-1,k,QU)-Q(i-1,j,k,QU)-Q(i-1,j-1,k,QU))
-                td(i,j,k,2) = 0.25d0*dxinv(1)*(Q(i+1,j,k,QV)+Q(i+1,j-1,k,QV)-Q(i-1,j,k,QV)-Q(i-1,j-1,k,QV))
-                td(i,j,k,3) = 0.25d0*dxinv(1)*(Q(i+1,j,k,QW)+Q(i+1,j-1,k,QW)-Q(i-1,j,k,QW)-Q(i-1,j-1,k,QW))
-                td(i,j,k,4) = 0.25d0*dxinv(3)*(Q(i,j,k+1,QU)+Q(i,j-1,k+1,QU)-Q(i,j,k-1,QU)-Q(i,j-1,k-1,QU))
-                td(i,j,k,5) = 0.25d0*dxinv(3)*(Q(i,j,k+1,QV)+Q(i,j-1,k+1,QV)-Q(i,j,k-1,QV)-Q(i,j-1,k-1,QV))
-                td(i,j,k,6) = 0.25d0*dxinv(3)*(Q(i,j,k+1,QW)+Q(i,j-1,k+1,QW)-Q(i,j,k-1,QW)-Q(i,j-1,k-1,QW))
+       do k=lo3,hi3
+          do j=lo2,hi2+1
+             do i=lo1,hi1
+                td(i,j,k,1) = 0.25d0*dxinv1*(Q(i+1,j,k,QU)+Q(i+1,j-1,k,QU)-Q(i-1,j,k,QU)-Q(i-1,j-1,k,QU))
+                td(i,j,k,2) = 0.25d0*dxinv1*(Q(i+1,j,k,QV)+Q(i+1,j-1,k,QV)-Q(i-1,j,k,QV)-Q(i-1,j-1,k,QV))
+                td(i,j,k,3) = 0.25d0*dxinv1*(Q(i+1,j,k,QW)+Q(i+1,j-1,k,QW)-Q(i-1,j,k,QW)-Q(i-1,j-1,k,QW))
+                td(i,j,k,4) = 0.25d0*dxinv3*(Q(i,j,k+1,QU)+Q(i,j-1,k+1,QU)-Q(i,j,k-1,QU)-Q(i,j-1,k-1,QU))
+                td(i,j,k,5) = 0.25d0*dxinv3*(Q(i,j,k+1,QV)+Q(i,j-1,k+1,QV)-Q(i,j,k-1,QV)-Q(i,j-1,k-1,QV))
+                td(i,j,k,6) = 0.25d0*dxinv3*(Q(i,j,k+1,QW)+Q(i,j-1,k+1,QW)-Q(i,j,k-1,QW)-Q(i,j-1,k-1,QW))
              enddo
           enddo
        enddo
@@ -79,21 +87,20 @@ contains
 
     else
        !$acc parallel loop gang vector collapse(3) default(present)
-       do k=lo(3),hi(3)+1
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)
-                td(i,j,k,1) = 0.25d0*dxinv(1)*(Q(i+1,j,k,QU)+Q(i+1,j,k-1,QU)-Q(i-1,j,k,QU)-Q(i-1,j,k-1,QU))
-                td(i,j,k,2) = 0.25d0*dxinv(1)*(Q(i+1,j,k,QV)+Q(i+1,j,k-1,QV)-Q(i-1,j,k,QV)-Q(i-1,j,k-1,QV))
-                td(i,j,k,3) = 0.25d0*dxinv(1)*(Q(i+1,j,k,QW)+Q(i+1,j,k-1,QW)-Q(i-1,j,k,QW)-Q(i-1,j,k-1,QW))
-                td(i,j,k,4) = 0.25d0*dxinv(2)*(Q(i,j+1,k,QU)+Q(i,j+1,k-1,QU)-Q(i,j-1,k,QU)-Q(i,j-1,k-1,QU))
-                td(i,j,k,5) = 0.25d0*dxinv(2)*(Q(i,j+1,k,QV)+Q(i,j+1,k-1,QV)-Q(i,j-1,k,QV)-Q(i,j-1,k-1,QV))
-                td(i,j,k,6) = 0.25d0*dxinv(2)*(Q(i,j+1,k,QW)+Q(i,j+1,k-1,QW)-Q(i,j-1,k,QW)-Q(i,j-1,k-1,QW)) 
+       do k=lo3,hi3+1
+          do j=lo2,hi2
+             do i=lo1,hi1
+                td(i,j,k,1) = 0.25d0*dxinv1*(Q(i+1,j,k,QU)+Q(i+1,j,k-1,QU)-Q(i-1,j,k,QU)-Q(i-1,j,k-1,QU))
+                td(i,j,k,2) = 0.25d0*dxinv1*(Q(i+1,j,k,QV)+Q(i+1,j,k-1,QV)-Q(i-1,j,k,QV)-Q(i-1,j,k-1,QV))
+                td(i,j,k,3) = 0.25d0*dxinv1*(Q(i+1,j,k,QW)+Q(i+1,j,k-1,QW)-Q(i-1,j,k,QW)-Q(i-1,j,k-1,QW))
+                td(i,j,k,4) = 0.25d0*dxinv2*(Q(i,j+1,k,QU)+Q(i,j+1,k-1,QU)-Q(i,j-1,k,QU)-Q(i,j-1,k-1,QU))
+                td(i,j,k,5) = 0.25d0*dxinv2*(Q(i,j+1,k,QV)+Q(i,j+1,k-1,QV)-Q(i,j-1,k,QV)-Q(i,j-1,k-1,QV))
+                td(i,j,k,6) = 0.25d0*dxinv2*(Q(i,j+1,k,QW)+Q(i,j+1,k-1,QW)-Q(i,j-1,k,QW)-Q(i,j-1,k-1,QW)) 
              enddo
           enddo
        enddo
        !$acc end parallel
     endif
-    !$acc exit data delete(dxinv,lo,hi)
   end subroutine pc_compute_tangential_vel_derivs
 
 #ifdef PELEC_USE_EB
