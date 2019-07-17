@@ -415,7 +415,7 @@ contains
     double precision, parameter :: small = 1.d-8
     double precision, parameter :: R = k_B*n_A
 
-    integer          :: i, j, k
+    integer          :: i, j, k, lo1, lo2, lo3, hi1, hi2, hi3
     integer          :: n, nq, ipassive
     double precision :: kineng, rhoinv
 
@@ -433,11 +433,18 @@ contains
 
     !$acc routine(eos_re_gpu) seq
 
-    !$acc enter data copyin(lo,hi) create(eos_state_aux,eos_state_massfrac)
+    lo1 = lo(1)
+    lo2 = lo(2)
+    lo3 = lo(3)
+    hi1 = hi(1)
+    hi2 = hi(2)
+    hi3 = hi(3)
+
+    !$acc enter data create(eos_state_aux,eos_state_massfrac)
     !$acc parallel loop gang vector collapse(3) private(rhoinv,kineng) default(present)
-    do k = lo(3), hi(3)
-       do j = lo(2), hi(2)
-          do i = lo(1), hi(1)
+    do k = lo3, hi3
+       do j = lo2, hi2
+          do i = lo1, hi1
              q(i,j,k,QRHO) = uin(i,j,k,URHO)
              rhoinv = 1.d0/q(i,j,k,QRHO)
              q(i,j,k,QU:QW) = uin(i,j,k,UMX:UMZ) * rhoinv
@@ -468,9 +475,9 @@ contains
 
     ! get gamc, p, T, c, csml using q state
     !$acc parallel loop gang vector collapse(3) private(eos_state_T, eos_state_rho, eos_state_e, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar, eos_state_massfrac, eos_state_aux) default(present)
-    do k = lo(3), hi(3)
-       do j = lo(2), hi(2)
-          do i = lo(1), hi(1)
+    do k = lo3, hi3
+       do j = lo2, hi2
+          do i = lo1, hi1
              eos_state_T        = q(i,j,k,QTEMP )
              eos_state_rho      = q(i,j,k,QRHO  )
              eos_state_e        = q(i,j,k,QREINT)
@@ -493,7 +500,7 @@ contains
        enddo
     enddo
     !$acc end parallel
-    !$acc exit data delete(lo,hi) delete(eos_state_aux,eos_state_massfrac)
+    !$acc exit data delete(eos_state_aux,eos_state_massfrac)
 
   end subroutine ctoprim
 
