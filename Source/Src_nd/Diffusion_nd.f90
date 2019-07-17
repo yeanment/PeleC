@@ -254,7 +254,7 @@ contains
              end do
           end do
        endif
-       
+
        if (lo(1) .eq. vlo(1) .and. lo(2) .eq. vlo(2) .and. hi(3) .eq. vhi(3)) then
           do k = hi(3)+1, d_hi(3)
              do j = d_lo(2), lo(2)-1
@@ -317,16 +317,22 @@ contains
     double precision, intent(inout) :: efab(e_lo(1):e_hi(1),e_lo(2):e_hi(2),e_lo(3):e_hi(3),nc)
 
     ! local variables
-    integer          :: i, j, k, n
+    integer          :: i, j, k, n, lo1, lo2, lo3, hi1, hi2, hi3
 
-    !$acc enter data copyin(lo,hi)
+    lo1 = lo(1)
+    lo2 = lo(2)
+    lo3 = lo(3)
+    hi1 = hi(1)
+    hi2 = hi(2)
+    hi3 = hi(3)
+
     if (do_harmonic .eq. 0) then
        if (dir .EQ. 0) then
           !$acc parallel loop gang vector collapse(4) default(present)
           do n = 1,nc
-             do k = lo(3), hi(3)
-                do j = lo(2), hi(2)
-                   do i = lo(1), hi(1)+1
+             do k = lo3, hi3
+                do j = lo2, hi2
+                   do i = lo1, hi1+1
                       efab(i,j,k,n) = 0.5d0*(cfab(i,j,k,n) + cfab(i-1,j,k,n))
                    end do
                 end do
@@ -336,9 +342,9 @@ contains
        else if (dir .EQ. 1) then
           !$acc parallel loop gang vector collapse(4) default(present)
           do n = 1,nc
-             do k = lo(3), hi(3)
-                do j = lo(2), hi(2)+1
-                   do i = lo(1), hi(1)
+             do k = lo3, hi3
+                do j = lo2, hi2+1
+                   do i = lo1, hi1
                       efab(i,j,k,n) = 0.5d0*(cfab(i,j,k,n) + cfab(i,j-1,k,n))
                    end do
                 end do
@@ -348,9 +354,9 @@ contains
        else if (dir .EQ. 2) then
           !$acc parallel loop gang vector collapse(4) default(present)
           do n = 1,nc
-             do k = lo(3), hi(3)+1
-                do j = lo(2), hi(2)
-                   do i = lo(1), hi(1)
+             do k = lo3, hi3+1
+                do j = lo2, hi2
+                   do i = lo(1), hi1
                       efab(i,j,k,n) = 0.5d0*(cfab(i,j,k,n) + cfab(i,j,k-1,n))
                    end do
                 end do
@@ -362,9 +368,9 @@ contains
        if (dir .EQ. 0) then
           !$acc parallel loop gang vector collapse(4) default(present)
           do n = 1,nc
-             do k = lo(3), hi(3)
-                do j = lo(2), hi(2)
-                   do i = lo(1), hi(1)+1
+             do k = lo3, hi3
+                do j = lo2, hi2
+                   do i = lo1, hi1+1
                       efab(i,j,k,n) = merge(2*(cfab(i,j,k,n)*cfab(i-1,j,k,n)) &
                                             /(cfab(i,j,k,n)+cfab(i-1,j,k,n)), &
                                             0.d0, &
@@ -377,9 +383,9 @@ contains
        else if (dir .EQ. 1) then
           !$acc parallel loop gang vector collapse(4) default(present)
           do n = 1,nc
-             do k = lo(3), hi(3)
-                do j = lo(2), hi(2)+1
-                   do i = lo(1), hi(1)
+             do k = lo3, hi3
+                do j = lo2, hi2+1
+                   do i = lo1, hi1
                       efab(i,j,k,n) = merge(2*(cfab(i,j,k,n)*cfab(i,j-1,k,n)) &
                                             /(cfab(i,j,k,n)+cfab(i,j-1,k,n)), &
                                             0.d0, &
@@ -392,9 +398,9 @@ contains
        else if (dir .EQ. 2) then
           !$acc parallel loop gang vector collapse(4) default(present)
           do n = 1,nc
-             do k = lo(3), hi(3)+1
-                do j = lo(2), hi(2)
-                   do i = lo(1), hi(1)
+             do k = lo3, hi3+1
+                do j = lo2, hi2
+                   do i = lo1, hi1
                       efab(i,j,k,n) = merge(2*(cfab(i,j,k,n)*cfab(i,j,k-1,n)) &
                                             /(cfab(i,j,k,n)+cfab(i,j,k-1,n)), &
                                             0.d0, &

@@ -95,7 +95,7 @@ contains
                 td(i,j,k,3) = 0.25d0*dxinv1*(Q(i+1,j,k,QW)+Q(i+1,j,k-1,QW)-Q(i-1,j,k,QW)-Q(i-1,j,k-1,QW))
                 td(i,j,k,4) = 0.25d0*dxinv2*(Q(i,j+1,k,QU)+Q(i,j+1,k-1,QU)-Q(i,j-1,k,QU)-Q(i,j-1,k-1,QU))
                 td(i,j,k,5) = 0.25d0*dxinv2*(Q(i,j+1,k,QV)+Q(i,j+1,k-1,QV)-Q(i,j-1,k,QV)-Q(i,j-1,k-1,QV))
-                td(i,j,k,6) = 0.25d0*dxinv2*(Q(i,j+1,k,QW)+Q(i,j+1,k-1,QW)-Q(i,j-1,k,QW)-Q(i,j-1,k-1,QW)) 
+                td(i,j,k,6) = 0.25d0*dxinv2*(Q(i,j+1,k,QW)+Q(i,j+1,k-1,QW)-Q(i,j-1,k,QW)-Q(i,j-1,k-1,QW))
              enddo
           enddo
        enddo
