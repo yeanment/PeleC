@@ -108,7 +108,9 @@ contains
     double precision :: Uface1, Uface2, Uface3, dudx, dvdx, dwdx, dudy, dvdy, dwdy, dudz, dvdz, dwdz
     double precision :: pface, hface, Xface, Yface
     double precision :: dTdx, dTdy, dTdz, dXdx, dXdy, dXdz, Vd
-    double precision :: Vc(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
+    double precision :: Vcx(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
+    double precision :: Vcy(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
+    double precision :: Vcz(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
     double precision :: dlnpi, dlnpj, dlnpk
     double precision :: X(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec_2)
     double precision :: hii(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec_2)
@@ -129,14 +131,14 @@ contains
     hi2 = hi(2)
     hi3 = hi(3)
 
-    !$acc enter data create(hii,x,vc)
+    !$acc enter data create(hii,x,vcx,vcy,vcz)
 
     !$acc parallel default(present)
     call eos_ytx_vec_gpu(q,x,lo1,lo2,lo3,hi1,hi2,hi3,nspec_2,qfs,qvar)
     call eos_hi_vec_gpu(q,hii,lo1,lo2,lo3,hi1,hi2,hi3,nspec_2,qtemp,qvar,qfs)
     !$acc end parallel
 
-    !$acc kernels default(present)
+    !$acc kernels default(present) async(1)
     !$acc loop collapse(3)
     do k=lo3,hi3
        do j=lo2,hi2
@@ -167,7 +169,7 @@ contains
     do k=lo3,hi3
        do j=lo2,hi2
           do i=lo1,hi1+1
-             Vc(i,j,k) = 0.d0
+             Vcx(i,j,k) = 0.d0
           enddo
        enddo
     enddo
@@ -184,7 +186,7 @@ contains
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i-1,j,k,n))
                 dXdx = dxinv1 * (X(i,j,k,n) - X(i-1,j,k,n))
                 Vd = -Dx(i,j,k,n)*(dXdx + (Xface - Yface) * dlnpi)
-                Vc(i,j,k) = Vc(i,j,k) + Vd
+                Vcx(i,j,k) = Vcx(i,j,k) + Vd
                 fx(i,j,k,UFS+n-1) = Vd
                 fx(i,j,k,UEDEN) = fx(i,j,k,UEDEN) + Vd*hface
              end do
@@ -199,8 +201,8 @@ contains
              do i=lo1,hi1+1
                 Yface = 0.5d0*(Q(i,j,k,QFS+n-1) + Q(i-1,j,k,QFS+n-1))
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i-1,j,k,n))
-                fx(i,j,k,UFS+n-1) = fx(i,j,k,UFS+n-1) - Yface*Vc(i,j,k)
-                fx(i,j,k,UEDEN)   = fx(i,j,k,UEDEN)   - Yface*Vc(i,j,k)*hface
+                fx(i,j,k,UFS+n-1) = fx(i,j,k,UFS+n-1) - Yface*Vcx(i,j,k)
+                fx(i,j,k,UEDEN)   = fx(i,j,k,UEDEN)   - Yface*Vcx(i,j,k)*hface
              end do
           enddo
        enddo
@@ -226,7 +228,9 @@ contains
           enddo
        enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels default(present) async(2)
     !$acc loop collapse(3)
     do k=lo3,hi3
        do j=lo2,hi2+1
@@ -257,7 +261,7 @@ contains
     do k=lo3,hi3
        do j=lo2,hi2+1
           do i=lo1,hi1
-             Vc(i,j,k) = 0.d0
+             Vcy(i,j,k) = 0.d0
           enddo
        enddo
     enddo
@@ -274,7 +278,7 @@ contains
                 hface = 0.5d0*(hii(i,j,k,n)   + hii(i,j-1,k,n))
                 dXdy = dxinv2 * (X(i,j,k,n) - X(i,j-1,k,n))
                 Vd = -Dy(i,j,k,n)*(dXdy + (Xface - Yface) * dlnpj)
-                Vc(i,j,k) = Vc(i,j,k) + Vd
+                Vcy(i,j,k) = Vcy(i,j,k) + Vd
                 fy(i,j,k,UFS+n-1) = Vd
                 fy(i,j,k,UEDEN) = fy(i,j,k,UEDEN) + Vd*hface
              end do
@@ -289,8 +293,8 @@ contains
              do i=lo1,hi1
                 Yface = 0.5d0*(Q(i,j,k,QFS+n-1) + Q(i,j-1,k,QFS+n-1))
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i,j-1,k,n))
-                fy(i,j,k,UFS+n-1) = fy(i,j,k,UFS+n-1) - Yface*Vc(i,j,k)
-                fy(i,j,k,UEDEN)   = fy(i,j,k,UEDEN)   - Yface*Vc(i,j,k)*hface
+                fy(i,j,k,UFS+n-1) = fy(i,j,k,UFS+n-1) - Yface*Vcy(i,j,k)
+                fy(i,j,k,UEDEN)   = fy(i,j,k,UEDEN)   - Yface*Vcy(i,j,k)*hface
              end do
           enddo
        enddo
@@ -316,7 +320,9 @@ contains
           enddo
        enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels default(present) async(3)
     !$acc loop collapse(3)
     do k=lo3,hi3+1
        do j=lo2,hi2
@@ -347,7 +353,7 @@ contains
     do k=lo3,hi3+1
        do j=lo2,hi2
           do i=lo1,hi1
-             Vc(i,j,k) = 0.d0
+             Vcz(i,j,k) = 0.d0
           enddo
        enddo
     enddo
@@ -364,7 +370,7 @@ contains
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i,j,k-1,n))
                 dXdz = dxinv3 * (X(i,j,k,n) - X(i,j,k-1,n))
                 Vd = -Dz(i,j,k,n)*(dXdz + (Xface - Yface) * dlnpk)
-                Vc(i,j,k) = Vc(i,j,k) + Vd
+                Vcz(i,j,k) = Vcz(i,j,k) + Vd
                 fz(i,j,k,UFS+n-1) = Vd
                 fz(i,j,k,UEDEN) = fz(i,j,k,UEDEN) + Vd*hface
              end do
@@ -379,8 +385,8 @@ contains
              do i=lo1,hi1
                 Yface = 0.5d0*(Q(i,j,k,QFS+n-1) + Q(i,j,k-1,QFS+n-1))
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i,j,k-1,n))
-                fz(i,j,k,UFS+n-1) = fz(i,j,k,UFS+n-1) - Yface*Vc(i,j,k)
-                fz(i,j,k,UEDEN)   = fz(i,j,k,UEDEN)   - Yface*Vc(i,j,k)*hface
+                fz(i,j,k,UFS+n-1) = fz(i,j,k,UFS+n-1) - Yface*Vcz(i,j,k)
+                fz(i,j,k,UEDEN)   = fz(i,j,k,UEDEN)   - Yface*Vcz(i,j,k)*hface
              end do
           enddo
        enddo
@@ -406,8 +412,10 @@ contains
           enddo
        enddo
     enddo
+    !$acc end kernels
 
-    !$acc loop collapse(4)
+    !$acc wait
+    !$acc parallel loop collapse(4) default(present)
     do n=1,NVAR
        do k = lo3, hi3
           do j = lo2, hi2
@@ -419,8 +427,9 @@ contains
           end do
        end do
     end do
-    !$acc end kernels
-    !$acc exit data delete(hii,x,q,vc)
+    !$acc end parallel loop
+
+    !$acc exit data delete(hii,x,q,vcx,vcy,vcz)
 
   end subroutine pc_diffterm
 
