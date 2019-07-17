@@ -1,6 +1,6 @@
   ! compute the diffusion source terms and fluxes for all the
   ! conservative equations.
-  ! 
+  !
 module diffterm_module
 
   implicit none
@@ -21,16 +21,16 @@ contains
                          tx,  txlo,  txhi,&
                          Ax,  Axlo,  Axhi,&
                          fx,  fxlo,  fxhi,&
-                         Dy,  Dylo,  Dyhi,&  
-                         muy, muylo, muyhi,& 
-                         xiy, xiylo, xiyhi,& 
+                         Dy,  Dylo,  Dyhi,&
+                         muy, muylo, muyhi,&
+                         xiy, xiylo, xiyhi,&
                          lamy,lamylo,lamyhi,&
                          ty,  tylo,  tyhi,&
                          Ay,  Aylo,  Ayhi,&
                          fy,  fylo,  fyhi,&
-                         Dz,  Dzlo,  Dzhi,&  
-                         muz, muzlo, muzhi,& 
-                         xiz, xizlo, xizhi,& 
+                         Dz,  Dzlo,  Dzhi,&
+                         muz, muzlo, muzhi,&
+                         xiz, xizlo, xizhi,&
                          lamz,lamzlo,lamzhi,&
                          tz,  tzlo,  tzhi,&
                          Az,  Azlo,  Azhi,&
@@ -103,7 +103,7 @@ contains
     double precision, intent(in   ) ::    V(   Vlo(1):   Vhi(1),   Vlo(2):   Vhi(2),   Vlo(3):   Vhi(3)  )
     double precision, intent(in   ) :: deltax(3)
 
-    integer :: i, j, k, n
+    integer :: i, j, k, n, lo1, lo2, lo3, hi1, hi2, hi3
     double precision :: tauxx, tauxy, tauxz, tauyx, tauyy, tauyz, tauzx, tauzy, tauzz, divu
     double precision :: Uface1, Uface2, Uface3, dudx, dvdx, dwdx, dudy, dvdy, dwdy, dudz, dvdz, dwdz
     double precision :: pface, hface, Xface, Yface
@@ -122,18 +122,25 @@ contains
     dxinv2 = 1.d0/deltax(2)
     dxinv3 = 1.d0/deltax(3)
 
-    !$acc enter data copyin(hi,lo) create(hii,x,vc)
+    lo1 = lo(1)
+    lo2 = lo(2)
+    lo3 = lo(3)
+    hi1 = hi(1)
+    hi2 = hi(2)
+    hi3 = hi(3)
+
+    !$acc enter data create(hii,x,vc)
 
     !$acc parallel default(present)
-    call eos_ytx_vec_gpu(q,x,lo,hi,nspec_2,qfs,qvar)
-    call eos_hi_vec_gpu(q,hii,lo,hi,nspec_2,qtemp,qvar,qfs)
+    call eos_ytx_vec_gpu(q,x,lo1,lo2,lo3,hi1,hi2,hi3,nspec_2,qfs,qvar)
+    call eos_hi_vec_gpu(q,hii,lo1,lo2,lo3,hi1,hi2,hi3,nspec_2,qtemp,qvar,qfs)
     !$acc end parallel
 
     !$acc kernels default(present)
     !$acc loop collapse(3)
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)+1
+    do k=lo3,hi3
+       do j=lo2,hi2
+          do i=lo1,hi1+1
              dTdx = dxinv1 * (Q(i,j,k,QTEMP) - Q(i-1,j,k,QTEMP))
              dudx = dxinv1 * (Q(i,j,k,QU)    - Q(i-1,j,k,QU))
              dvdx = dxinv1 * (Q(i,j,k,QV)    - Q(i-1,j,k,QV))
@@ -157,9 +164,9 @@ contains
        enddo
     enddo
     !$acc loop collapse(3)
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)+1
+    do k=lo3,hi3
+       do j=lo2,hi2
+          do i=lo1,hi1+1
              Vc(i,j,k) = 0.d0
           enddo
        enddo
@@ -167,9 +174,9 @@ contains
     !$acc loop seq
     do n=1,nspec_2
        !$acc loop collapse(3)
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)+1
+       do k=lo3,hi3
+          do j=lo2,hi2
+             do i=lo1,hi1+1
                 pface = 0.5d0*(Q(i,j,k,QPRES) + Q(i-1,j,k,QPRES))
                 dlnpi = dxinv1 * (Q(i,j,k,QPRES) - Q(i-1,j,k,QPRES)) / pface
                 Xface = 0.5d0*(X(i,j,k,n) + X(i-1,j,k,n))
@@ -187,9 +194,9 @@ contains
     !$acc loop seq
     do n=1,nspec_2
        !$acc loop collapse(3)
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)+1
+       do k=lo3,hi3
+          do j=lo2,hi2
+             do i=lo1,hi1+1
                 Yface = 0.5d0*(Q(i,j,k,QFS+n-1) + Q(i-1,j,k,QFS+n-1))
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i-1,j,k,n))
                 fx(i,j,k,UFS+n-1) = fx(i,j,k,UFS+n-1) - Yface*Vc(i,j,k)
@@ -199,9 +206,9 @@ contains
        enddo
     enddo
     !$acc loop collapse(3)
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)+1
+    do k=lo3,hi3
+       do j=lo2,hi2
+          do i=lo1,hi1+1
              fx(i,j,k,UMX)   = fx(i,j,k,UMX)   * Ax(i,j,k)
              fx(i,j,k,UMY)   = fx(i,j,k,UMY)   * Ax(i,j,k)
              fx(i,j,k,UMZ)   = fx(i,j,k,UMZ)   * Ax(i,j,k)
@@ -211,9 +218,9 @@ contains
     enddo
     !$acc loop collapse(4)
     do n=UFS,UFS+nspec_2-1
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)+1
+       do k=lo3,hi3
+          do j=lo2,hi2
+             do i=lo1,hi1+1
                 fx(i,j,k,n) = fx(i,j,k,n) * Ax(i,j,k)
              enddo
           enddo
@@ -221,9 +228,9 @@ contains
     enddo
 
     !$acc loop collapse(3)
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)+1
-          do i=lo(1),hi(1)
+    do k=lo3,hi3
+       do j=lo2,hi2+1
+          do i=lo1,hi1
              dTdy = dxinv2 * (Q(i,j,k,QTEMP) - Q(i,j-1,k,QTEMP))
              dudy = dxinv2 * (Q(i,j,k,QU)    - Q(i,j-1,k,QU))
              dvdy = dxinv2 * (Q(i,j,k,QV)    - Q(i,j-1,k,QV))
@@ -247,9 +254,9 @@ contains
        enddo
     enddo
     !$acc loop collapse(3)
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)+1
-          do i=lo(1),hi(1)
+    do k=lo3,hi3
+       do j=lo2,hi2+1
+          do i=lo1,hi1
              Vc(i,j,k) = 0.d0
           enddo
        enddo
@@ -257,9 +264,9 @@ contains
     !$acc loop seq
     do n=1,nspec_2
        !$acc loop collapse(3)
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)+1
-             do i=lo(1),hi(1)
+       do k=lo3,hi3
+          do j=lo2,hi2+1
+             do i=lo1,hi1
                 pface = 0.5d0*(Q(i,j,k,QPRES) + Q(i,j-1,k,QPRES))
                 dlnpj = dxinv2 * (Q(i,j,k,QPRES) - Q(i,j-1,k,QPRES)) / pface
                 Xface = 0.5d0*(X(i,j,k,n) + X(i,j-1,k,n))
@@ -277,9 +284,9 @@ contains
     !$acc loop seq
     do n=1,nspec_2
        !$acc loop collapse(3)
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)+1
-             do i=lo(1),hi(1)
+       do k=lo3,hi3
+          do j=lo2,hi2+1
+             do i=lo1,hi1
                 Yface = 0.5d0*(Q(i,j,k,QFS+n-1) + Q(i,j-1,k,QFS+n-1))
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i,j-1,k,n))
                 fy(i,j,k,UFS+n-1) = fy(i,j,k,UFS+n-1) - Yface*Vc(i,j,k)
@@ -289,9 +296,9 @@ contains
        enddo
     enddo
     !$acc loop collapse(3)
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)+1
-          do i=lo(1),hi(1)
+    do k=lo3,hi3
+       do j=lo2,hi2+1
+          do i=lo1,hi1
              fy(i,j,k,UMX)   = fy(i,j,k,UMX)   * Ay(i,j,k)
              fy(i,j,k,UMY)   = fy(i,j,k,UMY)   * Ay(i,j,k)
              fy(i,j,k,UMZ)   = fy(i,j,k,UMZ)   * Ay(i,j,k)
@@ -301,9 +308,9 @@ contains
     enddo
     !$acc loop collapse(4)
     do n=UFS,UFS+nspec_2-1
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)+1
-             do i=lo(1),hi(1)
+       do k=lo3,hi3
+          do j=lo2,hi2+1
+             do i=lo1,hi1
                 fy(i,j,k,n) = fy(i,j,k,n) * Ay(i,j,k)
              enddo
           enddo
@@ -311,9 +318,9 @@ contains
     enddo
 
     !$acc loop collapse(3)
-    do k=lo(3),hi(3)+1
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=lo3,hi3+1
+       do j=lo2,hi2
+          do i=lo1,hi1
              dTdz = dxinv3 * (Q(i,j,k,QTEMP) - Q(i,j,k-1,QTEMP))
              dudz = dxinv3 * (Q(i,j,k,QU)    - Q(i,j,k-1,QU))
              dvdz = dxinv3 * (Q(i,j,k,QV)    - Q(i,j,k-1,QV))
@@ -337,9 +344,9 @@ contains
        enddo
     enddo
     !$acc loop collapse(3)
-    do k=lo(3),hi(3)+1
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=lo3,hi3+1
+       do j=lo2,hi2
+          do i=lo1,hi1
              Vc(i,j,k) = 0.d0
           enddo
        enddo
@@ -347,9 +354,9 @@ contains
     !$acc loop seq
     do n=1,nspec_2
        !$acc loop collapse(3)
-       do k=lo(3),hi(3)+1
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)
+       do k=lo3,hi3+1
+          do j=lo2,hi2
+             do i=lo1,hi1
                 pface = 0.5d0*(Q(i,j,k,QPRES) + Q(i,j,k-1,QPRES))
                 dlnpk = dxinv3 * (Q(i,j,k,QPRES) - Q(i,j,k-1,QPRES)) / pface
                 Xface = 0.5d0*(X(i,j,k,n) + X(i,j,k-1,n))
@@ -367,9 +374,9 @@ contains
     !$acc loop seq
     do n=1,nspec_2
        !$acc loop collapse(3)
-       do k=lo(3),hi(3)+1
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)
+       do k=lo3,hi3+1
+          do j=lo2,hi2
+             do i=lo1,hi1
                 Yface = 0.5d0*(Q(i,j,k,QFS+n-1) + Q(i,j,k-1,QFS+n-1))
                 hface = 0.5d0*(hii(i,j,k,n) + hii(i,j,k-1,n))
                 fz(i,j,k,UFS+n-1) = fz(i,j,k,UFS+n-1) - Yface*Vc(i,j,k)
@@ -379,9 +386,9 @@ contains
        enddo
     enddo
     !$acc loop collapse(3)
-    do k=lo(3),hi(3)+1
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=lo3,hi3+1
+       do j=lo2,hi2
+          do i=lo1,hi1
              fz(i,j,k,UMX)   = fz(i,j,k,UMX)   * Az(i,j,k)
              fz(i,j,k,UMY)   = fz(i,j,k,UMY)   * Az(i,j,k)
              fz(i,j,k,UMZ)   = fz(i,j,k,UMZ)   * Az(i,j,k)
@@ -391,9 +398,9 @@ contains
     enddo
     !$acc loop collapse(4)
     do n=UFS,UFS+nspec_2-1
-       do k=lo(3),hi(3)+1
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)
+       do k=lo3,hi3+1
+          do j=lo2,hi2
+             do i=lo1,hi1
                 fz(i,j,k,n) = fz(i,j,k,n) * Az(i,j,k)
              enddo
           enddo
@@ -402,9 +409,9 @@ contains
 
     !$acc loop collapse(4)
     do n=1,NVAR
-       do k = lo(3), hi(3)
-          do j = lo(2), hi(2)
-             do i = lo(1), hi(1)
+       do k = lo3, hi3
+          do j = lo2, hi2
+             do i = lo1, hi1
                 D(i,j,k,n) = - (fx(i+1,j,k,n)-fx(i,j,k,n) &
                                +fy(i,j+1,k,n)-fy(i,j,k,n) &
                                +fz(i,j,k+1,n)-fz(i,j,k,n) )/V(i,j,k)
@@ -413,7 +420,7 @@ contains
        end do
     end do
     !$acc end kernels
-    !$acc exit data delete(hi,lo,hii,x,q,vc)
+    !$acc exit data delete(hii,x,q,vc)
 
   end subroutine pc_diffterm
 
