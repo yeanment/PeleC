@@ -48,7 +48,7 @@ module hyp_advection_module
                      h) &
                      bind(C,name="pc_hyp_mol_flux")
 
-    use meth_params_module, only : plm_iorder, QVAR, NVAR, QPRES, QRHO, QU, QV, QW, &
+    use meth_params_module, only : plm_iorder, QPRES, QRHO, QU, QV, QW, &
                                    QFS, QC, QCSML, NQAUX, nadv, &
                                    URHO, UMX, UMY, UMZ, UEDEN, UEINT, UFS, UTEMP, UFX, UFA, &
                                    small_dens, small_pres
@@ -60,6 +60,8 @@ module hyp_advection_module
     implicit none
 
     integer, parameter  :: nspec_2=9
+    integer, parameter  :: nvar_2=16
+    integer, parameter  :: qvar_2=17
     integer :: vis, vie, vic ! Loop bounds for vector blocking
     integer :: vi, vii ! Loop indicies for unrolled loops over 
 
@@ -85,23 +87,23 @@ module hyp_advection_module
     double precision, intent(in) :: vfrac(vflo(1):vfhi(1),vflo(2):vfhi(2),vflo(3):vfhi(3))
 
     integer, intent(in) :: nebflux
-    double precision, intent(inout) ::   ebflux(0:nebflux-1,1:NVAR)
+    double precision, intent(inout) ::   ebflux(0:nebflux-1,1:nvar_2)
     integer,            intent(in   ) :: Nebg
     type(eb_bndry_geom),intent(in   ) :: ebg(0:Nebg-1)    
     double precision :: eb_norm(3), full_area
 #endif
-    double precision, intent(in) ::     q(  qd_lo(1):  qd_hi(1),  qd_lo(2):  qd_hi(2),  qd_lo(3):  qd_hi(3),QVAR)  !> State
+    double precision, intent(in) ::     q(  qd_lo(1):  qd_hi(1),  qd_lo(2):  qd_hi(2),  qd_lo(3):  qd_hi(3),qvar_2)  !> State
     double precision, intent(in) ::  qaux(  qa_lo(1):  qa_hi(1),  qa_lo(2):  qa_hi(2),  qa_lo(3):  qa_hi(3),NQAUX) !> Auxiliary state
     double precision, intent(in) :: flatn(fltd_lo(1):fltd_hi(1),fltd_lo(2):fltd_hi(2),fltd_lo(3):fltd_hi(3))
 
     double precision, intent(in   ) ::    Ax(  Axlo(1):  Axhi(1),  Axlo(2):  Axhi(2),  Axlo(3):  Axhi(3))
-    double precision, intent(inout) :: flux1(fd1_lo(1):fd1_hi(1),fd1_lo(2):fd1_hi(2),fd1_lo(3):fd1_hi(3),NVAR)
+    double precision, intent(inout) :: flux1(fd1_lo(1):fd1_hi(1),fd1_lo(2):fd1_hi(2),fd1_lo(3):fd1_hi(3),nvar_2)
     double precision, intent(in   ) ::    Ay(  Aylo(1):  Ayhi(1),  Aylo(2):  Ayhi(2),  Aylo(3):  Ayhi(3))
-    double precision, intent(inout) :: flux2(fd2_lo(1):fd2_hi(1),fd2_lo(2):fd2_hi(2),fd2_lo(3):fd2_hi(3),NVAR)
+    double precision, intent(inout) :: flux2(fd2_lo(1):fd2_hi(1),fd2_lo(2):fd2_hi(2),fd2_lo(3):fd2_hi(3),nvar_2)
     double precision, intent(in   ) ::    Az(  Azlo(1):  Azhi(1),  Azlo(2):  Azhi(2),  Azlo(3):  Azhi(3))
-    double precision, intent(inout) :: flux3(fd3_lo(1):fd3_hi(1),fd3_lo(2):fd3_hi(2),fd3_lo(3):fd3_hi(3),NVAR)
+    double precision, intent(inout) :: flux3(fd3_lo(1):fd3_hi(1),fd3_lo(2):fd3_hi(2),fd3_lo(3):fd3_hi(3),nvar_2)
     double precision, intent(inout) ::     V(   Vlo(1):   Vhi(1),   Vlo(2):   Vhi(2),   Vlo(3):   Vhi(3))
-    double precision, intent(inout) ::     D(   Dlo(1):   Dhi(1),   Dlo(2):   Dhi(2),   Dlo(3):   Dhi(3),NVAR)
+    double precision, intent(inout) ::     D(   Dlo(1):   Dhi(1),   Dlo(2):   Dhi(2),   Dlo(3):   Dhi(3),nvar_2)
 
     integer :: i, j, k, n, nsp, L, ivar
     integer :: qt_lo(3), qt_hi(3)
@@ -128,7 +130,7 @@ module hyp_advection_module
     double precision:: u_gd, v_gd, w_gd, &
          p_gd, game_gd, re_gd, &
          r_gd, ustar
-    double precision :: flux_tmp(NVAR)
+    double precision :: flux_tmp(nvar_2)
     integer, parameter :: idir = 1
     integer :: nextra
     integer, parameter :: coord_type = 0
@@ -174,15 +176,14 @@ module hyp_advection_module
        !endif
     enddo
 
-    allocate(dqx(qt_lo(1):qt_hi(1), qt_lo(2):qt_hi(2), qt_lo(3):qt_hi(3), 1:QVAR))
-    allocate(dqy(qt_lo(1):qt_hi(1), qt_lo(2):qt_hi(2), qt_lo(3):qt_hi(3), 1:QVAR))
-    allocate(dqz(qt_lo(1):qt_hi(1), qt_lo(2):qt_hi(2), qt_lo(3):qt_hi(3), 1:QVAR))
+    allocate(dqx(qt_lo(1):qt_hi(1), qt_lo(2):qt_hi(2), qt_lo(3):qt_hi(3), 1:qvar_2))
+    allocate(dqy(qt_lo(1):qt_hi(1), qt_lo(2):qt_hi(2), qt_lo(3):qt_hi(3), 1:qvar_2))
+    allocate(dqz(qt_lo(1):qt_hi(1), qt_lo(2):qt_hi(2), qt_lo(3):qt_hi(3), 1:qvar_2))
 
-    !$acc update device(ru,naux,plm_iorder,qvar,nvar,qpres,qrho,qu,qv,qw,qfs,qc,qcsml,nqaux,nadv,urho,umx,umy,umz,ueden,ueint,ufs,utemp,ufx,ufa)
-    !$acc enter data create(dqx,dqy,dqz) copyin(flux1,flux2,flux3,d) copyin(v,ax,ay,az,q,flatn,qd_lo,qd_hi,qt_lo,qt_hi,domlo,domhi,qaux,qa_lo,qa_hi,flag,fglo,fghi,lo,hi)
+    !$acc enter data create(dqx,dqy,dqz) copyin(flux_tmp,qd_lo,qd_hi,qt_lo,qt_hi,domlo,domhi,qa_lo,qa_hi,fglo,fghi,lo,hi) create(qtempl,qtempr,eos_state_massfrac,flux_tmp,nbr)
 
     !$acc parallel loop gang vector collapse(4) default(present)
-    do n = 1, qvar
+    do n = 1, qvar_2
        do k = qt_lo(3), qt_hi(3)
           do j = qt_lo(2), qt_hi(2)
              do i = qt_lo(1), qt_hi(1)
@@ -193,13 +194,15 @@ module hyp_advection_module
     enddo
     !$acc end parallel
     if(plm_iorder.ne.1) then
+       !$acc parallel default(present)
        call slopex(q,flatn,qd_lo,qd_hi, &
                   dqx,qt_lo,qt_hi, &
                   ilo1,ilo2,ilo3, &
-                  ihi1,ihi2,ihi3,qvar,nqaux, &
+                  ihi1,ihi2,ihi3,qvar_2,nqaux, &
                   domlo,domhi, &
                   qaux,qa_lo,qa_hi, &
                   flag,fglo,fghi)
+       !$acc end parallel
     end if
 
     !$acc kernels default(present)
@@ -279,7 +282,7 @@ module hyp_advection_module
                 flux_tmp(n) = merge(0.d0, flux_tmp(n), nadv .gt. 0)
              enddo
 
-             do ivar = 1, NVAR
+             do ivar = 1, nvar_2
                 flux1(i,j,k,ivar) = flux1(i,j,k,ivar) + flux_tmp(ivar) * ax(i,j,k)
              enddo
           enddo
@@ -288,7 +291,7 @@ module hyp_advection_module
     !$acc end kernels
 
     !$acc parallel loop gang vector collapse(4) default(present)
-    do n = 1, qvar
+    do n = 1, qvar_2
        do k = qt_lo(3), qt_hi(3)
           do j = qt_lo(2), qt_hi(2)
              do i = qt_lo(1), qt_hi(1)
@@ -299,13 +302,15 @@ module hyp_advection_module
     enddo
     !$acc end parallel
     if(plm_iorder.ne.1) then
+       !$acc parallel default(present)
        call slopey(q,flatn,qd_lo,qd_hi, &
                   dqy,qt_lo,qt_hi, &
                   ilo1,ilo2,ilo3, &
-                  ihi1,ihi2,ihi3,qvar,nqaux, &
+                  ihi1,ihi2,ihi3,qvar_2,nqaux, &
                   domlo,domhi, &
                   qaux,qa_lo,qa_hi, &
                   flag,fglo,fghi)
+       !$acc end parallel
     end if
 
     !$acc kernels default(present)
@@ -386,7 +391,7 @@ module hyp_advection_module
                 flux_tmp(n) = merge(0.d0, flux_tmp(n), nadv .gt. 0)
              enddo
 
-             do ivar = 1, NVAR
+             do ivar = 1, nvar_2
                 flux2(i,j,k,ivar) = flux2(i,j,k,ivar) + flux_tmp(ivar) * ay(i,j,k)
              enddo
           enddo
@@ -395,7 +400,7 @@ module hyp_advection_module
     !$acc end kernels
 
     !$acc parallel loop gang vector collapse(4) default(present)
-    do n = 1, qvar
+    do n = 1, qvar_2
        do k = qt_lo(3), qt_hi(3)
           do j = qt_lo(2), qt_hi(2)
              do i = qt_lo(1), qt_hi(1)
@@ -406,13 +411,15 @@ module hyp_advection_module
     enddo
     !$acc end parallel
     if(plm_iorder.ne.1) then
+       !$acc parallel default(present)
        call slopez(q,flatn,qd_lo,qd_hi, &
                   dqz,qt_lo,qt_hi, &
                   ilo1,ilo2,ilo3, &
-                  ihi1,ihi2,ihi3,qvar,nqaux, &
+                  ihi1,ihi2,ihi3,qvar_2,nqaux, &
                   domlo,domhi, &
                   qaux,qa_lo,qa_hi, &
                   flag,fglo,fghi)
+       !$acc end parallel
     end if
 
     !$acc kernels default(present)
@@ -496,7 +503,7 @@ module hyp_advection_module
                 flux_tmp(n) = merge(0.d0, flux_tmp(n), nadv .gt. 0)
              enddo
 
-             do ivar = 1, NVAR
+             do ivar = 1, nvar_2
                 flux3(i,j,k,ivar) = flux3(i,j,k,ivar) + flux_tmp(ivar) * az(i,j,k)
              enddo
           enddo
@@ -505,7 +512,7 @@ module hyp_advection_module
     !$acc end kernels
 
     !$acc parallel loop gang vector collapse(4) default(present)
-    do ivar=1,NVAR
+    do ivar=1,nvar_2
        do k = lo(3)-nextra+1, hi(3)+nextra-1
           do j = lo(2)-nextra+1, hi(2)+nextra-1
              do i = lo(1)-nextra+1, hi(1)+nextra-1
@@ -517,13 +524,14 @@ module hyp_advection_module
        enddo
     enddo
     !$acc end parallel
-    !$acc exit data delete(dqx,dqy,dqz) copyout(flux1,flux2,flux3,d) delete(v,ax,ay,az,q,flatn,qd_lo,qd_hi,qt_lo,qt_hi,domlo,domhi,qaux,qa_lo,qa_hi,flag,fglo,fghi,lo,hi)
+
+    !$acc exit data delete(dqx,dqy,dqz) delete(qd_lo,qd_hi,qt_lo,qt_hi,domlo,domhi,qa_lo,qa_hi,fglo,fghi,lo,hi) delete(qtempl,qtempr,eos_state_massfrac,flux_tmp,nbr)
 
     deallocate(dqx)
     deallocate(dqy)
     deallocate(dqz)
 
-    !do ivar=1,NVAR
+    !do ivar=1,nvar_2
     !   do k = lo(3)-nextra+1, hi(3)+nextra-1
     !      do j = lo(2)-nextra+1, hi(2)+nextra-1
     !         do i = lo(1)-nextra+1, hi(1)+nextra-1

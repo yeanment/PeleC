@@ -186,6 +186,15 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
         tander_ec[d].resize(ebox, nCompTan); tander_ec[d].setVal(0);
       }
 
+      flatn.resize(cbox,1);
+      flatn.setVal(1.0);
+
+#ifdef PELEC_USE_EB
+      int nFlux = sv_eb_flux.size()==0 ? 0 : sv_eb_flux[local_i].numPts();
+      const EBBndryGeom* sv_ebbg_ptr = (Ncut>0 ? sv_eb_bndry_geom[local_i].data() : 0);
+      Real* sv_eb_flux_ptr = (nFlux>0 ? sv_eb_flux[local_i].dataPtr() : 0);
+#endif
+
       const unsigned long coeff_size = coeff_cc.size();
       const double* coeff_array = coeff_cc.dataPtr();
       const unsigned long sfab_size = Sfab.size();
@@ -222,8 +231,15 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       const double* volume_array = volume[mfi].dataPtr();
       const unsigned long dterm_size = Dterm.size();
       const double* dterm_array = Dterm.dataPtr();
+      const unsigned long vfrac_size = vfrac[mfi].size();
+      const double* vfrac_array = vfrac[mfi].dataPtr();
+      const unsigned long flag_size = flag_fab.size();
+      const amrex::EBCellFlag* flag_array = flag_fab.dataPtr();
+      const unsigned long flatn_size = flatn.size();
+      const double* flatn_array = flatn.dataPtr();
 
-      #pragma acc enter data copyin(sfab_array[0:sfab_size], area_array_0[0:area_size_0], area_array_1[0:area_size_1], area_array_2[0:area_size_2], volume_array[0:volume_size]) create(qfab_array[0:qfab_size], qaux_array[0:qaux_size], coeff_ec_array_0[0:coeff_ec_size_0], coeff_ec_array_1[0:coeff_ec_size_1], coeff_ec_array_2[0:coeff_ec_size_2], tander_ec_array_0[0:tander_ec_size_0], tander_ec_array_1[0:tander_ec_size_1], tander_ec_array_2[0:tander_ec_size_2], coeff_array[0:coeff_size], flux_array_0[0:flux_size_0], flux_array_1[0:flux_size_1], flux_array_2[0:flux_size_2], dterm_array[0:dterm_size])
+      #pragma acc enter data copyin(sfab_array[0:sfab_size], area_array_0[0:area_size_0], area_array_1[0:area_size_1], area_array_2[0:area_size_2], volume_array[0:volume_size], vfrac_array[0:vfrac_size]) create(flag_array[0:flag_size], qfab_array[0:qfab_size], qaux_array[0:qaux_size], coeff_ec_array_0[0:coeff_ec_size_0], coeff_ec_array_1[0:coeff_ec_size_1], coeff_ec_array_2[0:coeff_ec_size_2], tander_ec_array_0[0:tander_ec_size_0], tander_ec_array_1[0:tander_ec_size_1], tander_ec_array_2[0:tander_ec_size_2], coeff_array[0:coeff_size], flux_array_0[0:flux_size_0], flux_array_1[0:flux_size_1], flux_array_2[0:flux_size_2], dterm_array[0:dterm_size], flatn_array[0:flatn_size])
+      #pragma acc enter data create(qfab_array[0:qfab_size])
 
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
@@ -371,8 +387,6 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                     geom.CellSize());
       }
 
-      #pragma acc exit data delete(coeff_array[0:coeff_size], sfab_array[0:sfab_size], qfab_array[0:qfab_size], qaux_array[0:qaux_size], coeff_ec_array_0[0:coeff_ec_size_0], coeff_ec_array_1[0:coeff_ec_size_1], coeff_ec_array_2[0:coeff_ec_size_2], tander_ec_array_0[0:tander_ec_size_0], tander_ec_array_1[0:tander_ec_size_1], tander_ec_array_2[0:tander_ec_size_2], area_array_0[0:area_size_0], area_array_1[0:area_size_1], area_array_2[0:area_size_2], volume_array[0:volume_size]) copyout(flux_array_0[0:flux_size_0], flux_array_1[0:flux_size_1], flux_array_2[0:flux_size_2], dterm_array[0:dterm_size]) finalize
-  
       // Shut off unwanted diffusion after the fact
       //    ick! Under normal conditions, you either have diffusion on all or
       //      none, so this shouldn't be done this way.  However, the regression
@@ -472,14 +486,6 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       */
       if (do_hydro && do_mol_AD) 
       {
-        flatn.resize(cbox,1);
-        flatn.setVal(1.0);  // Set flattening to 1.0
-#ifdef PELEC_USE_EB
-        int nFlux = sv_eb_flux.size()==0 ? 0 : sv_eb_flux[local_i].numPts();
-        const EBBndryGeom* sv_ebbg_ptr = (Ncut>0 ? sv_eb_bndry_geom[local_i].data() : 0);
-        Real* sv_eb_flux_ptr = (nFlux>0 ? sv_eb_flux[local_i].dataPtr() : 0);
-#endif
-
         { // Get face-centered hyperbolic fluxes and their divergences.
           // Get hyp flux at EB wall
           BL_PROFILE("PeleC::pc_hyp_mol_flux call");
@@ -511,6 +517,8 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       }
 #endif
 
+      #pragma acc exit data delete(coeff_array[0:coeff_size], sfab_array[0:sfab_size], qfab_array[0:qfab_size], qaux_array[0:qaux_size], coeff_ec_array_0[0:coeff_ec_size_0], coeff_ec_array_1[0:coeff_ec_size_1], coeff_ec_array_2[0:coeff_ec_size_2], tander_ec_array_0[0:tander_ec_size_0], tander_ec_array_1[0:tander_ec_size_1], tander_ec_array_2[0:tander_ec_size_2], area_array_0[0:area_size_0], area_array_1[0:area_size_1], area_array_2[0:area_size_2], volume_array[0:volume_size], vfrac_array[0:vfrac_size], flag_array[0:flag_size], flatn_array[0:flatn_size]) copyout(flux_array_0[0:flux_size_0], flux_array_1[0:flux_size_1], flux_array_2[0:flux_size_2], dterm_array[0:dterm_size]) finalize
+  
 #ifdef PELEC_USE_EB
 /*      if (typ == FabType::singlevalued) {
         // Interpolate fluxes from face centers to face centroids

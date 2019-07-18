@@ -22,6 +22,7 @@ contains
       !use actual_network, only : nspec
       !use prob_params_module, only : physbc_lo, physbc_hi, Inflow
 
+      !$acc routine(slopex) gang
       !$acc routine(get_neighbor_cells_int) seq
       !$acc routine(is_covered_cell) seq
 
@@ -49,7 +50,6 @@ contains
       integer :: nbr(-1:1,-1:1,-1:1)
       logical :: flagArrayL, flagArrayR
 
-      !$acc kernels default(present)
       !$acc loop gang vector collapse(3) private(nbr,dlft,drgt,flagarrayl,flagarrayr,n,dcen,dlim)
       do k = ilo3, ihi3
          do j = ilo2, ihi2
@@ -83,7 +83,6 @@ contains
             enddo
          enddo
       enddo
-      !$acc end kernels
 
     end subroutine slopex
 
@@ -101,6 +100,7 @@ contains
       !use actual_network, only : nspec
       !use prob_params_module, only : physbc_lo, physbc_hi, Inflow
 
+      !$acc routine(slopey) gang
       !$acc routine(get_neighbor_cells_int) seq
       !$acc routine(is_covered_cell) seq
 
@@ -128,7 +128,6 @@ contains
       integer :: nbr(-1:1,-1:1,-1:1)
       logical :: flagArrayL, flagArrayR
 
-      !$acc kernels default(present)
       !$acc loop gang vector collapse(3) private(nbr,dlft,drgt,flagarrayl,flagarrayr,n,dcen,dlim)
       do k = ilo3, ihi3
          do j = ilo2, ihi2
@@ -162,7 +161,6 @@ contains
             enddo
          enddo
       enddo
-      !$acc end kernels
 
     end subroutine slopey
 
@@ -180,6 +178,7 @@ contains
       !use actual_network, only : nspec
       !use prob_params_module, only : physbc_lo, physbc_hi, Inflow
 
+      !$acc routine(slopez) gang
       !$acc routine(get_neighbor_cells_int) seq
       !$acc routine(is_covered_cell) seq
 
@@ -207,7 +206,6 @@ contains
       integer :: nbr(-1:1,-1:1,-1:1)
       logical :: flagArrayL, flagArrayR
 
-      !$acc kernels default(present)
       !$acc loop gang vector collapse(3) private(nbr,dlft,drgt,flagarrayl,flagarrayr,n,dcen,dlim)
       do k = ilo3, ihi3
          do j = ilo2, ihi2
@@ -241,7 +239,6 @@ contains
             enddo
          enddo
       enddo
-      !$acc end kernels
 
     end subroutine slopez
 
