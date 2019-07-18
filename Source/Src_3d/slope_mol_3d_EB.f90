@@ -8,12 +8,12 @@ module slope_module
 
 contains
 
-      subroutine slopex(q,flatn,qd_lo,qd_hi, &
-                        dqx,qt_lo,qt_hi, &
-                        ilo1,ilo2,ilo3,ihi1,ihi2,ihi3,qvar,nqaux,&
-                        domlo,domhi,&
-                        qaux,qa_lo,qa_hi, &
-                        flag,fglo,fghi)
+      subroutine slopex(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
+                        dqx,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
+                        ilo1,ilo2,ilo3,ihi1,ihi2,ihi3,qvar,nqaux, &
+                        domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
+                        qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
+                        flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
 
       !use amrex_fort_module, only : amrex_real
       !use amrex_mempool_module, only : bl_allocate, bl_deallocate
@@ -32,17 +32,17 @@ contains
       implicit none
 
       integer, parameter  :: nspec=9
-      integer, intent(in) :: qd_lo(3), qd_hi(3)
-      integer, intent(in) :: qt_lo(3), qt_hi(3)
-      integer, intent(in) :: qa_lo(3), qa_hi(3)
+      integer, intent(in) :: qd_lo1, qd_lo2, qd_lo3, qd_hi1, qd_hi2, qd_hi3
+      integer, intent(in) :: qt_lo1, qt_lo2, qt_lo3, qt_hi1, qt_hi2, qt_hi3
+      integer, intent(in) :: qa_lo1, qa_lo2, qa_lo3, qa_hi1, qa_hi2, qa_hi3
       integer, intent(in) :: ilo1, ilo2, ihi1, ihi2, ilo3, ihi3, qvar, nqaux
-      integer, intent(in) :: domlo(3), domhi(3)
-      integer, intent(in) :: fglo(3), fghi(3)
-      integer, intent(in) :: flag(fglo(1):fghi(1),fglo(2):fghi(2),fglo(3):fghi(3))
-      double precision, intent(in) :: q(qd_lo(1):qd_hi(1),qd_lo(2):qd_hi(2),qd_lo(3):qd_hi(3),qvar)
-      double precision, intent(in) :: qaux(qa_lo(1):qa_hi(1),qa_lo(2):qa_hi(2),qa_lo(3):qa_hi(3),nqaux)
-      double precision, intent(in) :: flatn(qd_lo(1):qd_hi(1),qd_lo(2):qd_hi(2),qd_lo(3):qd_hi(3))
-      double precision, intent(out) :: dqx(qt_lo(1):qt_hi(1),qt_lo(2):qt_hi(2),qt_lo(3):qt_hi(3),qvar)
+      integer, intent(in) :: domlo1, domlo2, domlo3, domhi1, domhi2, domhi3
+      integer, intent(in) :: fglo1,fglo2,fglo3,fghi1,fghi2,fghi3
+      integer, intent(in) :: flag(fglo1:fghi1,fglo2:fghi2,fglo3:fghi3)
+      double precision, intent(in) :: q(qd_lo1:qd_hi1,qd_lo2:qd_hi2,qd_lo3:qd_hi3,qvar)
+      double precision, intent(in) :: qaux(qa_lo1:qa_hi1,qa_lo2:qa_hi2,qa_lo3:qa_hi3,nqaux)
+      double precision, intent(in) :: flatn(qd_lo1:qd_hi1,qd_lo2:qd_hi2,qd_lo3:qd_hi3)
+      double precision, intent(out) :: dqx(qt_lo1:qt_hi1,qt_lo2:qt_hi2,qt_lo3:qt_hi3,qvar)
 
       integer i, j, k, n
       double precision :: dlft(1:qvar), drgt(1:qvar)
@@ -86,12 +86,12 @@ contains
 
     end subroutine slopex
 
-    subroutine slopey(q,flatn,qd_lo,qd_hi, &
-         dqy,qt_lo,qt_hi, &
-         ilo1,ilo2,ilo3,ihi1,ihi2,ihi3,qvar,nqaux,&
-         domlo,domhi, &
-         qaux,qa_lo,qa_hi, &
-         flag,fglo,fghi)
+    subroutine slopey(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
+         dqy,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
+         ilo1,ilo2,ilo3,ihi1,ihi2,ihi3,qvar,nqaux, &
+         domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
+         qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
+         flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
 
       !use amrex_fort_module, only : amrex_real
       !use amrex_mempool_module, only : bl_allocate, bl_deallocate
@@ -110,17 +110,17 @@ contains
       implicit none
 
       integer, parameter  :: nspec=9
-      integer, intent(in) :: qd_lo(3), qd_hi(3)
-      integer, intent(in) :: qt_lo(3), qt_hi(3)
-      integer, intent(in) :: qa_lo(3), qa_hi(3)
+      integer, intent(in) :: qd_lo1, qd_lo2, qd_lo3, qd_hi1, qd_hi2, qd_hi3
+      integer, intent(in) :: qt_lo1, qt_lo2, qt_lo3, qt_hi1, qt_hi2, qt_hi3
+      integer, intent(in) :: qa_lo1, qa_lo2, qa_lo3, qa_hi1, qa_hi2, qa_hi3
       integer, intent(in) :: ilo1, ilo2, ihi1, ihi2, ilo3, ihi3, qvar, nqaux
-      integer, intent(in) :: domlo(3),domhi(3)
-      integer, intent(in) :: fglo(3),fghi(3)
-      integer, intent(in) :: flag(fglo(1):fghi(1),fglo(2):fghi(2),fglo(3):fghi(3))
-      double precision, intent(in) :: q(qd_lo(1):qd_hi(1),qd_lo(2):qd_hi(2),qd_lo(3):qd_hi(3),qvar)
-      double precision, intent(in) :: qaux(qa_lo(1):qa_hi(1),qa_lo(2):qa_hi(2),qa_lo(3):qa_hi(3),nqaux)
-      double precision, intent(in) :: flatn(qd_lo(1):qd_hi(1),qd_lo(2):qd_hi(2),qd_lo(3):qd_hi(3))
-      double precision, intent(out) :: dqy(qt_lo(1):qt_hi(1),qt_lo(2):qt_hi(2),qt_lo(3):qt_hi(3),qvar)
+      integer, intent(in) :: domlo1, domlo2, domlo3, domhi1, domhi2, domhi3
+      integer, intent(in) :: fglo1,fglo2,fglo3,fghi1,fghi2,fghi3
+      integer, intent(in) :: flag(fglo1:fghi1,fglo2:fghi2,fglo3:fghi3)
+      double precision, intent(in) :: q(qd_lo1:qd_hi1,qd_lo2:qd_hi2,qd_lo3:qd_hi3,qvar)
+      double precision, intent(in) :: qaux(qa_lo1:qa_hi1,qa_lo2:qa_hi2,qa_lo3:qa_hi3,nqaux)
+      double precision, intent(in) :: flatn(qd_lo1:qd_hi1,qd_lo2:qd_hi2,qd_lo3:qd_hi3)
+      double precision, intent(out) :: dqy(qt_lo1:qt_hi1,qt_lo2:qt_hi2,qt_lo3:qt_hi3,qvar)
 
       integer i, j, k, n
       double precision :: dlft(1:qvar), drgt(1:qvar)
@@ -164,12 +164,12 @@ contains
 
     end subroutine slopey
 
-    subroutine slopez(q,flatn,qd_lo,qd_hi, &
-         dqz,qt_lo,qt_hi, &
+    subroutine slopez(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
+         dqz,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
          ilo1,ilo2,ilo3,ihi1,ihi2,ihi3,qvar,nqaux, &
-         domlo,domhi, &
-         qaux,qa_lo,qa_hi, &
-         flag,fglo,fghi)
+         domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
+         qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
+         flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
 
       !use amrex_fort_module, only : amrex_real
       !use amrex_mempool_module, only : bl_allocate, bl_deallocate
@@ -188,17 +188,17 @@ contains
       implicit none
 
       integer, parameter  :: nspec=9
-      integer, intent(in) :: qd_lo(3), qd_hi(3)
-      integer, intent(in) :: qt_lo(3), qt_hi(3)
-      integer, intent(in) :: qa_lo(3), qa_hi(3)
+      integer, intent(in) :: qd_lo1, qd_lo2, qd_lo3, qd_hi1, qd_hi2, qd_hi3
+      integer, intent(in) :: qt_lo1, qt_lo2, qt_lo3, qt_hi1, qt_hi2, qt_hi3
+      integer, intent(in) :: qa_lo1, qa_lo2, qa_lo3, qa_hi1, qa_hi2, qa_hi3
       integer, intent(in) :: ilo1, ilo2, ihi1, ihi2, ilo3, ihi3, qvar, nqaux
-      integer, intent(in) :: domlo(3),domhi(3)
-      integer, intent(in) :: fglo(3),fghi(3)
-      integer, intent(in) :: flag(fglo(1):fghi(1),fglo(2):fghi(2),fglo(3):fghi(3))
-      double precision, intent(in) :: q(qd_lo(1):qd_hi(1),qd_lo(2):qd_hi(2),qd_lo(3):qd_hi(3),qvar)
-      double precision, intent(in) :: qaux(qa_lo(1):qa_hi(1),qa_lo(2):qa_hi(2),qa_lo(3):qa_hi(3),nqaux)
-      double precision, intent(in) :: flatn(qd_lo(1):qd_hi(1),qd_lo(2):qd_hi(2),qd_lo(3):qd_hi(3))
-      double precision, intent(out) :: dqz(qt_lo(1):qt_hi(1),qt_lo(2):qt_hi(2),qt_lo(3):qt_hi(3),qvar)
+      integer, intent(in) :: domlo1, domlo2, domlo3, domhi1, domhi2, domhi3
+      integer, intent(in) :: fglo1,fglo2,fglo3,fghi1,fghi2,fghi3
+      integer, intent(in) :: flag(fglo1:fghi1,fglo2:fghi2,fglo3:fghi3)
+      double precision, intent(in) :: q(qd_lo1:qd_hi1,qd_lo2:qd_hi2,qd_lo3:qd_hi3,qvar)
+      double precision, intent(in) :: qaux(qa_lo1:qa_hi1,qa_lo2:qa_hi2,qa_lo3:qa_hi3,nqaux)
+      double precision, intent(in) :: flatn(qd_lo1:qd_hi1,qd_lo2:qd_hi2,qd_lo3:qd_hi3)
+      double precision, intent(out) :: dqz(qt_lo1:qt_hi1,qt_lo2:qt_hi2,qt_lo3:qt_hi3,qvar)
 
       integer i, j, k, n
       double precision :: dlft(1:qvar), drgt(1:qvar)
