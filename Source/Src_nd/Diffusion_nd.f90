@@ -412,7 +412,6 @@ contains
           !$acc end parallel
        end if
     end if
-    !$acc exit data delete(lo,hi)
 
   end subroutine pc_move_transport_coeffs_to_ec
 
