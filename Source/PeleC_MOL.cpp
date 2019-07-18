@@ -488,7 +488,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
         { // Get face-centered hyperbolic fluxes and their divergences.
           // Get hyp flux at EB wall
           BL_PROFILE("PeleC::pc_hyp_mol_flux call");
-          pc_hyp_mol_flux(vbox.loVect(), vbox.hiVect(),
+          pc_hyp_mol_flux(AMREX_ARLIM(vbox.loVect()),AMREX_ARLIM(vbox.hiVect()),
                           geom.Domain().loVect(), geom.Domain().hiVect(),
                           BL_TO_FORTRAN_3D(Qfab),
                           BL_TO_FORTRAN_3D(Qaux),

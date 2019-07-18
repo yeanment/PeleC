@@ -1,17 +1,17 @@
-module hyp_advection_module 
+module hyp_advection_module
 
   use amrex_ebcellflag_module, only : get_neighbor_cells
   use pelec_eb_stencil_types_module, only : eb_bndry_geom
   use riemann_util_module, only : riemann_md_singlepoint, riemann_md_vec
   use prob_params_module, only: dim
 
-  implicit none 
-  private 
+  implicit none
+  private
   public pc_hyp_mol_flux
-  contains 
+  contains
 
   !> Computes fluxes for hyperbolic conservative update.
-  !> @brief 
+  !> @brief
   !> Uses MOL formulation
   !! @param[inout] flux1  flux in X direction on X edges
   !> @param[in] q        (const)  input state, primitives
@@ -27,7 +27,7 @@ module hyp_advection_module
   !> @param[inout] flux1    (modify) flux in X direction on X edges
   !> @param[inout] flux2    (modify) flux in Y direction on Y edges
   !> @param[inout] flux3    (modify) flux in Z direction on Z edges
-    subroutine pc_hyp_mol_flux(lo, hi, &
+    subroutine pc_hyp_mol_flux(lo1,lo2,lo3,hi1,hi2,hi3, &
                      domlo, domhi, &
                      q, qd_lo, qd_hi, &
                      qaux, qa_lo, qa_hi, &
@@ -73,11 +73,11 @@ module hyp_advection_module
  #endif
 
     integer :: vis, vie, vic ! Loop bounds for vector blocking
-    integer :: vi, vii ! Loop indicies for unrolled loops over 
+    integer :: vi, vii ! Loop indicies for unrolled loops over
 
     integer, intent(in) ::      qd_lo(3),   qd_hi(3)
     integer, intent(in) ::      qa_lo(3),   qa_hi(3)
-    integer, intent(in) ::         lo(3),      hi(3)
+    integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
     integer, intent(in) ::      domlo(3),   domhi(3)
     integer, intent(in) ::       Axlo(3),    Axhi(3)
     integer, intent(in) ::     fd1_lo(3),  fd1_hi(3)
@@ -99,7 +99,7 @@ module hyp_advection_module
     integer, intent(in) :: nebflux
     double precision, intent(inout) ::   ebflux(0:nebflux-1,1:nvar_2)
     integer,            intent(in   ) :: Nebg
-    type(eb_bndry_geom),intent(in   ) :: ebg(0:Nebg-1)    
+    type(eb_bndry_geom),intent(in   ) :: ebg(0:Nebg-1)
     double precision :: eb_norm(3), full_area
 #endif
     double precision, intent(in) ::     q(  qd_lo(1):  qd_hi(1),  qd_lo(2):  qd_hi(2),  qd_lo(3):  qd_hi(3),qvar_2)  !> State
@@ -125,9 +125,9 @@ module hyp_advection_module
     integer :: qa_lo1, qa_lo2, qa_lo3, qa_hi1, qa_hi2, qa_hi3
 
     ! Left and right state arrays (edge centered, cell centered)
-    double precision :: dqx(lo(1)-nextra:hi(1)+nextra, lo(2)-nextra:hi(2)+nextra, lo(3)-nextra:hi(3)+nextra, 1:qvar_2)
-    double precision :: dqy(lo(1)-nextra:hi(1)+nextra, lo(2)-nextra:hi(2)+nextra, lo(3)-nextra:hi(3)+nextra, 1:qvar_2)
-    double precision :: dqz(lo(1)-nextra:hi(1)+nextra, lo(2)-nextra:hi(2)+nextra, lo(3)-nextra:hi(3)+nextra, 1:qvar_2)
+    double precision :: dqx(lo1-nextra:hi1+nextra, lo2-nextra:hi2+nextra, lo3-nextra:hi3+nextra, 1:qvar_2)
+    double precision :: dqy(lo1-nextra:hi1+nextra, lo2-nextra:hi2+nextra, lo3-nextra:hi3+nextra, 1:qvar_2)
+    double precision :: dqz(lo1-nextra:hi1+nextra, lo2-nextra:hi2+nextra, lo3-nextra:hi3+nextra, 1:qvar_2)
 
     ! Other left and right state arrays
     double precision :: qtempl(1:5+nspec_2)
@@ -152,7 +152,7 @@ module hyp_advection_module
     ! integer :: nextra
     integer, parameter :: coord_type = 0
     integer, parameter :: bc_test_val = 1
-    
+
     double precision :: eos_state_rho
     double precision :: eos_state_p
     double precision :: eos_state_massfrac(nspec_2)
@@ -167,51 +167,51 @@ module hyp_advection_module
     integer, parameter :: R_P   = 5
     integer, parameter :: R_Y   = 6
 
-    do L=1,3
-       qt_lo(L) = lo(L) - nextra
-       qt_hi(L) = hi(L) + nextra
-       !if (qt_lo(L)-1 .lt. qd_lo(L) .or. qt_hi(L)+1 .gt. qd_hi(L)) then
-       !   stop 1
-       !endif
-    enddo
+    ! do L=1,3
+    !    qt_lo(L) = lo(L) - nextra
+    !    qt_hi(L) = hi(L) + nextra
+    !    !if (qt_lo(L)-1 .lt. qd_lo(L) .or. qt_hi(L)+1 .gt. qd_hi(L)) then
+    !    !   stop 1
+    !    !endif
+    ! enddo
 
     flux_tmp = 0.d0
-    ilo1=lo(1)-nextra
-    ilo2=lo(2)-nextra
-    ilo3=lo(3)-nextra
-    ihi1=hi(1)+nextra
-    ihi2=hi(2)+nextra
-    ihi3=hi(3)+nextra
+    ilo1=lo1-nextra
+    ilo2=lo2-nextra
+    ilo3=lo3-nextra
+    ihi1=hi1+nextra
+    ihi2=hi2+nextra
+    ihi3=hi3+nextra
     fglo1=fglo(1)
     fglo2=fglo(2)
     fglo3=fglo(3)
     fghi1=fghi(1)
     fghi2=fghi(2)
-    fghi3=fghi(3)    
+    fghi3=fghi(3)
     domlo1=domlo(1)
     domlo2=domlo(2)
     domlo3=domlo(3)
     domhi1=domhi(1)
     domhi2=domhi(2)
-    domhi3=domhi(3)    
+    domhi3=domhi(3)
     qd_lo1=qd_lo(1)
     qd_lo2=qd_lo(2)
     qd_lo3=qd_lo(3)
     qd_hi1=qd_hi(1)
     qd_hi2=qd_hi(2)
-    qd_hi3=qd_hi(3)    
-    qt_lo1=lo(1)-nextra
-    qt_lo2=lo(2)-nextra
-    qt_lo3=lo(3)-nextra
-    qt_hi1=hi(1)+nextra
-    qt_hi2=hi(2)+nextra
-    qt_hi3=hi(3)+nextra
+    qd_hi3=qd_hi(3)
+    qt_lo1=lo1-nextra
+    qt_lo2=lo2-nextra
+    qt_lo3=lo3-nextra
+    qt_hi1=hi1+nextra
+    qt_hi2=hi2+nextra
+    qt_hi3=hi3+nextra
     qa_lo1=qa_lo(1)
     qa_lo2=qa_lo(2)
     qa_lo3=qa_lo(3)
     qa_hi1=qa_hi(1)
     qa_hi2=qa_hi(2)
-    qa_hi3=qa_hi(3)    
+    qa_hi3=qa_hi(3)
 
     !$acc enter data create(dqx,dqy,dqz,qtempl,qtempr,eos_state_massfrac,flux_tmp,nbr)
 
@@ -239,7 +239,7 @@ module hyp_advection_module
     end if
 
     !$acc kernels default(present)
-    !$acc loop gang vector collapse(3) private(n,qtempl,qtempr,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp, csmall, cavg, vic, ivar) 
+    !$acc loop gang vector collapse(3) private(n,qtempl,qtempr,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp, csmall, cavg, vic, ivar)
     do k = ilo3, ihi3
        do j = ilo2, ihi2
           do i = ilo1+1, ihi1
@@ -347,7 +347,7 @@ module hyp_advection_module
     end if
 
     !$acc kernels default(present)
-    !$acc loop gang vector collapse(3) private(n,qtempl,qtempr,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp, csmall, cavg, vic, ivar) 
+    !$acc loop gang vector collapse(3) private(n,qtempl,qtempr,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp, csmall, cavg, vic, ivar)
     do k = ilo3, ihi3
        do j = ilo2+1, ihi2
           do i = ilo1, ihi1
@@ -571,4 +571,4 @@ module hyp_advection_module
     !enddo
 
   end subroutine pc_hyp_mol_flux
-end module hyp_advection_module 
+end module hyp_advection_module

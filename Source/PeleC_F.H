@@ -319,7 +319,7 @@ extern "C"
 
     void pc_hyp_mol_flux
     (
-        const int* lo, const int* hi,
+        AMREX_ARLIM_P(lo),AMREX_ARLIM_P(hi),
         const int* domlo, const int* domhi,
         const BL_FORT_FAB_ARG_3D(q),
         const BL_FORT_FAB_ARG_3D(qaux),
