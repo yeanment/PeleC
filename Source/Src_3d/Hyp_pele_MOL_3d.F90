@@ -62,6 +62,16 @@ module hyp_advection_module
     integer, parameter  :: nspec_2=9
     integer, parameter  :: nvar_2=16
     integer, parameter  :: qvar_2=17
+    !   concept is to advance cells lo to hi
+    !   need fluxes on the boundary
+    !   if tile is eb need to expand by 2 cells in each directions
+    !   would like to do this tile by tile
+#ifdef PELEC_USE_EB
+    integer, parameter  :: nextra = 3
+#else
+    integer, parameter  :: nextra = 0
+ #endif
+
     integer :: vis, vie, vic ! Loop bounds for vector blocking
     integer :: vi, vii ! Loop indicies for unrolled loops over 
 
@@ -115,7 +125,9 @@ module hyp_advection_module
     integer :: qa_lo1, qa_lo2, qa_lo3, qa_hi1, qa_hi2, qa_hi3
 
     ! Left and right state arrays (edge centered, cell centered)
-    double precision, pointer :: dqx(:,:,:,:), dqy(:,:,:,:), dqz(:,:,:,:)
+    double precision :: dqx(lo(1)-nextra:hi(1)+nextra, lo(2)-nextra:hi(2)+nextra, lo(3)-nextra:hi(3)+nextra, 1:qvar_2)
+    double precision :: dqy(lo(1)-nextra:hi(1)+nextra, lo(2)-nextra:hi(2)+nextra, lo(3)-nextra:hi(3)+nextra, 1:qvar_2)
+    double precision :: dqz(lo(1)-nextra:hi(1)+nextra, lo(2)-nextra:hi(2)+nextra, lo(3)-nextra:hi(3)+nextra, 1:qvar_2)
 
     ! Other left and right state arrays
     double precision :: qtempl(1:5+nspec_2)
@@ -137,7 +149,7 @@ module hyp_advection_module
          r_gd, ustar
     double precision :: flux_tmp(nvar_2)
     integer, parameter :: idir = 1
-    integer :: nextra
+    ! integer :: nextra
     integer, parameter :: coord_type = 0
     integer, parameter :: bc_test_val = 1
     
@@ -154,16 +166,6 @@ module hyp_advection_module
     integer, parameter :: R_UT2 = 4
     integer, parameter :: R_P   = 5
     integer, parameter :: R_Y   = 6
-
-    !   concept is to advance cells lo to hi
-    !   need fluxes on the boundary
-    !   if tile is eb need to expand by 2 cells in each directions
-    !   would like to do this tile by tile
-#ifdef PELEC_USE_EB
-    nextra = 3
-#else
-    nextra = 0
-#endif
 
     do L=1,3
        qt_lo(L) = lo(L) - nextra
@@ -210,10 +212,6 @@ module hyp_advection_module
     qa_hi1=qa_hi(1)
     qa_hi2=qa_hi(2)
     qa_hi3=qa_hi(3)    
-
-    allocate(dqx(qt_lo1:qt_hi1, qt_lo2:qt_hi2, qt_lo3:qt_hi3, 1:qvar_2))
-    allocate(dqy(qt_lo1:qt_hi1, qt_lo2:qt_hi2, qt_lo3:qt_hi3, 1:qvar_2))
-    allocate(dqz(qt_lo1:qt_hi1, qt_lo2:qt_hi2, qt_lo3:qt_hi3, 1:qvar_2))
 
     !$acc enter data create(dqx,dqy,dqz,qtempl,qtempr,eos_state_massfrac,flux_tmp,nbr)
 
@@ -561,10 +559,6 @@ module hyp_advection_module
     !$acc end parallel
 
     !$acc exit data delete(dqx,dqy,dqz,qtempl,qtempr,eos_state_massfrac,flux_tmp,nbr)
-
-    deallocate(dqx)
-    deallocate(dqy)
-    deallocate(dqz)
 
     !do ivar=1,nvar_2
     !   do k = lo(3)-nextra+1, hi(3)+nextra-1

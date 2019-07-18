@@ -239,7 +239,6 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       const double* flatn_array = flatn.dataPtr();
 
       #pragma acc enter data copyin(sfab_array[0:sfab_size], area_array_0[0:area_size_0], area_array_1[0:area_size_1], area_array_2[0:area_size_2], volume_array[0:volume_size], vfrac_array[0:vfrac_size]) create(flag_array[0:flag_size], qfab_array[0:qfab_size], qaux_array[0:qaux_size], coeff_ec_array_0[0:coeff_ec_size_0], coeff_ec_array_1[0:coeff_ec_size_1], coeff_ec_array_2[0:coeff_ec_size_2], tander_ec_array_0[0:tander_ec_size_0], tander_ec_array_1[0:tander_ec_size_1], tander_ec_array_2[0:tander_ec_size_2], coeff_array[0:coeff_size], flux_array_0[0:flux_size_0], flux_array_1[0:flux_size_1], flux_array_2[0:flux_size_2], dterm_array[0:dterm_size], flatn_array[0:flatn_size])
-      #pragma acc enter data create(qfab_array[0:qfab_size])
 
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term

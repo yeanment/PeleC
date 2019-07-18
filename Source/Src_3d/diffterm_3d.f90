@@ -429,7 +429,7 @@ contains
     end do
     !$acc end parallel loop
 
-    !$acc exit data delete(hii,x,q,vcx,vcy,vcz)
+    !$acc exit data delete(hii,x,vcx,vcy,vcz)
 
   end subroutine pc_diffterm
 
