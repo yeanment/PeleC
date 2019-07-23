@@ -1,23 +1,22 @@
-AMREX_HOME = /home/steven/amrex
-USE_EB = FALSE
-
 PRECISION  = DOUBLE
 
 PROFILE    = FALSE
 
 DEBUG      = FALSE
 
-#DIM        = 1
-DIM        = 2
 DIM        = 3
 
-COMP	   = gcc
+COMP	   = pgi
 
 USE_MPI    = FALSE
 
+USE_ACC    = FALSE
+
 USE_REACT  = TRUE
 
-#HYP_TYPE   = MOL
+HYP_TYPE   = MOL
+
+USE_EB     = TRUE
 
 # This sets the EOS directory in $(PELE_PHYSICS_HOME)/Eos
 #Eos_dir     := Soave-Redlich-Kwong
