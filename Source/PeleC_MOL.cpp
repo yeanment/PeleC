@@ -131,7 +131,6 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 
     //for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true)); mfi.isValid(); ++mfi) {
     for (MFIter mfi(S,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
-
       const int gpuStream = (mfi.index() % 16) + 1;
 
 #ifdef PELE_USE_EB
@@ -196,6 +195,21 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       const EBBndryGeom* sv_ebbg_ptr = (Ncut>0 ? sv_eb_bndry_geom[local_i].data() : 0);
       Real* sv_eb_flux_ptr = (nFlux>0 ? sv_eb_flux[local_i].dataPtr() : 0);
 #endif
+
+      Elixir Qfab_eli = Qfab.elixir();
+      Elixir Qaux_eli = Qaux.elixir();
+      Elixir coeff_cc_eli = coeff_cc.elixir();
+      Elixir Dterm_eli = Dterm.elixir();
+      Elixir coeff_ec_eli_0 = coeff_ec[0].elixir();
+      Elixir coeff_ec_eli_1 = coeff_ec[1].elixir();
+      Elixir coeff_ec_eli_2 = coeff_ec[2].elixir();
+      Elixir flux_ec_eli_0 = flux_ec[0].elixir();
+      Elixir flux_ec_eli_1 = flux_ec[1].elixir();
+      Elixir flux_ec_eli_2 = flux_ec[2].elixir();
+      Elixir tander_ec_eli_0 = tander_ec[0].elixir();
+      Elixir tander_ec_eli_1 = tander_ec[1].elixir();
+      Elixir tander_ec_eli_2 = tander_ec[2].elixir();
+      Elixir flatn_eli = flatn.elixir();
 
       //const unsigned long coeff_size = coeff_cc.size();
       //const double* coeff_array = coeff_cc.dataPtr();
