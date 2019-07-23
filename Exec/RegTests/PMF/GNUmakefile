@@ -12,11 +12,13 @@ USE_MPI    = FALSE
 
 USE_ACC    = FALSE
 
+USE_CUDA   = FALSE
+
 USE_REACT  = TRUE
 
 HYP_TYPE   = MOL
 
-USE_EB     = TRUE
+USE_EB     = FALSE
 
 # This sets the EOS directory in $(PELE_PHYSICS_HOME)/Eos
 #Eos_dir     := Soave-Redlich-Kwong
