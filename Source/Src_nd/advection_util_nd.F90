@@ -387,7 +387,7 @@ contains
   end subroutine compute_cfl
 
 
-  subroutine ctoprim(lo, hi, &
+  subroutine ctoprim(gpustream, lo, hi, &
                      uin, uin_lo, uin_hi, &
                      q,     q_lo,   q_hi, &
                      qaux, qa_lo,  qa_hi) bind(C, name = "ctoprim")
@@ -403,6 +403,8 @@ contains
                                    npassive, upass_map, qpass_map
     implicit none
 
+    integer, intent(in) :: gpustream
+    integer, intent(in) :: lo(3), hi(3)
     integer, intent(in) :: lo(3), hi(3)
     integer, intent(in) :: uin_lo(3), uin_hi(3)
     integer, intent(in) :: q_lo(3), q_hi(3)
@@ -440,8 +442,8 @@ contains
     hi2 = hi(2)
     hi3 = hi(3)
 
-    !$acc enter data create(eos_state_aux,eos_state_massfrac)
-    !$acc parallel loop gang vector collapse(3) private(rhoinv,kineng) default(present)
+    !$acc enter data create(eos_state_aux,eos_state_massfrac) async(gpustream)
+    !$acc parallel loop gang vector collapse(3) private(rhoinv,kineng) default(present) async(gpustream)
     do k = lo3, hi3
        do j = lo2, hi2
           do i = lo1, hi1
@@ -457,7 +459,7 @@ contains
     !$acc end parallel
 
     ! Load passively advected quatities into q
-    !$acc parallel default(present)
+    !$acc parallel default(present) async(gpustream)
     !$acc loop gang private(n,nq)
     do ipassive = 1, npassive
        n  = upass_map(ipassive)
@@ -474,7 +476,7 @@ contains
     !$acc end parallel
 
     ! get gamc, p, T, c, csml using q state
-    !$acc parallel loop gang vector collapse(3) private(eos_state_T, eos_state_rho, eos_state_e, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar, eos_state_massfrac, eos_state_aux) default(present)
+    !$acc parallel loop gang vector collapse(3) private(eos_state_T, eos_state_rho, eos_state_e, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar, eos_state_massfrac, eos_state_aux) default(present) async(gpustream)
     do k = lo3, hi3
        do j = lo2, hi2
           do i = lo1, hi1
@@ -500,7 +502,7 @@ contains
        enddo
     enddo
     !$acc end parallel
-    !$acc exit data delete(eos_state_aux,eos_state_massfrac)
+    !$acc exit data delete(eos_state_aux,eos_state_massfrac) async(gpustream)
 
   end subroutine ctoprim
 

@@ -11,7 +11,7 @@ F90EXE_sources += grad_utils_$(DIM)d.F90
 
 ifeq ($(HYP_TYPE), MOL)
   #F90EXE_sources += PeleC_mol_$(DIM)d.F90
-  f90EXE_sources += slope_mol_$(DIM)d_EB.f90
+  #f90EXE_sources += slope_mol_$(DIM)d_EB.f90
   F90EXE_sources += Hyp_pele_MOL_$(DIM)d.F90
 else
   f90EXE_sources += slope_$(DIM)d.f90

@@ -11,7 +11,7 @@ module diffterm_module
 
 contains
 
-  subroutine pc_diffterm(lo,  hi,&
+  subroutine pc_diffterm(gpustream, lo,  hi,&
                          dmnlo, dmnhi,&
                          Q,   Qlo,   Qhi,&
                          Dx,  Dxlo,  Dxhi,&
@@ -46,6 +46,7 @@ contains
     implicit none
 
     integer, parameter  :: nspec_2=9
+    integer, intent(in) :: gpustream
     integer, intent(in) ::     lo(3),    hi(3)
     integer, intent(in) ::  dmnlo(3), dmnhi(3)
     integer, intent(in) ::    Qlo(3),   Qhi(3)
@@ -131,14 +132,14 @@ contains
     hi2 = hi(2)
     hi3 = hi(3)
 
-    !$acc enter data create(hii,x,vcx,vcy,vcz)
+    !$acc enter data create(hii,x,vcx,vcy,vcz) async(gpustream)
 
-    !$acc parallel default(present)
+    !$acc parallel default(present) async(gpustream)
     call eos_ytx_vec_gpu(q,x,lo1,lo2,lo3,hi1,hi2,hi3,nspec_2,qfs,qvar)
     call eos_hi_vec_gpu(q,hii,lo1,lo2,lo3,hi1,hi2,hi3,nspec_2,qtemp,qvar,qfs)
     !$acc end parallel
 
-    !$acc kernels default(present) async(1)
+    !$acc kernels default(present) async(gpustream)
     !$acc loop collapse(3)
     do k=lo3,hi3
        do j=lo2,hi2
@@ -230,7 +231,7 @@ contains
     enddo
     !$acc end kernels
 
-    !$acc kernels default(present) async(2)
+    !$acc kernels default(present) async(gpustream)
     !$acc loop collapse(3)
     do k=lo3,hi3
        do j=lo2,hi2+1
@@ -322,7 +323,7 @@ contains
     enddo
     !$acc end kernels
 
-    !$acc kernels default(present) async(3)
+    !$acc kernels default(present) async(gpustream)
     !$acc loop collapse(3)
     do k=lo3,hi3+1
        do j=lo2,hi2
@@ -414,8 +415,7 @@ contains
     enddo
     !$acc end kernels
 
-    !$acc wait
-    !$acc parallel loop collapse(4) default(present)
+    !$acc parallel loop collapse(4) default(present) async(gpustream)
     do n=1,NVAR
        do k = lo3, hi3
           do j = lo2, hi2
@@ -429,7 +429,7 @@ contains
     end do
     !$acc end parallel loop
 
-    !$acc exit data delete(hii,x,vcx,vcy,vcz)
+    !$acc exit data delete(hii,x,vcx,vcy,vcz) async(gpustream)
 
   end subroutine pc_diffterm
 

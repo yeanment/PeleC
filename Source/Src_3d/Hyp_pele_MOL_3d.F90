@@ -1,7 +1,7 @@
 module hyp_advection_module
 
-  use amrex_ebcellflag_module, only : get_neighbor_cells
-  use pelec_eb_stencil_types_module, only : eb_bndry_geom
+  !use amrex_ebcellflag_module, only : get_neighbor_cells
+  !use pelec_eb_stencil_types_module, only : eb_bndry_geom
   use riemann_util_module, only : riemann_md_singlepoint, riemann_md_vec
   use prob_params_module, only: dim
 
@@ -27,7 +27,7 @@ module hyp_advection_module
   !> @param[inout] flux1    (modify) flux in X direction on X edges
   !> @param[inout] flux2    (modify) flux in Y direction on Y edges
   !> @param[inout] flux3    (modify) flux in Z direction on Z edges
-    subroutine pc_hyp_mol_flux(lo1,lo2,lo3,hi1,hi2,hi3, &
+    subroutine pc_hyp_mol_flux(gpustream,lo1,lo2,lo3,hi1,hi2,hi3, &
                      domlo, domhi, &
                      q, qd_lo, qd_hi, &
                      qaux, qa_lo, qa_hi, &
@@ -52,7 +52,7 @@ module hyp_advection_module
                                    QFS, QC, QCSML, NQAUX, nadv, &
                                    URHO, UMX, UMY, UMZ, UEDEN, UEINT, UFS, UTEMP, UFX, UFA, &
                                    small_dens, small_pres
-    use slope_module, only : slopex, slopey, slopez
+    !use slope_module, only : slopex, slopey, slopez
     use actual_network, only : naux
     use eos_module, only : eos_rp_gpu
     use chemistry_module, only: Ru
@@ -75,6 +75,7 @@ module hyp_advection_module
     integer :: vis, vie, vic ! Loop bounds for vector blocking
     integer :: vi, vii ! Loop indicies for unrolled loops over
 
+    integer, intent(in) :: gpustream
     integer, intent(in) ::      qd_lo(3),   qd_hi(3)
     integer, intent(in) ::      qa_lo(3),   qa_hi(3)
     integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
@@ -191,12 +192,12 @@ module hyp_advection_module
     ihi1=hi1+nextra
     ihi2=hi2+nextra
     ihi3=hi3+nextra
-    fglo1=fglo(1)
-    fglo2=fglo(2)
-    fglo3=fglo(3)
-    fghi1=fghi(1)
-    fghi2=fghi(2)
-    fghi3=fghi(3)
+    !fglo1=fglo(1)
+    !fglo2=fglo(2)
+    !fglo3=fglo(3)
+    !fghi1=fghi(1)
+    !fghi2=fghi(2)
+    !fghi3=fghi(3)
     domlo1=domlo(1)
     domlo2=domlo(2)
     domlo3=domlo(3)
@@ -222,9 +223,9 @@ module hyp_advection_module
     qa_hi2=qa_hi(2)
     qa_hi3=qa_hi(3)
 
-    !$acc enter data create(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z,nbr_x,nbr_y,nbr_z)
+    !$acc enter data create(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z,nbr_x,nbr_y,nbr_z) async(gpustream)
 
-    !$acc parallel loop gang vector collapse(4) default(present) async(1)
+    !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
     do n = 1, qvar_2
        do k = qt_lo3, qt_hi3
           do j = qt_lo2, qt_hi2
@@ -235,19 +236,19 @@ module hyp_advection_module
        enddo
     enddo
     !$acc end parallel
-    if(plm_iorder.ne.1) then
-       !$acc parallel default(present) async(1)
-       call slopex(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
-                  dqx,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
-                  ilo1,ilo2,ilo3, &
-                  ihi1,ihi2,ihi3,qvar_2,nqaux, &
-                  domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
-                  qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
-                  flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
-       !$acc end parallel
-    end if
+    !if(plm_iorder.ne.1) then
+    !   !$acc parallel default(present) async(gpustream)
+    !   call slopex(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
+    !              dqx,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
+    !              ilo1,ilo2,ilo3, &
+    !              ihi1,ihi2,ihi3,qvar_2,nqaux, &
+    !              domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
+    !              qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
+    !              flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
+    !   !$acc end parallel
+    !end if
 
-    !$acc kernels default(present) async(1)
+    !$acc kernels default(present) async(gpustream)
     !$acc loop gang vector collapse(3) private(n,qtempl_x,qtempr_x,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac_x, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp_x, csmall, cavg, vic, ivar)
     do k = ilo3, ihi3
        do j = ilo2, ihi2
@@ -332,7 +333,7 @@ module hyp_advection_module
     enddo
     !$acc end kernels
 
-    !$acc parallel loop gang vector collapse(4) default(present) async(2)
+    !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
     do n = 1, qvar_2
        do k = qt_lo3, qt_hi3
           do j = qt_lo2, qt_hi2
@@ -343,19 +344,19 @@ module hyp_advection_module
        enddo
     enddo
     !$acc end parallel
-    if(plm_iorder.ne.1) then
-       !$acc parallel default(present) async(2)
-       call slopey(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
-                  dqy,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
-                  ilo1,ilo2,ilo3, &
-                  ihi1,ihi2,ihi3,qvar_2,nqaux, &
-                  domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
-                  qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
-                  flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
-       !$acc end parallel
-    end if
+    !if(plm_iorder.ne.1) then
+    !   !$acc parallel default(present) async(gpustream)
+    !   call slopey(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
+    !              dqy,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
+    !              ilo1,ilo2,ilo3, &
+    !              ihi1,ihi2,ihi3,qvar_2,nqaux, &
+    !              domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
+    !              qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
+    !              flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
+    !   !$acc end parallel
+    !end if
 
-    !$acc kernels default(present) async(2)
+    !$acc kernels default(present) async(gpustream)
     !$acc loop gang vector collapse(3) private(n,qtempl_y,qtempr_y,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac_y, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp_y, csmall, cavg, vic, ivar)
     do k = ilo3, ihi3
        do j = ilo2+1, ihi2
@@ -441,7 +442,7 @@ module hyp_advection_module
     enddo
     !$acc end kernels
 
-    !$acc parallel loop gang vector collapse(4) default(present) async(3)
+    !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
     do n = 1, qvar_2
        do k = qt_lo3, qt_hi3
           do j = qt_lo2, qt_hi2
@@ -452,19 +453,19 @@ module hyp_advection_module
        enddo
     enddo
     !$acc end parallel
-    if(plm_iorder.ne.1) then
-       !$acc parallel default(present) async(3)
-       call slopez(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
-                  dqz,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
-                  ilo1,ilo2,ilo3, &
-                  ihi1,ihi2,ihi3,qvar_2,nqaux, &
-                  domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
-                  qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
-                  flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
-       !$acc end parallel
-    end if
+    !if(plm_iorder.ne.1) then
+    !   !$acc parallel default(present) async(gpustream)
+    !   call slopez(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
+    !              dqz,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
+    !              ilo1,ilo2,ilo3, &
+    !              ihi1,ihi2,ihi3,qvar_2,nqaux, &
+    !              domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
+    !              qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
+    !              flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
+    !   !$acc end parallel
+    !end if
 
-    !$acc kernels default(present) async(3)
+    !$acc kernels default(present) async(gpustream)
     !$acc loop gang vector collapse(3) private(n,qtempl_z,qtempr_z,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac_z, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp_z, csmall, cavg, vic, ivar)
     do k = ilo3+1, ihi3
        do j = ilo2, ihi2
@@ -553,8 +554,7 @@ module hyp_advection_module
     enddo
     !$acc end kernels
 
-    !$acc wait
-    !$acc parallel loop gang vector collapse(4) default(present)
+    !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
     do ivar=1,nvar_2
        do k = ilo3+1, ihi3-1
           do j = ilo2+1, ihi2-1
@@ -568,7 +568,7 @@ module hyp_advection_module
     enddo
     !$acc end parallel
 
-    !$acc exit data delete(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z,nbr_x,nbr_y,nbr_z)
+    !$acc exit data delete(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z,nbr_x,nbr_y,nbr_z) async(gpustream)
 
     !do ivar=1,nvar_2
     !   do k = lo(3)-nextra+1, hi(3)+nextra-1

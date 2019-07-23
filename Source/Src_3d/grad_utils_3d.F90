@@ -19,7 +19,7 @@ module grad_utils_module
 
 contains
 
-  subroutine pc_compute_tangential_vel_derivs(lo,  hi, dlo, dhi,&
+  subroutine pc_compute_tangential_vel_derivs(gpustream, lo,  hi, dlo, dhi,&
        Q,   Qlo,   Qhi,&
        td,  tdlo,  tdhi,&
        deltax, idir) bind(C, name = "pc_compute_tangential_vel_derivs")
@@ -30,6 +30,7 @@ contains
 
     implicit none
 
+    integer, intent(in   ) :: gpustream
     integer, intent(in   ) ::   lo(3),  hi(3)
     integer, intent(in   ) ::  dlo(3), dhi(3)
     integer, intent(in   ) ::  Qlo(3), Qhi(3)
@@ -54,7 +55,7 @@ contains
     hi3 = hi(3)
 
     if (idir .eq. 0) then
-       !$acc parallel loop gang vector collapse(3) default(present)
+       !$acc parallel loop gang vector collapse(3) default(present) async(gpustream)
        do k=lo3,hi3
           do j=lo2,hi2
              do i=lo1,hi1+1
@@ -70,7 +71,7 @@ contains
        !$acc end parallel
 
     else if (idir .eq. 1) then
-       !$acc parallel loop gang vector collapse(3) default(present)
+       !$acc parallel loop gang vector collapse(3) default(present) async(gpustream)
        do k=lo3,hi3
           do j=lo2,hi2+1
              do i=lo1,hi1
@@ -86,7 +87,7 @@ contains
        !$acc end parallel
 
     else
-       !$acc parallel loop gang vector collapse(3) default(present)
+       !$acc parallel loop gang vector collapse(3) default(present) async(gpustream)
        do k=lo3,hi3+1
           do j=lo2,hi2
              do i=lo1,hi1

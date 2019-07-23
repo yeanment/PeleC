@@ -299,7 +299,7 @@ contains
 
   end subroutine pc_diffextrap
 
-  subroutine pc_move_transport_coeffs_to_ec(lo,hi,dlo,dhi, &
+  subroutine pc_move_transport_coeffs_to_ec(gpustream,lo,hi,dlo,dhi, &
        cfab,c_lo,c_hi, &
        efab,e_lo,e_hi, dir, nc, do_harmonic) &
        bind(C, name="pc_move_transport_coeffs_to_ec")
@@ -308,6 +308,7 @@ contains
 
     implicit none
 
+    integer         , intent(in   ) :: gpustream
     integer         , intent(in   ) :: lo(3), hi(3)
     integer         , intent(in   ) :: dlo(3), dhi(3)
     integer         , intent(in   ) :: c_lo(3), c_hi(3)
@@ -328,7 +329,7 @@ contains
 
     if (do_harmonic .eq. 0) then
        if (dir .EQ. 0) then
-          !$acc parallel loop gang vector collapse(4) default(present)
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
              do k = lo3, hi3
                 do j = lo2, hi2
@@ -340,7 +341,7 @@ contains
           end do
           !$acc end parallel
        else if (dir .EQ. 1) then
-          !$acc parallel loop gang vector collapse(4) default(present)
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
              do k = lo3, hi3
                 do j = lo2, hi2+1
@@ -352,7 +353,7 @@ contains
           end do
           !$acc end parallel
        else if (dir .EQ. 2) then
-          !$acc parallel loop gang vector collapse(4) default(present)
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
              do k = lo3, hi3+1
                 do j = lo2, hi2
@@ -366,7 +367,7 @@ contains
        end if
     else
        if (dir .EQ. 0) then
-          !$acc parallel loop gang vector collapse(4) default(present)
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
              do k = lo3, hi3
                 do j = lo2, hi2
@@ -381,7 +382,7 @@ contains
           end do
           !$acc end parallel
        else if (dir .EQ. 1) then
-          !$acc parallel loop gang vector collapse(4) default(present)
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
              do k = lo3, hi3
                 do j = lo2, hi2+1
@@ -396,7 +397,7 @@ contains
           end do
           !$acc end parallel
        else if (dir .EQ. 2) then
-          !$acc parallel loop gang vector collapse(4) default(present)
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
              do k = lo3, hi3+1
                 do j = lo2, hi2
