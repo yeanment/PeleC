@@ -169,7 +169,10 @@ PeleC::do_mol_advance(Real time,
     MultiFab::Subtract(S, I_R, NumSpec,Eden,      1,       0);
 
     // Compute I_R and U^{n+1} = U^n + dt*(F_{AD} + I_R)
-    react_state(time, dt, false, &S);  // false = not react_init
+    if(do_gpu_react)
+      react_state_gpu(time, dt);
+    else
+      react_state(time, dt, false, &S);  // false = not react_init
   }
 #endif
 
@@ -191,7 +194,10 @@ PeleC::do_mol_advance(Real time,
       MultiFab::LinComb(S, 0.5, S_old, 0, 0.5, S_new, 0, 0, NUM_STATE, 0);
 
       // Compute I_R and U^{n+1} = U^n + dt*(F_{AD} + I_R)
-      react_state(time, dt, false, &S);  // false = not react_init
+      if(do_gpu_react)
+        react_state_gpu(time, dt);
+      else
+        react_state(time, dt, false, &S);  // false = not react_init
       
       computeTemp(U_new,0);
     }

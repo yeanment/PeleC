@@ -15,6 +15,7 @@ static int do_avg_down;
 static int use_reactions_work_estimate;
 static int load_balance_verbosity;
 static int do_gpu;
+static int do_gpu_react;
 static amrex::Real difmag;
 static amrex::Real small_dens;
 static amrex::Real small_massfrac;

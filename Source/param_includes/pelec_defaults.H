@@ -15,6 +15,7 @@ int         PeleC::do_avg_down = 1;
 int         PeleC::use_reactions_work_estimate = 0;
 int         PeleC::load_balance_verbosity = 0;
 int         PeleC::do_gpu = 0;
+int         PeleC::do_gpu_react = 0;
 amrex::Real PeleC::difmag = 0.1;
 amrex::Real PeleC::small_dens = 1.e-200;
 amrex::Real PeleC::small_massfrac = 1.e-200;

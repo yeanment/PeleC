@@ -1336,7 +1336,7 @@ PeleC::post_init (Real stop_time)
   if (do_react == 1)
   {
     bool react_init = true;
-    if(do_gpu)
+    if(do_gpu || do_gpu_react)
          react_state_gpu(cumtime, dtlev, react_init);
     else 
         react_state(cumtime,dtlev,react_init);
