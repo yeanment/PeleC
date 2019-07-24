@@ -70,7 +70,7 @@ module hyp_advection_module
     integer, parameter  :: nextra = 3
 #else
     integer, parameter  :: nextra = 0
- #endif
+#endif
 
     integer :: vis, vie, vic ! Loop bounds for vector blocking
     integer :: vi, vii ! Loop indicies for unrolled loops over

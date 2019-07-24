@@ -405,7 +405,6 @@ contains
 
     integer, intent(in) :: gpustream
     integer, intent(in) :: lo(3), hi(3)
-    integer, intent(in) :: lo(3), hi(3)
     integer, intent(in) :: uin_lo(3), uin_hi(3)
     integer, intent(in) :: q_lo(3), q_hi(3)
     integer, intent(in) :: qa_lo(3), qa_hi(3)
