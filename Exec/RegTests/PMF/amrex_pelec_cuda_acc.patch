@@ -73,16 +73,3 @@ index 476800599..e79d36b74 100644
            end do
         end do
      end do
-diff --git a/Tools/GNUMake/Make.defs b/Tools/GNUMake/Make.defs
-index a6577e7d1..d28ed181e 100644
---- a/Tools/GNUMake/Make.defs
-+++ b/Tools/GNUMake/Make.defs
-@@ -487,7 +487,7 @@ USE_GPU := FALSE
- 
- ifeq ($(USE_ACC),TRUE)
- 
--  USE_GPU := TRUE
-+  #USE_GPU := TRUE
-   ACCSuffix := .ACC
-   DEFINES += -DAMREX_USE_ACC
- 
