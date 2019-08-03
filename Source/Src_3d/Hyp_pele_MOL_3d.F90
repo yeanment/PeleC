@@ -56,6 +56,14 @@ module hyp_advection_module
     use actual_network, only : naux
     use eos_module, only : eos_rp_gpu
     use chemistry_module, only: Ru
+    !                               eb_small_vfrac
+    !use slope_module, only : slopex, slopey, slopez
+    !use network, only : nspecies, naux
+    !use eos_type_module
+    !use eos_module, only : eos_t, eos_rp
+    !use riemann_module, only: cmpflx, shock
+    !use amrex_constants_module
+    !use amrex_fort_module, only : amrex_real
 
     implicit none
 

@@ -39,6 +39,7 @@ contains
                          D,   Dlo,   Dhi,&
                          deltax) bind(C, name = "pc_diffterm")
 
+    !use network, only : nspecies
     use meth_params_module, only : NVAR, UMX, UMY, UMZ, UEDEN, UFS, QVAR, QU, QV, QW, QPRES, QTEMP, QFS, QRHO
     use eos_module !this pulls in nspec, so we need to use a unique nspec to
                    !define as a parameter for the gpu
