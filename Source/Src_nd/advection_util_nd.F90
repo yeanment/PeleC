@@ -482,7 +482,7 @@ contains
              eos_state_T        = q(i,j,k,QTEMP )
              eos_state_rho      = q(i,j,k,QRHO  )
              eos_state_e        = q(i,j,k,QREINT)
-             eos_state_massfrac = q(i,j,k,QFS:QFS+nspec-1)
+             eos_state_massfrac = q(i,j,k,QFS:QFS+nspecies-1)
              eos_state_aux      = q(i,j,k,QFX:QFX+naux-1)
 
              call eos_re_gpu(eos_state_T, eos_state_rho, eos_state_e, eos_state_massfrac, eos_state_aux, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar)
