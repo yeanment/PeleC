@@ -39,14 +39,12 @@ contains
                          D,   Dlo,   Dhi,&
                          deltax) bind(C, name = "pc_diffterm")
 
-    !use network, only : nspecies
+    use network, only : nspecies
     use meth_params_module, only : NVAR, UMX, UMY, UMZ, UEDEN, UFS, QVAR, QU, QV, QW, QPRES, QTEMP, QFS, QRHO
-    use eos_module !this pulls in nspec, so we need to use a unique nspec to
-                   !define as a parameter for the gpu
+    use eos_module
 
     implicit none
 
-    integer, parameter  :: nspec_2=9
     integer, intent(in) :: gpustream
     integer, intent(in) ::     lo(3),    hi(3)
     integer, intent(in) ::  dmnlo(3), dmnhi(3)
@@ -80,21 +78,21 @@ contains
     integer, intent(in) ::    Vlo(3),   Vhi(3)
 
     double precision, intent(in   ) ::    Q(   Qlo(1):   Qhi(1),   Qlo(2):   Qhi(2),   Qlo(3):   Qhi(3), QVAR)
-    double precision, intent(in   ) ::   Dx(  Dxlo(1):  Dxhi(1),  Dxlo(2):  Dxhi(2),  Dxlo(3):  Dxhi(3), nspec_2)
+    double precision, intent(in   ) ::   Dx(  Dxlo(1):  Dxhi(1),  Dxlo(2):  Dxhi(2),  Dxlo(3):  Dxhi(3), nspecies)
     double precision, intent(in   ) ::  mux( muxlo(1): muxhi(1), muxlo(2): muxhi(2), muxlo(3): muxhi(3)  )
     double precision, intent(in   ) ::  xix( xixlo(1): xixhi(1), xixlo(2): xixhi(2), xixlo(3): xixhi(3)  )
     double precision, intent(in   ) :: lamx(lamxlo(1):lamxhi(1),lamxlo(2):lamxhi(2),lamxlo(3):lamxhi(3)  )
     double precision, intent(in   ) ::   tx(  txlo(1):  txhi(1),  txlo(2):  txhi(2),  txlo(3):  txhi(3), 6)
     double precision, intent(in   ) ::   Ax(  Axlo(1):  Axhi(1),  Axlo(2):  Axhi(2),  Axlo(3):  Axhi(3)  )
     double precision, intent(inout) ::   fx(  fxlo(1):  fxhi(1),  fxlo(2):  fxhi(2),  fxlo(3):  fxhi(3), NVAR)
-    double precision, intent(in   ) ::   Dy(  Dylo(1):  Dyhi(1),  Dylo(2):  Dyhi(2),  Dylo(3):  Dyhi(3), nspec_2)
+    double precision, intent(in   ) ::   Dy(  Dylo(1):  Dyhi(1),  Dylo(2):  Dyhi(2),  Dylo(3):  Dyhi(3), nspecies)
     double precision, intent(in   ) ::  muy( muylo(1): muyhi(1), muylo(2): muyhi(2), muylo(3): muyhi(3)  )
     double precision, intent(in   ) ::  xiy( xiylo(1): xiyhi(1), xiylo(2): xiyhi(2), xiylo(3): xiyhi(3)  )
     double precision, intent(in   ) :: lamy(lamylo(1):lamyhi(1),lamylo(2):lamyhi(2),lamylo(3):lamyhi(3)  )
     double precision, intent(in   ) ::   ty(  tylo(1):  tyhi(1),  tylo(2):  tyhi(2),  tylo(3):  tyhi(3), 6)
     double precision, intent(in   ) ::   Ay(  Aylo(1):  Ayhi(1),  Aylo(2):  Ayhi(2),  Aylo(3):  Ayhi(3)  )
     double precision, intent(inout) ::   fy(  fylo(1):  fyhi(1),  fylo(2):  fyhi(2),  fylo(3):  fyhi(3), NVAR)
-    double precision, intent(in   ) ::   Dz(  Dzlo(1):  Dzhi(1),  Dzlo(2):  Dzhi(2),  Dzlo(3):  Dzhi(3), nspec_2)
+    double precision, intent(in   ) ::   Dz(  Dzlo(1):  Dzhi(1),  Dzlo(2):  Dzhi(2),  Dzlo(3):  Dzhi(3), nspecies)
     double precision, intent(in   ) ::  muz( muzlo(1): muzhi(1), muzlo(2): muzhi(2), muzlo(3): muzhi(3)  )
     double precision, intent(in   ) ::  xiz( xizlo(1): xizhi(1), xizlo(2): xizhi(2), xizlo(3): xizhi(3)  )
     double precision, intent(in   ) :: lamz(lamzlo(1):lamzhi(1),lamzlo(2):lamzhi(2),lamzlo(3):lamzhi(3)  )
@@ -114,8 +112,8 @@ contains
     double precision :: Vcy(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
     double precision :: Vcz(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)
     double precision :: dlnpi, dlnpj, dlnpk
-    double precision :: X(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec_2)
-    double precision :: hii(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspec_2)
+    double precision :: X(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspecies)
+    double precision :: hii(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1,1:nspecies)
     double precision, parameter :: twoThirds = 2.d0/3.d0
     double precision :: dxinv1, dxinv2, dxinv3
 
@@ -136,8 +134,8 @@ contains
     !$acc enter data create(hii,x,vcx,vcy,vcz) async(gpustream)
 
     !$acc parallel default(present) async(gpustream)
-    call eos_ytx_vec_gpu(q,x,lo1,lo2,lo3,hi1,hi2,hi3,nspec_2,qfs,qvar)
-    call eos_hi_vec_gpu(q,hii,lo1,lo2,lo3,hi1,hi2,hi3,nspec_2,qtemp,qvar,qfs)
+    call eos_ytx_vec_gpu(q,x,lo1,lo2,lo3,hi1,hi2,hi3,qfs,qvar)
+    call eos_hi_vec_gpu(q,hii,lo1,lo2,lo3,hi1,hi2,hi3,qtemp,qvar,qfs)
     !$acc end parallel
 
     !$acc kernels default(present) async(gpustream)
@@ -176,7 +174,7 @@ contains
        enddo
     enddo
     !$acc loop seq
-    do n=1,nspec_2
+    do n=1,nspecies
        !$acc loop collapse(3)
        do k=lo3,hi3
           do j=lo2,hi2
@@ -196,7 +194,7 @@ contains
        enddo
     enddo
     !$acc loop seq
-    do n=1,nspec_2
+    do n=1,nspecies
        !$acc loop collapse(3)
        do k=lo3,hi3
           do j=lo2,hi2
@@ -221,7 +219,7 @@ contains
        enddo
     enddo
     !$acc loop collapse(4)
-    do n=UFS,UFS+nspec_2-1
+    do n=UFS,UFS+nspecies-1
        do k=lo3,hi3
           do j=lo2,hi2
              do i=lo1,hi1+1
@@ -268,7 +266,7 @@ contains
        enddo
     enddo
     !$acc loop seq
-    do n=1,nspec_2
+    do n=1,nspecies
        !$acc loop collapse(3)
        do k=lo3,hi3
           do j=lo2,hi2+1
@@ -288,7 +286,7 @@ contains
        enddo
     enddo
     !$acc loop seq
-    do n=1,nspec_2
+    do n=1,nspecies
        !$acc loop collapse(3)
        do k=lo3,hi3
           do j=lo2,hi2+1
@@ -313,7 +311,7 @@ contains
        enddo
     enddo
     !$acc loop collapse(4)
-    do n=UFS,UFS+nspec_2-1
+    do n=UFS,UFS+nspecies-1
        do k=lo3,hi3
           do j=lo2,hi2+1
              do i=lo1,hi1
@@ -360,7 +358,7 @@ contains
        enddo
     enddo
     !$acc loop seq
-    do n=1,nspec_2
+    do n=1,nspecies
        !$acc loop collapse(3)
        do k=lo3,hi3+1
           do j=lo2,hi2
@@ -380,7 +378,7 @@ contains
        enddo
     enddo
     !$acc loop seq
-    do n=1,nspec_2
+    do n=1,nspecies
        !$acc loop collapse(3)
        do k=lo3,hi3+1
           do j=lo2,hi2
@@ -405,7 +403,7 @@ contains
        enddo
     enddo
     !$acc loop collapse(4)
-    do n=UFS,UFS+nspec_2-1
+    do n=UFS,UFS+nspecies-1
        do k=lo3,hi3+1
           do j=lo2,hi2
              do i=lo1,hi1

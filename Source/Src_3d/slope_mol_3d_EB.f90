@@ -19,7 +19,7 @@ contains
       !use amrex_mempool_module, only : bl_allocate, bl_deallocate
       !use meth_params_module
       !use amrex_constants_module
-      !use actual_network, only : nspec
+      use network, only : nspecies
       !use prob_params_module, only : physbc_lo, physbc_hi, Inflow
 
       !$acc routine(slopex) gang
@@ -31,7 +31,6 @@ contains
 
       implicit none
 
-      integer, parameter  :: nspec=9
       integer, intent(in) :: qd_lo1, qd_lo2, qd_lo3, qd_hi1, qd_hi2, qd_hi3
       integer, intent(in) :: qt_lo1, qt_lo2, qt_lo3, qt_hi1, qt_hi2, qt_hi3
       integer, intent(in) :: qa_lo1, qa_lo2, qa_lo3, qa_hi1, qa_hi2, qa_hi3
@@ -69,7 +68,7 @@ contains
                     + 0.5d0*q(i,j,k,QRHO)*(q(i+1,j,k,QU)-q(i,j,k,QU)), 0.d0, flagArrayR)
                drgt(3) = merge(q(i+1,j,k,QV)-q(i,j,k,QV), 0.d0, flagArrayR)
                drgt(4) = merge(q(i+1,j,k,QW)-q(i,j,k,QW), 0.d0, flagArrayR)
-               do n = 1, nspec
+               do n = 1, nspecies
                   dlft(4+n) = merge(q(i,j,k,QRHO)*q(i,j,k,QFS+n-1)-q(i-1,j,k,QRHO)*q(i-1,j,k,QFS+n-1) &
                                - q(i,j,k,QFS+n-1)*(q(i,j,k,QPRES)-q(i-1,j,k,QPRES))/qaux(i,j,k,QC)**2, 0.d0, flagArrayL)
                   drgt(4+n) = merge(q(i+1,j,k,QRHO)*q(i+1,j,k,QFS+n-1)-q(i,j,k,QRHO)*q(i,j,k,QFS+n-1) &
@@ -97,7 +96,7 @@ contains
       !use amrex_mempool_module, only : bl_allocate, bl_deallocate
       !use meth_params_module
       !use amrex_constants_module
-      !use actual_network, only : nspec
+      use network, only : nspecies
       !use prob_params_module, only : physbc_lo, physbc_hi, Inflow
 
       !$acc routine(slopey) gang
@@ -109,7 +108,6 @@ contains
 
       implicit none
 
-      integer, parameter  :: nspec=9
       integer, intent(in) :: qd_lo1, qd_lo2, qd_lo3, qd_hi1, qd_hi2, qd_hi3
       integer, intent(in) :: qt_lo1, qt_lo2, qt_lo3, qt_hi1, qt_hi2, qt_hi3
       integer, intent(in) :: qa_lo1, qa_lo2, qa_lo3, qa_hi1, qa_hi2, qa_hi3
@@ -147,7 +145,7 @@ contains
                     + 0.5d0*q(i,j,k,QRHO)*(q(i,j+1,k,QV)-q(i,j,k,QV)), 0.d0, flagArrayR)
                drgt(3) = merge(q(i,j+1,k,QU)-q(i,j,k,QU), 0.d0, flagArrayR)
                drgt(4) = merge(q(i,j+1,k,QW)-q(i,j,k,QW), 0.d0, flagArrayR)
-               do n = 1, nspec
+               do n = 1, nspecies
                   dlft(4+n) = merge(q(i,j,k,QRHO)*q(i,j,k,QFS+n-1)-q(i,j-1,k,QRHO)*q(i,j-1,k,QFS+n-1) &
                               - q(i,j,k,QFS+n-1)*(q(i,j,k,QPRES)-q(i,j-1,k,QPRES))/qaux(i,j,k,QC)**2, 0.d0, flagArrayL)
                   drgt(4+n) = merge(q(i,j+1,k,QRHO)*q(i,j+1,k,QFS+n-1)-q(i,j,k,QRHO)*q(i,j,k,QFS+n-1) &
@@ -175,7 +173,7 @@ contains
       !use amrex_mempool_module, only : bl_allocate, bl_deallocate
       !use meth_params_module
       !use amrex_constants_module
-      !use actual_network, only : nspec
+      use network, only : nspecies
       !use prob_params_module, only : physbc_lo, physbc_hi, Inflow
 
       !$acc routine(slopez) gang
@@ -187,7 +185,6 @@ contains
 
       implicit none
 
-      integer, parameter  :: nspec=9
       integer, intent(in) :: qd_lo1, qd_lo2, qd_lo3, qd_hi1, qd_hi2, qd_hi3
       integer, intent(in) :: qt_lo1, qt_lo2, qt_lo3, qt_hi1, qt_hi2, qt_hi3
       integer, intent(in) :: qa_lo1, qa_lo2, qa_lo3, qa_hi1, qa_hi2, qa_hi3
@@ -225,7 +222,7 @@ contains
                     + 0.5d0*q(i,j,k,QRHO)*(q(i,j,k+1,QW)-q(i,j,k,QW)), 0.d0, flagArrayR)
                drgt(3) = merge(q(i,j,k+1,QU)-q(i,j,k,QU), 0.d0, flagArrayR)
                drgt(4) = merge(q(i,j,k+1,QV)-q(i,j,k,QV), 0.d0, flagArrayR)
-               do n = 1, nspec
+               do n = 1, nspecies
                   dlft(4+n) = merge(q(i,j,k,QRHO)*q(i,j,k,QFS+n-1)-q(i,j,k-1,QRHO)*q(i,j,k-1,QFS+n-1) &
                               - q(i,j,k,QFS+n-1)*(q(i,j,k,QPRES)-q(i,j,k-1,QPRES))/qaux(i,j,k,QC)**2, 0.d0, flagArrayL)
                   drgt(4+n) = merge(q(i,j,k+1,QRHO)*q(i,j,k+1,QFS+n-1)-q(i,j,k,QRHO)*q(i,j,k,QFS+n-1) &

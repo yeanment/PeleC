@@ -311,7 +311,7 @@ use amrex_ebcellflag_module, only : is_covered_cell
            !Given rho, T, and mass fractions
            !call VCKWYR(npts, urk(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),URHO), &
            !    urk(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),UTEMP), &
-           !    yrk(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),1:nspec), &
+           !    yrk(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),1:nspecies), &
            !    wdot)
 
             !Ideally this has to come from a vector call to fuego

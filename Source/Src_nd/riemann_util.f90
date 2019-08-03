@@ -594,7 +594,7 @@ contains
   subroutine riemann_md_singlepoint( rl, ul, vl, v2l, pl, rel, spl, gamcl, &
        rr, ur, vr, v2r, pr, rer, spr, gamcr,&
        qint_iu, qint_iv1, qint_iv2, qint_gdpres, qint_gdgame, &
-       regd, rgd, ustar, eos_state, gdnv_state, nsp, &
+       regd, rgd, ustar, eos_state, gdnv_state, nspecies, &
        uflx_rho, uflx_u, uflx_v, uflx_w, uflx_eden, uflx_eint, &
        idir, coord_type, bc_test_val, csmall, cav)
 
@@ -604,9 +604,9 @@ contains
     implicit none
 
     ! Inputs
-    integer, intent(in) :: nsp
-    double precision, intent(in) :: rl, ul, vl, v2l, pl, rel, spl(nsp), gamcl ! Left state
-    double precision, intent(in) :: rr, ur, vr, v2r, pr, rer, spr(nsp), gamcr ! Right state
+    integer, intent(in) :: nspecies
+    double precision, intent(in) :: rl, ul, vl, v2l, pl, rel, spl(nspecies), gamcl ! Left state
+    double precision, intent(in) :: rr, ur, vr, v2r, pr, rer, spr(nspecies), gamcr ! Right state
     integer, intent(in) :: idir, coord_type
     integer, intent(in) :: bc_test_val
     double precision, intent(in) :: csmall, cav
@@ -822,7 +822,7 @@ contains
        qint_iu, vgd, wgd, qint_gdpres, qint_gdgame, &
        regd, rgd, ustar, &
        gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, &
-       gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp, &
+       gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nspecies, &
        uflx_rho, uflx_u, uflx_v, uflx_w, uflx_eden, uflx_eint, &
        bc_test_val, csmall, cav, VECLEN)
 
@@ -833,15 +833,15 @@ contains
 
     implicit none
 
-    integer, intent(in) :: nsp, VECLEN
+    integer, intent(in) :: nspecies, VECLEN
     double precision, intent(in) :: rl, ul, vl, v2l, pl, rel, gamcl
     double precision, intent(in) :: rr, ur, vr, v2r, pr, rer, gamcr
-    double precision, intent(in), dimension(nsp) :: spl, spr
+    double precision, intent(in), dimension(nspecies) :: spl, spr
     integer, intent(in) :: bc_test_val
     double precision, intent(in) :: csmall, cav
     double precision, intent(out) :: rgd, regd, ustar
     double precision, intent(out) :: qint_iu, vgd, wgd, qint_gdpres, qint_gdgame
-    double precision, intent(inout) :: gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac(nsp)
+    double precision, intent(inout) :: gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac(nspecies)
     double precision, intent(out) :: gdnv_state_e, gdnv_state_gam1, gdnv_state_cs
     double precision, intent(inout) :: uflx_rho, uflx_u, uflx_v, uflx_w, uflx_eden, uflx_eint
 
@@ -850,7 +850,7 @@ contains
     double precision :: ro, uo, po, reo, co, drho
     double precision :: sgnm, spin, spout, ushock, frac
     double precision :: wsmall, psmall, rsmall
-    double precision, dimension(nsp) :: sp
+    double precision, dimension(nspecies) :: sp
     logical :: mask
     integer :: n
     double precision, parameter:: small = 1.d-8
@@ -866,13 +866,13 @@ contains
     gdnv_state_rho = rl
     gdnv_state_p = pl
     gdnv_state_massfrac = spl(:)
-    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs)
     csl = gdnv_state_cs
 
     gdnv_state_rho = rr
     gdnv_state_p = pr
     gdnv_state_massfrac = spr(:)
-    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs)
     csr = gdnv_state_cs
 
     wl = sqrt(abs(gamcl*pl*rl))
@@ -888,7 +888,7 @@ contains
     uo = merge(ul, ur, mask)
     po = merge(pl, pr, mask)
 
-    do n=1,nsp
+    do n=1,nspecies
        sp(n) = merge(spl(n), spr(n), mask)
     enddo
 
@@ -898,14 +898,14 @@ contains
     uo = merge(0.5d0*(ul+ur), uo, mask)
     po = merge(0.5d0*(pl+pr), po, mask)
 
-    do n=1,nsp
+    do n=1,nspecies
        sp(n) = merge(0.5d0*(spl(n)+spr(n)), sp(n), mask)
     enddo
 
     gdnv_state_rho = ro
     gdnv_state_p = po
     gdnv_state_massfrac = sp(:)
-    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs)
     reo = gdnv_state_rho * gdnv_state_e
     co = gdnv_state_cs
 
@@ -916,7 +916,7 @@ contains
     gdnv_state_rho = rstar
     gdnv_state_p = pstar
     gdnv_state_massfrac = sp(:)
-    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs)
     cstar = gdnv_state_cs
     estar = gdnv_state_rho * gdnv_state_e
 
@@ -948,7 +948,7 @@ contains
     gdnv_state_rho = rgd
     gdnv_state_p = qint_gdpres
     gdnv_state_massfrac = sp(:)
-    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs)
     regd = gdnv_state_rho * gdnv_state_e
 
     mask = spout < 0.d0
@@ -966,7 +966,7 @@ contains
     gdnv_state_rho = rgd
     gdnv_state_p = qint_gdpres
     gdnv_state_massfrac = sp(:)
-    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs, nsp)
+    call eos_rp_gpu(gdnv_state_rho, gdnv_state_p, gdnv_state_massfrac, gdnv_state_e, gdnv_state_gam1, gdnv_state_cs)
     regd = gdnv_state_rho * gdnv_state_e
 
     qint_gdgame = qint_gdpres/regd + 1.d0
@@ -983,7 +983,7 @@ contains
 
   subroutine riemann_cg_singlepoint( rl, ul, vl, v2l, pl, rel, spl, gamcl, &
        rr, ur, vr, v2r, pr, rer, spr, gamcr,&
-       ugd, v1gd, v2gd, pgd, gamegd, regd, rgd, ustar, nsp, &
+       ugd, v1gd, v2gd, pgd, gamegd, regd, rgd, ustar, nspecies, &
        uflx_rho, uflx_u, uflx_v, uflx_w, uflx_eden, uflx_eint, &
        idir, coord_type, bc_test_val, csmall, cav)
 
@@ -992,9 +992,9 @@ contains
     implicit none
 
     ! Inputs
-    integer, intent(in) :: nsp
-    double precision, intent(in) :: rl, ul, vl, v2l, pl, rel, spl(nsp), gamcl ! Left state
-    double precision, intent(in) :: rr, ur, vr, v2r, pr, rer, spr(nsp), gamcr ! Right state
+    integer, intent(in) :: nspecies
+    double precision, intent(in) :: rl, ul, vl, v2l, pl, rel, spl(nspecies), gamcl ! Left state
+    double precision, intent(in) :: rr, ur, vr, v2r, pr, rer, spr(nspecies), gamcr ! Right state
     integer, intent(in) :: idir, coord_type
     integer, intent(in) :: bc_test_val
     double precision, intent(in) :: csmall, cav
