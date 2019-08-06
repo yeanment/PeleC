@@ -169,8 +169,8 @@ PeleC::do_mol_advance(Real time,
     MultiFab::Subtract(S, I_R, NumSpec,Eden,      1,       0);
 
     // Compute I_R and U^{n+1} = U^n + dt*(F_{AD} + I_R)
-    if(do_gpu_react)
-      react_state_gpu(time, dt);
+    if(do_cuda_react)
+      react_state_cuda(time, dt);
     else
       react_state(time, dt, false, &S);  // false = not react_init
   }
@@ -194,8 +194,8 @@ PeleC::do_mol_advance(Real time,
       MultiFab::LinComb(S, 0.5, S_old, 0, 0.5, S_new, 0, 0, NUM_STATE, 0);
 
       // Compute I_R and U^{n+1} = U^n + dt*(F_{AD} + I_R)
-      if(do_gpu_react)
-        react_state_gpu(time, dt);
+      if(do_cuda_react)
+        react_state_cuda(time, dt);
       else
         react_state(time, dt, false, &S);  // false = not react_init
       
@@ -459,8 +459,8 @@ PeleC::do_sdc_iteration (Real time,
       BL_ASSERT(!do_mol_AD); // Currently this combo only managed through MOL integrator
       Real flux_factor_old = 0.5;
 
-      if (do_gpu){
-        getMOLSrcTermGPU(Sborder,*old_sources[diff_src],time,dt,flux_factor_old);
+      if (do_cuda){
+        getMOLSrcTermCUDA(Sborder,*old_sources[diff_src],time,dt,flux_factor_old);
       }
         else
           getMOLSrcTerm(Sborder,*old_sources[diff_src],time,dt,flux_factor_old);
@@ -478,8 +478,8 @@ PeleC::do_sdc_iteration (Real time,
   // Construct hydro source, will use old and current iterate of new sources.
   if (do_hydro)
   {
-    if (do_gpu) 
-        construct_gpu_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle); 
+    if (do_cuda) 
+        construct_cuda_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle); 
     else  
         construct_hydro_source(Sborder, time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle);
   }
@@ -498,7 +498,7 @@ PeleC::do_sdc_iteration (Real time,
     }
     FillPatch(*this, Sborder, nGrowTr, time + dt, State_Type, 0, NUM_STATE);
     Real flux_factor_new = sub_iteration==sub_ncycle-1 ? 0.5 : 0;
-    if(do_gpu) getMOLSrcTermGPU(Sborder, *new_sources[diff_src],time,dt,flux_factor_new); 
+    if(do_cuda) getMOLSrcTermCUDA(Sborder, *new_sources[diff_src],time,dt,flux_factor_new); 
     else getMOLSrcTerm(Sborder,*new_sources[diff_src],time,dt,flux_factor_new);
   }
 
@@ -550,8 +550,8 @@ PeleC::do_sdc_iteration (Real time,
   // Update I_R and rebuild S_new accordingly
   if (do_react == 1)
   {
-    if(do_gpu) 
-        react_state_gpu(time, dt); 
+    if(do_cuda) 
+        react_state_cuda(time, dt); 
     else
         react_state(time, dt);
   }

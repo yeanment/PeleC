@@ -68,7 +68,7 @@ PeleC::volWgtSum (const std::string& name,
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
-    if(do_gpu){
+    if(do_cuda){
         sum = MultiFab::Dot(*mf, 0, volume, 0, 0, 0, local);
     }
     else{

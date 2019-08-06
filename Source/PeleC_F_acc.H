@@ -82,11 +82,7 @@ extern "C"
 
   void get_tagging_params(const int* name, const int* namlen);
 
-#ifdef PELEC_USE_ACC
-   void ctoprim(const int* gpustream, const int* lo, const int* hi,
-#else
-   void ctoprim(const int* lo, const int* hi,
-#endif
+  void ctoprim(const int* gpustream, const int* lo, const int* hi,
 	       const amrex::Real* u, const int* u_lo, const int* u_hi,
 	       const amrex::Real* q, const int* q_lo, const int* q_hi,
                const amrex::Real* qaux, const int* qa_lo, const int* qa_hi);
@@ -98,11 +94,7 @@ extern "C"
 		 const amrex::Real* srQ, const int* srQ_lo, const int* srQ_hi);
 
 #if (BL_SPACEDIM > 1)
-#ifdef PELEC_USE_ACC
   void pc_compute_tangential_vel_derivs(const int* gpustream, const int* lo, const int* hi,
-#else
-  void pc_compute_tangential_vel_derivs(const int* lo, const int* hi,
-#endif
                                         const int* dlo, const int* dhi,
                                         const amrex::Real* Q, const int* Qlo, const int* Qhi,
                                         amrex::Real* td, const int* tdlo, const int* tdhi,
@@ -127,12 +119,7 @@ extern "C"
 
 #endif
 
-
-#ifdef PELEC_USE_ACC
   void pc_diffterm(const int* gpustream, const int* lo,  const int* hi,
-#else
-  void pc_diffterm(const int* lo,  const int* hi,
-#endif
 		   const int* dmnlo,  const int* dmnhi,
 		   const BL_FORT_FAB_ARG_3D(Q),
 		   const BL_FORT_FAB_ARG_3D(Dx),
@@ -332,12 +319,8 @@ extern "C"
 
     void pc_hyp_mol_flux
     (
-#ifdef PELEC_USE_ACC
         const int* gpustream, 
         AMREX_ARLIM_P(lo),AMREX_ARLIM_P(hi),
-#else
-        const int* lo, const int* hi,
-#endif
         const int* domlo, const int* domhi,
         const BL_FORT_FAB_ARG_3D(q),
         const BL_FORT_FAB_ARG_3D(qaux),
@@ -436,11 +419,7 @@ extern "C"
      BL_FORT_FAB_ARG_3D(TempDiffTerm));
 
   void pc_move_transport_coeffs_to_ec
-#ifdef PELEC_USE_ACC
     (const int* gpustream, const int* lo, const int* hi,
-#else
-    (const int* lo, const int* hi,
-#endif
      const int* dlo, const int* dhi,
      const BL_FORT_FAB_ARG_3D(cdata),
      const BL_FORT_FAB_ARG_3D(edata),

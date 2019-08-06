@@ -35,7 +35,11 @@ ifeq ($(USE_PARTICLES), TRUE)
 CEXE_sources += PeleCParticles.cpp
 endif
 
-CEXE_sources += PeleC_MOL.cpp
+ifeq ($(USE_ACC_FILES), TRUE)
+  CEXE_sources += PeleC_MOL_acc.cpp
+else
+  CEXE_sources += PeleC_MOL.cpp
+endif
 
 ifeq ($(USE_MASA), TRUE)
 CEXE_sources += PeleC_mms.cpp

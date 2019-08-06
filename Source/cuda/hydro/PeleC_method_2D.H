@@ -7,7 +7,7 @@
 #include "PeleC_EOS.H" 
 #include <cmath> 
 
-/*This header file contains functions and declarations for the 2D hydro portion of PeleC gpu. 
+/*This header file contains functions and declarations for the 2D hydro portion of PeleC cuda. 
   As per the convention of AMReX, inlined functions are defined here. Where as non-inline functions 
   are declared here. */ 
 
@@ -1082,7 +1082,7 @@ void PeleC_artif_visc(const int i, const int j, const int k,
     flx(i,j,k,UTEMP) = 0.e0;  
 }
 
-//Host function to call gpu hydro functions
+//Host function to call cuda hydro functions
 //Defined in PeleC_method_2D
 void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi, 
            const int* domlo, const int* domhi, 

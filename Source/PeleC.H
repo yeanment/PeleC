@@ -307,7 +307,7 @@ public:
 
     void construct_Snew(amrex::MultiFab& S_new, const amrex::MultiFab& S_old, amrex::Real dt);
 
-    void construct_gpu_hydro_source(const amrex::MultiFab& S, amrex::Real time, amrex::Real dt, int amr_iteration, int amr_ncycle, int sub_iteration, int sub_ncycle);
+    void construct_cuda_hydro_source(const amrex::MultiFab& S, amrex::Real time, amrex::Real dt, int amr_iteration, int amr_ncycle, int sub_iteration, int sub_ncycle);
 
     void construct_hydro_source(const amrex::MultiFab& S, amrex::Real time, amrex::Real dt, int amr_iteration, int amr_ncycle, int sub_iteration, int sub_ncycle);
  
@@ -438,7 +438,7 @@ public:
 
 #ifdef REACTIONS
     void react_state(amrex::Real time, amrex::Real dt, bool init=false, amrex::MultiFab* A_aux = nullptr);
-    void react_state_gpu(amrex::Real time, amrex::Real dt, bool init=false, amrex::MultiFab* A_aux = nullptr); 
+    void react_state_cuda(amrex::Real time, amrex::Real dt, bool init=false, amrex::MultiFab* A_aux = nullptr); 
 #endif
 
     void reset_internal_energy (amrex::MultiFab& State, int ng);
@@ -451,7 +451,7 @@ public:
                         amrex::Real                   dt,
                         amrex::Real                   flux_factor);
 
-   void getMOLSrcTermGPU (const amrex::MultiFab& S,
+   void getMOLSrcTermCUDA (const amrex::MultiFab& S,
                         amrex::MultiFab&       MOLSrcTerm,
                         amrex::Real time,
                         amrex::Real                   dt,

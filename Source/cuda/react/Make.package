@@ -1,0 +1,5 @@
+ifeq ($(USE_REACT), TRUE)
+CEXE_sources += PeleC_cuda_react.cpp 
+CEXE_headers += PeleC_cuda_react.H
+endif
+

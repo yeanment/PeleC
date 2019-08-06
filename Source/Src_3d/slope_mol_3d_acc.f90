@@ -15,12 +15,7 @@ contains
                         qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
                         flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
 
-      !use amrex_fort_module, only : amrex_real
-      !use amrex_mempool_module, only : bl_allocate, bl_deallocate
-      !use meth_params_module
-      !use amrex_constants_module
       use network, only : nspecies
-      !use prob_params_module, only : physbc_lo, physbc_hi, Inflow
 
       !$acc routine(slopex) gang
       !$acc routine(get_neighbor_cells_int) seq
@@ -92,12 +87,7 @@ contains
          qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
          flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
 
-      !use amrex_fort_module, only : amrex_real
-      !use amrex_mempool_module, only : bl_allocate, bl_deallocate
-      !use meth_params_module
-      !use amrex_constants_module
       use network, only : nspecies
-      !use prob_params_module, only : physbc_lo, physbc_hi, Inflow
 
       !$acc routine(slopey) gang
       !$acc routine(get_neighbor_cells_int) seq
@@ -169,12 +159,7 @@ contains
          qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
          flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
 
-      !use amrex_fort_module, only : amrex_real
-      !use amrex_mempool_module, only : bl_allocate, bl_deallocate
-      !use meth_params_module
-      !use amrex_constants_module
       use network, only : nspecies
-      !use prob_params_module, only : physbc_lo, physbc_hi, Inflow
 
       !$acc routine(slopez) gang
       !$acc routine(get_neighbor_cells_int) seq

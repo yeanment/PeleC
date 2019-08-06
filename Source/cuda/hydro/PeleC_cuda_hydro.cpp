@@ -9,7 +9,7 @@ using namespace amrex;
  *  Set up the source terms to go into the hydro.
  */
 void
-PeleC::construct_gpu_hydro_source(const MultiFab& S, Real time, Real dt, int amr_iteration, int amr_ncycle, int sub_iteration, int sub_ncycle)
+PeleC::construct_cuda_hydro_source(const MultiFab& S, Real time, Real dt, int amr_iteration, int amr_ncycle, int sub_iteration, int sub_ncycle)
 {
 #ifdef PELEC_USE_MOL
 

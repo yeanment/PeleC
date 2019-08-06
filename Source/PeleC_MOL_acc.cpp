@@ -120,18 +120,19 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
     FArrayBox dm_as_fine(Box::TheUnitBox(), NUM_STATE);
     FArrayBox fab_drho_as_crse(Box::TheUnitBox(), NUM_STATE);
     IArrayBox fab_rrflag_as_crse(Box::TheUnitBox());
-    
 
     int flag_nscbc_isAnyPerio = (geom.isAnyPeriodic()) ? 1 : 0; 
     int flag_nscbc_perio[BL_SPACEDIM]; // For 3D, we will know which corners have a periodicity
     for (int d=0; d<BL_SPACEDIM; ++d) {
         flag_nscbc_perio[d] = (DefaultGeometry().isPeriodic(d)) ? 1 : 0;
     }
-	  const int*  domain_lo = geom.Domain().loVect();
-	  const int*  domain_hi = geom.Domain().hiVect();
+    const int*  domain_lo = geom.Domain().loVect();
+    const int*  domain_hi = geom.Domain().hiVect();
 
-    for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true));
-         mfi.isValid(); ++mfi) {
+    //for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true)); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(S,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+      const int gpuStream = (mfi.index() % 16) + 1;
+
 #ifdef PELE_USE_EB
       Real wt = ParallelDescriptor::second();
 #endif
@@ -143,7 +144,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       const Box& dbox = geom.Domain();
       
       const int* lo = vbox.loVect();
-	  const int* hi = vbox.hiVect();
+      const int* hi = vbox.hiVect();
 
 #ifdef PELE_USE_EB
       const EBFArrayBox& Sfab = static_cast<const EBFArrayBox&>(S[mfi]);
@@ -167,38 +168,75 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       const FArrayBox& Sfab = S[mfi];
 #endif
 
+      // Container on grown region, for hybrid divergence & redistribution
+      Dterm.resize(cbox, NUM_STATE);
+      Dterm.setVal(0);
+
       BL_PROFILE_VAR_START(diff);
       Qfab.resize(gbox, QVAR);
       int nqaux = NQAUX > 0 ? NQAUX : 1;
       Qaux.resize(gbox, nqaux);
+      coeff_cc.resize(gbox, nCompTr);
+
+      for (int d=0; d<BL_SPACEDIM; ++d) {
+        Box ebox = amrex::surroundingNodes(cbox,d);
+        coeff_ec[d].resize(ebox,nCompTr);
+        flux_ec[d].resize(ebox,NUM_STATE);
+        flux_ec[d].setVal(0);
+        int nCompTan = AMREX_D_PICK(1, 2, 6);
+        tander_ec[d].resize(ebox, nCompTan); tander_ec[d].setVal(0);
+      }
+
+      flatn.resize(cbox,1);
+      flatn.setVal(1.0);
+
+#ifdef PELEC_USE_EB
+      int nFlux = sv_eb_flux.size()==0 ? 0 : sv_eb_flux[local_i].numPts();
+      const EBBndryGeom* sv_ebbg_ptr = (Ncut>0 ? sv_eb_bndry_geom[local_i].data() : 0);
+      Real* sv_eb_flux_ptr = (nFlux>0 ? sv_eb_flux[local_i].dataPtr() : 0);
+#endif
+
+      Elixir Qfab_eli = Qfab.elixir();
+      Elixir Qaux_eli = Qaux.elixir();
+      Elixir coeff_cc_eli = coeff_cc.elixir();
+      Elixir Dterm_eli = Dterm.elixir();
+      Elixir coeff_ec_eli_0 = coeff_ec[0].elixir();
+      Elixir coeff_ec_eli_1 = coeff_ec[1].elixir();
+      Elixir coeff_ec_eli_2 = coeff_ec[2].elixir();
+      Elixir flux_ec_eli_0 = flux_ec[0].elixir();
+      Elixir flux_ec_eli_1 = flux_ec[1].elixir();
+      Elixir flux_ec_eli_2 = flux_ec[2].elixir();
+      Elixir tander_ec_eli_0 = tander_ec[0].elixir();
+      Elixir tander_ec_eli_1 = tander_ec[1].elixir();
+      Elixir tander_ec_eli_2 = tander_ec[2].elixir();
+      Elixir flatn_eli = flatn.elixir();
+
       // Get primitives, Q, including (Y, T, p, rho) from conserved state
       // required for D term
       {
-        BL_PROFILE("PeleC::ctoprim call");
-        ctoprim(ARLIM_3D(gbox.loVect()), ARLIM_3D(gbox.hiVect()),
+        BL_PROFILE("PeleC::ctoprim");
+        ctoprim(&gpuStream, ARLIM_3D(gbox.loVect()), ARLIM_3D(gbox.hiVect()),
                 Sfab.dataPtr(), ARLIM_3D(Sfab.loVect()), ARLIM_3D(Sfab.hiVect()),
                 Qfab.dataPtr(), ARLIM_3D(Qfab.loVect()), ARLIM_3D(Qfab.hiVect()),
                 Qaux.dataPtr(), ARLIM_3D(Qaux.loVect()), ARLIM_3D(Qaux.hiVect()));
       }
-      
-      
-      
+      // Not yet addressed for ACC
+ /*     
       for (int i = 0; i < BL_SPACEDIM ; i++)  {
-		    const Box& bxtmp = amrex::surroundingNodes(vbox,i);
+        const Box& bxtmp = amrex::surroundingNodes(vbox,i);
         Box TestBox(bxtmp);
         for(int d=0; d<BL_SPACEDIM; ++d) {
           if (i!=d) TestBox.grow(d,1);
         }
-        
-		    bcMask[i].resize(TestBox,1);
+        bcMask[i].resize(TestBox,1);
         bcMask[i].setVal(0);
-	    }
+      }
       
       // Becase bcMask is read in the Riemann solver in any case,
       // here we put physbc values in the appropriate faces for the non-nscbc case
       set_bc_mask(lo, hi, domain_lo, domain_hi,
                   D_DECL(BL_TO_FORTRAN(bcMask[0]),
-	                       BL_TO_FORTRAN(bcMask[1]),
+                         BL_TO_FORTRAN(bcMask[1]),
                          BL_TO_FORTRAN(bcMask[2])));
 
       if (nscbc_diff == 1)
@@ -208,17 +246,16 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                      BL_TO_FORTRAN(Qfab),
                      BL_TO_FORTRAN(Qaux),
                      D_DECL(BL_TO_FORTRAN(bcMask[0]),
-	                          BL_TO_FORTRAN(bcMask[1]),
+                            BL_TO_FORTRAN(bcMask[1]),
                             BL_TO_FORTRAN(bcMask[2])),
                      &flag_nscbc_isAnyPerio, flag_nscbc_perio, 
                      &time, dx, &dt);
       }
-      
+*/     
       // Compute transport coefficients, coincident with Q
       {
-        BL_PROFILE("PeleC::get_transport_coeffs call");
-        coeff_cc.resize(gbox, nCompTr);
-        get_transport_coeffs(ARLIM_3D(gbox.loVect()),
+        BL_PROFILE("PeleC::get_transport_coeffs");
+        get_transport_coeffs(&gpuStream, ARLIM_3D(gbox.loVect()),
                              ARLIM_3D(gbox.hiVect()),
                              BL_TO_FORTRAN_N_3D(Qfab, cQFS),
                              BL_TO_FORTRAN_N_3D(Qfab, cQTEMP),
@@ -229,18 +266,11 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                              BL_TO_FORTRAN_N_3D(coeff_cc, dComp_lambda));
       }
 
-      // Container on grown region, for hybrid divergence & redistribution
-      Dterm.resize(cbox, NUM_STATE);
-
       for (int d=0; d<BL_SPACEDIM; ++d) {
-        Box ebox = amrex::surroundingNodes(cbox,d);
-        coeff_ec[d].resize(ebox,nCompTr);
-        flux_ec[d].resize(ebox,NUM_STATE);
-        flux_ec[d].setVal(0);
         // Get face-centered transport coefficients
         {
-          BL_PROFILE("PeleC::pc_move_transport_coeffs_to_ec call");
-          pc_move_transport_coeffs_to_ec(ARLIM_3D(cbox.loVect()),
+          BL_PROFILE("PeleC::pc_move_transport_coeffs_to_ec");
+          pc_move_transport_coeffs_to_ec(&gpuStream, ARLIM_3D(cbox.loVect()),
                                          ARLIM_3D(cbox.hiVect()),
                                          ARLIM_3D(dbox.loVect()),
                                          ARLIM_3D(dbox.hiVect()),
@@ -249,27 +279,25 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                                          &d, &nCompTr, &do_harmonic);
         }
 #if (BL_SPACEDIM > 1)
-        int nCompTan = AMREX_D_PICK(1, 2, 6);
-        tander_ec[d].resize(ebox, nCompTan); tander_ec[d].setVal(0);
         // Tangential derivatives on faces only needed for velocity diffusion
-        if (diffuse_vel == 0) {
-          tander_ec[d].setVal(0);
-        } else {
-          {
-            BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs call");
-            pc_compute_tangential_vel_derivs(cbox.loVect(),
+        //if (diffuse_vel == 0) {
+        //  tander_ec[d].setVal(0);
+        //} else {
+        {
+            BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs");
+            pc_compute_tangential_vel_derivs(&gpuStream, cbox.loVect(),
                                              cbox.hiVect(),
                                              dbox.loVect(),
                                              dbox.hiVect(),
                                              BL_TO_FORTRAN_ANYD(Qfab),
                                              BL_TO_FORTRAN_ANYD(tander_ec[d]),
                                              geom.CellSize(), &d);
-          }
+        }
 #ifdef PELE_USE_EB
           if (typ == FabType::singlevalued) {
             // Reset tangential derivatives to avoid using covered (invalid) data
             if (Ncut > 0) {
-              BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs_eb call");
+              BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs_eb");
               pc_compute_tangential_vel_derivs_eb(cbox.loVect(),
                                                   cbox.hiVect(),
                                                   dbox.loVect(),
@@ -285,14 +313,15 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
             amrex::Abort("multi-valued eb tangential derivatives to be implemented");
           }
 #endif
-        }  // diffuse_vel
+        //}  // diffuse_vel
 #endif
       }  // loop over dimension
 
       // Compute extensive diffusion fluxes, F.A and (1/Vol).Div(F.A)
+
       {
-        BL_PROFILE("PeleC::pc_diffterm()");
-        pc_diffterm(cbox.loVect(),
+          BL_PROFILE("PeleC::pc_diffterm()");
+          pc_diffterm(&gpuStream, cbox.loVect(),
                     cbox.hiVect(),
                     dbox.loVect(),
                     dbox.hiVect(),
@@ -335,7 +364,9 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       //      test for diffusion works by diffusing only temperature through
       //      this process.  Ideally, we'd redo that test to diffuse a passive
       //      scalar instead....
-          
+
+      // Not yet addressed for ACC
+/*
       if (diffuse_temp == 0 && diffuse_enth == 0) {
         Dterm.setVal(0, Eden);
         Dterm.setVal(0, Eint);
@@ -357,7 +388,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
           flux_ec[d].setVal(0, flux_ec[d].box(), Xmom, 3);
         }
       }
-
+*/
 #ifdef PELE_USE_EB
       //  Set extensive flux at embedded boundary, potentially
       //  non-zero only for heat flux on isothermal boundaries,
@@ -377,7 +408,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 
           Box box_to_apply = mfi.growntilebox(2);
           {
-            BL_PROFILE("PeleC::pc_apply_eb_boundry_flux_stencil call");
+            BL_PROFILE("PeleC::pc_apply_eb_boundry_flux_stencil");
             pc_apply_eb_boundry_flux_stencil(BL_TO_FORTRAN_BOX(box_to_apply),
                                              sv_eb_bndry_grad_stencil[local_i].data(),
                                              &Ncut,
@@ -396,7 +427,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 
           Box box_to_apply = mfi.growntilebox(2);
           {
-            BL_PROFILE("PeleC::pc_apply_eb_boundry_visc_flux_stencil call");
+            BL_PROFILE("PeleC::pc_apply_eb_boundry_visc_flux_stencil");
             pc_apply_eb_boundry_visc_flux_stencil(BL_TO_FORTRAN_BOX(box_to_apply),
                                                   sv_eb_bndry_grad_stencil[local_i].data(),
                                                   &Ncut,
@@ -425,18 +456,11 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       */
       if (do_hydro && do_mol_AD) 
       {
-        flatn.resize(cbox,1);
-        flatn.setVal(1.0);  // Set flattening to 1.0
-#ifdef PELEC_USE_EB
-        int nFlux = sv_eb_flux.size()==0 ? 0 : sv_eb_flux[local_i].numPts();
-        const EBBndryGeom* sv_ebbg_ptr = (Ncut>0 ? sv_eb_bndry_geom[local_i].data() : 0);
-        Real* sv_eb_flux_ptr = (nFlux>0 ? sv_eb_flux[local_i].dataPtr() : 0);
-#endif
-
-        { // Get face-centered hyperbolic fluxes and their divergences.
+        {
+          // Get face-centered hyperbolic fluxes and their divergences.
           // Get hyp flux at EB wall
-          BL_PROFILE("PeleC::pc_hyp_mol_flux call");
-          pc_hyp_mol_flux(vbox.loVect(), vbox.hiVect(),
+          BL_PROFILE("PeleC::pc_hyp_mol_flux");
+          pc_hyp_mol_flux(&gpuStream, AMREX_ARLIM(vbox.loVect()),AMREX_ARLIM(vbox.hiVect()),
                           geom.Domain().loVect(), geom.Domain().hiVect(),
                           BL_TO_FORTRAN_3D(Qfab),
                           BL_TO_FORTRAN_3D(Qaux),
@@ -464,14 +488,16 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       }
 #endif
 
+      #pragma acc wait
+  
 #ifdef PELEC_USE_EB
       if (typ == FabType::singlevalued) {
-        /* Interpolate fluxes from face centers to face centroids
-         * Note that hybrid divergence and redistribution algorithms require that we
-         *   be able to compute the conservative divergence on 2 grow cells, so we
-         *   need interpolated fluxes on 2 grow cells, and therefore we need face
-         *   centered fluxes on 3.
-         */
+        // Interpolate fluxes from face centers to face centroids
+        // Note that hybrid divergence and redistribution algorithms require that we
+        //   be able to compute the conservative divergence on 2 grow cells, so we
+        //   need interpolated fluxes on 2 grow cells, and therefore we need face
+        //   centered fluxes on 3.
+        
 
         for (int idir=0; idir < BL_SPACEDIM; ++idir) {
           int Nsten = flux_interp_stencil[idir][local_i].size();
@@ -479,7 +505,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
           const Box valid_interped_flux_box =
             Box(amrex::grow(vbox, 2)).surroundingNodes(idir);
           {
-            BL_PROFILE("PeleC::pc_apply_face_stencil call");
+            BL_PROFILE("PeleC::pc_apply_face_stencil");
             pc_apply_face_stencil(BL_TO_FORTRAN_BOX(valid_interped_flux_box),
                                   BL_TO_FORTRAN_BOX(stencil_volume_box),
                                   flux_interp_stencil[idir][local_i].data(),
@@ -520,7 +546,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
           if (fr_as_fine) {
             dm_as_fine.resize(amrex::grow(vbox, 1), NUM_STATE);
           }
-          BL_PROFILE("PeleC::pc_fix_div_and_redistribute call");
+          BL_PROFILE("PeleC::pc_fix_div_and_redistribute");
           pc_fix_div_and_redistribute(BL_TO_FORTRAN_BOX(vbox),
                                       sv_eb_bndry_geom[local_i].data(), &Ncut,
                                       BL_TO_FORTRAN_ANYD(flag_fab),
@@ -584,7 +610,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
       // do regular flux reg ops
       if (do_reflux && flux_factor != 0 && typ == FabType::regular) 
 #else
-        if (do_reflux && flux_factor != 0)  // no eb in problem
+      if (do_reflux && flux_factor != 0)  // no eb in problem
 #endif
         {
           for (int d = 0; d < BL_SPACEDIM ; d++) {
@@ -619,7 +645,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
 #pragma omp parallel
 #endif
     for (MFIter mfi(MOLSrcTerm, hydro_tile_size); mfi.isValid(); ++mfi) {
-      BL_PROFILE("PeleC::diffextrap calls");
+      BL_PROFILE("PeleC::diffextrap");
 
       const Box& vbx = mfi.validbox();
       const Box& tbx = mfi.tilebox();

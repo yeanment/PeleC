@@ -45,9 +45,9 @@ load_balance_verbosity       int           0
 #-----------------------------------------------------------------------------
 
 # this flag uses C++ based GPU routines instead of CPU 
-# If comiled with USE_CUDA FALSE, then uses C++ routines on CPU 
-do_gpu                       int           0
-do_gpu_react                 int           0
+# If compiled with USE_CUDA FALSE, then uses C++ routines on CPU 
+do_cuda                       int           0
+do_cuda_react                 int           0
 
 #-----------------------------------------------------------------------------
 # category: hydrodynamics

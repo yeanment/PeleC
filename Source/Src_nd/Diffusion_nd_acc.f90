@@ -254,7 +254,7 @@ contains
              end do
           end do
        endif
-       
+
        if (lo(1) .eq. vlo(1) .and. lo(2) .eq. vlo(2) .and. hi(3) .eq. vhi(3)) then
           do k = hi(3)+1, d_hi(3)
              do j = d_lo(2), lo(2)-1
@@ -299,108 +299,118 @@ contains
 
   end subroutine pc_diffextrap
 
-  subroutine pc_move_transport_coeffs_to_ec(lo,hi,dlo,dhi, &
+  subroutine pc_move_transport_coeffs_to_ec(gpustream,lo,hi,dlo,dhi, &
        cfab,c_lo,c_hi, &
        efab,e_lo,e_hi, dir, nc, do_harmonic) &
        bind(C, name="pc_move_transport_coeffs_to_ec")
 
     use prob_params_module, only : physbc_lo, physbc_hi
-    use amrex_constants_module
 
     implicit none
 
+    integer         , intent(in   ) :: gpustream
     integer         , intent(in   ) :: lo(3), hi(3)
     integer         , intent(in   ) :: dlo(3), dhi(3)
     integer         , intent(in   ) :: c_lo(3), c_hi(3)
     integer         , intent(in   ) :: e_lo(3), e_hi(3)
     integer         , intent(in   ) :: dir, nc, do_harmonic
-    real (amrex_real), intent(in   ) :: cfab(c_lo(1):c_hi(1),c_lo(2):c_hi(2),c_lo(3):c_hi(3),nc)
-    real (amrex_real), intent(inout) :: efab(e_lo(1):e_hi(1),e_lo(2):e_hi(2),e_lo(3):e_hi(3),nc)
+    double precision, intent(in   ) :: cfab(c_lo(1):c_hi(1),c_lo(2):c_hi(2),c_lo(3):c_hi(3),nc)
+    double precision, intent(inout) :: efab(e_lo(1):e_hi(1),e_lo(2):e_hi(2),e_lo(3):e_hi(3),nc)
 
     ! local variables
-    integer          :: i, j, k, n
+    integer          :: i, j, k, n, lo1, lo2, lo3, hi1, hi2, hi3
+
+    lo1 = lo(1)
+    lo2 = lo(2)
+    lo3 = lo(3)
+    hi1 = hi(1)
+    hi2 = hi(2)
+    hi3 = hi(3)
 
     if (do_harmonic .eq. 0) then
        if (dir .EQ. 0) then
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
-             do k = lo(3), hi(3)
-                do j = lo(2), hi(2)
-                   do i = lo(1), hi(1)+1
-                      efab(i,j,k,n) = half*(cfab(i,j,k,n) + cfab(i-1,j,k,n))
+             do k = lo3, hi3
+                do j = lo2, hi2
+                   do i = lo1, hi1+1
+                      efab(i,j,k,n) = 0.5d0*(cfab(i,j,k,n) + cfab(i-1,j,k,n))
                    end do
                 end do
              end do
           end do
+          !$acc end parallel
        else if (dir .EQ. 1) then
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
-             do k = lo(3), hi(3)
-                do j = lo(2), hi(2)+1
-                   do i = lo(1), hi(1)
-                      efab(i,j,k,n) = half*(cfab(i,j,k,n) + cfab(i,j-1,k,n))
+             do k = lo3, hi3
+                do j = lo2, hi2+1
+                   do i = lo1, hi1
+                      efab(i,j,k,n) = 0.5d0*(cfab(i,j,k,n) + cfab(i,j-1,k,n))
                    end do
                 end do
              end do
           end do
+          !$acc end parallel
        else if (dir .EQ. 2) then
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
-             do k = lo(3), hi(3)+1
-                do j = lo(2), hi(2)
-                   do i = lo(1), hi(1)
-                      efab(i,j,k,n) = half*(cfab(i,j,k,n) + cfab(i,j,k-1,n))
+             do k = lo3, hi3+1
+                do j = lo2, hi2
+                   do i = lo(1), hi1
+                      efab(i,j,k,n) = 0.5d0*(cfab(i,j,k,n) + cfab(i,j,k-1,n))
                    end do
                 end do
              end do
           end do
+          !$acc end parallel
        end if
     else
        if (dir .EQ. 0) then
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
-             do k = lo(3), hi(3)
-                do j = lo(2), hi(2)
-                   do i = lo(1), hi(1)+1
-                      if ((cfab(i,j,k,n) * cfab(i-1,j,k,n)) .gt.zero) then
-                         efab(i,j,k,n) =&
-                              2*(cfab(i,j,k,n) * cfab(i-1,j,k,n))&
-                              /(cfab(i,j,k,n) + cfab(i-1,j,k,n))
-                      else
-                         efab(i,j,k,n) = zero
-                      endif
+             do k = lo3, hi3
+                do j = lo2, hi2
+                   do i = lo1, hi1+1
+                      efab(i,j,k,n) = merge(2*(cfab(i,j,k,n)*cfab(i-1,j,k,n)) &
+                                            /(cfab(i,j,k,n)+cfab(i-1,j,k,n)), &
+                                            0.d0, &
+                                            (cfab(i,j,k,n)*cfab(i-1,j,k,n)) .gt. 0.d0)
                    end do
                 end do
              end do
           end do
+          !$acc end parallel
        else if (dir .EQ. 1) then
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
-             do k = lo(3), hi(3)
-                do j = lo(2), hi(2)+1
-                   do i = lo(1), hi(1)
-                      if((cfab(i,j,k,n) * cfab(i,j-1,k,n)).gt.zero) then
-                         efab(i,j,k,n) =&
-                              2*(cfab(i,j,k,n) * cfab(i,j-1,k,n))&
-                              /(cfab(i,j,k,n) + cfab(i,j-1,k,n))
-                      else
-                         efab(i,j,k,n) = zero
-                      endif
+             do k = lo3, hi3
+                do j = lo2, hi2+1
+                   do i = lo1, hi1
+                      efab(i,j,k,n) = merge(2*(cfab(i,j,k,n)*cfab(i,j-1,k,n)) &
+                                            /(cfab(i,j,k,n)+cfab(i,j-1,k,n)), &
+                                            0.d0, &
+                                            (cfab(i,j,k,n)*cfab(i,j-1,k,n)) .gt. 0.d0)
                    end do
                 end do
              end do
           end do
+          !$acc end parallel
        else if (dir .EQ. 2) then
+          !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
           do n = 1,nc
-             do k = lo(3), hi(3)+1
-                do j = lo(2), hi(2)
-                   do i = lo(1), hi(1)
-                      if((cfab(i,j,k,n) * cfab(i,j,k-1,n)).gt.zero) then
-                         efab(i,j,k,n) =&
-                              2*(cfab(i,j,k,n) * cfab(i,j,k-1,n))&
-                              /(cfab(i,j,k,n) + cfab(i,j,k-1,n))
-                      else
-                         efab(i,j,k,n) = zero
-                      endif
+             do k = lo3, hi3+1
+                do j = lo2, hi2
+                   do i = lo1, hi1
+                      efab(i,j,k,n) = merge(2*(cfab(i,j,k,n)*cfab(i,j,k-1,n)) &
+                                            /(cfab(i,j,k,n)+cfab(i,j,k-1,n)), &
+                                            0.d0, &
+                                            (cfab(i,j,k,n)*cfab(i,j,k-1,n)) .gt. 0.d0)
                    end do
                 end do
              end do
           end do
+          !$acc end parallel
        end if
     end if
 

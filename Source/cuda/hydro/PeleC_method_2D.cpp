@@ -1,6 +1,6 @@
 #include "PeleC_method_2D.H" 
 
-//Host function to call gpu hydro functions
+//Host function to call cuda hydro functions
 void PeleC_umeth_2D(amrex::Box const& bx, const int* bclo, const int* bchi, 
            const int* domlo, const int* domhi, 
            amrex::Array4<const amrex::Real> const &q, 

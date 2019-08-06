@@ -915,10 +915,6 @@ contains
 
     ! Add up some diagnostic quantities. Note that we are not dividing by the cell volume.
     if (verbose .eq. 1) then
-       !acc kernels
-       !acc loop collapse(3) &
-       !acc& reduction(+:mass_added_flux) reduction(+:xmom_added_flux) reduction(+:ymom_added_flux) &
-       !acc& reduction(+:zmom_added_flux) reduction(+:E_added_flux)
        do k = lo(3), hi(3)
           do j = lo(2), hi(2)
              do i = lo(1), hi(1)
@@ -940,7 +936,6 @@ contains
              enddo
           enddo
        enddo
-       !acc end kernels
     endif
 
     !if (track_grid_losses .eq. 1) then

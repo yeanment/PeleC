@@ -6,9 +6,11 @@ DEBUG      = FALSE
 
 DIM        = 3
 
-COMP	   = pgi
+COMP	   = gnu
 
 USE_MPI    = FALSE
+
+USE_ACC_FILES = FALSE
 
 USE_ACC    = FALSE
 
@@ -18,7 +20,7 @@ USE_REACT  = TRUE
 
 HYP_TYPE   = MOL
 
-USE_EB     = FALSE
+USE_EB     = TRUE
 
 # This sets the EOS directory in $(PELE_PHYSICS_HOME)/Eos
 #Eos_dir     := Soave-Redlich-Kwong

@@ -1,5 +1,0 @@
-ifeq ($(USE_REACT), TRUE)
-CEXE_sources += PeleC_gpu_react.cpp 
-CEXE_headers += PeleC_gpu_react.H
-endif
-

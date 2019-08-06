@@ -1,13 +1,13 @@
 #include <PeleC.H>
 #include <AMReX_DistributionMapping.H>
-#include "PeleC_gpu_react.H" 
+#include "PeleC_cuda_react.H" 
 
 
 using std::string;
 using namespace amrex;
 
 void
-PeleC::react_state_gpu(Real time, Real dt, bool react_init, MultiFab* A_aux)
+PeleC::react_state_cuda(Real time, Real dt, bool react_init, MultiFab* A_aux)
 {
   /*
     Update I_R, and recompute S_new

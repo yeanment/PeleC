@@ -21,7 +21,7 @@ using namespace amrex;
 
 // **********************************************************************************************
 void
-PeleC::getMOLSrcTermGPU(const amrex::MultiFab& S,
+PeleC::getMOLSrcTermCUDA(const amrex::MultiFab& S,
                      amrex::MultiFab&       MOLSrcTerm,
                      amrex::Real            time,
                      amrex::Real            dt,

@@ -1,17 +1,19 @@
-module hyp_advection_module
+module hyp_advection_module 
 
-  !use amrex_ebcellflag_module, only : get_neighbor_cells
-  !use pelec_eb_stencil_types_module, only : eb_bndry_geom
+#ifdef PELEC_USE_EB
+  use amrex_ebcellflag_module, only : get_neighbor_cells
+  use pelec_eb_stencil_types_module, only : eb_bndry_geom
+#endif
   use riemann_util_module, only : riemann_md_singlepoint, riemann_md_vec
   use prob_params_module, only: dim
 
-  implicit none
-  private
+  implicit none 
+  private 
   public pc_hyp_mol_flux
-  contains
+  contains 
 
   !> Computes fluxes for hyperbolic conservative update.
-  !> @brief
+  !> @brief 
   !> Uses MOL formulation
   !! @param[inout] flux1  flux in X direction on X edges
   !> @param[in] q        (const)  input state, primitives
@@ -27,7 +29,7 @@ module hyp_advection_module
   !> @param[inout] flux1    (modify) flux in X direction on X edges
   !> @param[inout] flux2    (modify) flux in Y direction on Y edges
   !> @param[inout] flux3    (modify) flux in Z direction on Z edges
-    subroutine pc_hyp_mol_flux(gpustream,lo1,lo2,lo3,hi1,hi2,hi3, &
+    subroutine pc_hyp_mol_flux(lo, hi, &
                      domlo, domhi, &
                      q, qd_lo, qd_hi, &
                      qaux, qa_lo, qa_hi, &
@@ -48,45 +50,33 @@ module hyp_advection_module
                      h) &
                      bind(C,name="pc_hyp_mol_flux")
 
-    use meth_params_module, only : plm_iorder, QPRES, QRHO, QU, QV, QW, &
-                                   QFS, QC, QCSML, NQAUX, nadv, &
+
+
+    use amrex_mempool_module, only : bl_allocate, bl_deallocate
+    use meth_params_module, only : QVAR, NVAR, QPRES, QRHO, QU, QV, QW, &
+                                   QFS,  &
+                                   QC, QCSML, NQAUX, nadv, &
                                    URHO, UMX, UMY, UMZ, UEDEN, UEINT, UFS, UTEMP, UFX, UFA, &
-                                   small_dens, small_pres
-    !use slope_module, only : slopex, slopey, slopez
-    use actual_network, only : naux
-    use eos_module, only : eos_rp_gpu
-    use chemistry_module, only: Ru
-    !                               eb_small_vfrac
-    !use slope_module, only : slopex, slopey, slopez
-    !use network, only : nspecies, naux
-    !use eos_type_module
-    !use eos_module, only : eos_t, eos_rp
-    !use riemann_module, only: cmpflx, shock
-    !use amrex_constants_module
-    !use amrex_fort_module, only : amrex_real
+                                   eb_small_vfrac
+#ifdef PELEC_USE_EB
+    use slope_module, only : slopex, slopey, slopez
+#endif
+    use network, only : nspecies, naux
+    use eos_type_module
+    use eos_module, only : eos_t, eos_rp
+    use riemann_module, only: cmpflx, shock
+    use amrex_constants_module
+    use amrex_fort_module, only : amrex_real
 
     implicit none
 
-    integer, parameter  :: nspecies=9
-    integer, parameter  :: nvar_2=16
-    integer, parameter  :: qvar_2=17
-    !   concept is to advance cells lo to hi
-    !   need fluxes on the boundary
-    !   if tile is eb need to expand by 2 cells in each directions
-    !   would like to do this tile by tile
-#ifdef PELEC_USE_EB
-    integer, parameter  :: nextra = 3
-#else
-    integer, parameter  :: nextra = 0
-#endif
-
+    integer, parameter :: VECLEN = 16
     integer :: vis, vie, vic ! Loop bounds for vector blocking
-    integer :: vi, vii ! Loop indicies for unrolled loops over
+    integer :: vi, vii ! Loop indicies for unrolled loops over 
 
-    integer, intent(in) :: gpustream
     integer, intent(in) ::      qd_lo(3),   qd_hi(3)
     integer, intent(in) ::      qa_lo(3),   qa_hi(3)
-    integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
+    integer, intent(in) ::         lo(3),      hi(3)
     integer, intent(in) ::      domlo(3),   domhi(3)
     integer, intent(in) ::       Axlo(3),    Axhi(3)
     integer, intent(in) ::     fd1_lo(3),  fd1_hi(3)
@@ -103,81 +93,61 @@ module hyp_advection_module
     integer, intent(in) ::  fglo(3),    fghi(3)
     integer, intent(in) ::  vflo(3),    vfhi(3)
     integer, intent(in) :: flag(fglo(1):fghi(1),fglo(2):fghi(2),fglo(3):fghi(3))
-    double precision, intent(in) :: vfrac(vflo(1):vfhi(1),vflo(2):vfhi(2),vflo(3):vfhi(3))
+    real(amrex_real), intent(in) :: vfrac(vflo(1):vfhi(1),vflo(2):vfhi(2),vflo(3):vfhi(3))
 
     integer, intent(in) :: nebflux
-    double precision, intent(inout) ::   ebflux(0:nebflux-1,1:nvar_2)
+    real(amrex_real), intent(inout) ::   ebflux(0:nebflux-1,1:NVAR)
     integer,            intent(in   ) :: Nebg
-    type(eb_bndry_geom),intent(in   ) :: ebg(0:Nebg-1)
-    double precision :: eb_norm(3), full_area
+    type(eb_bndry_geom),intent(in   ) :: ebg(0:Nebg-1)    
+    real(amrex_real) :: eb_norm(3), full_area
+    real(amrex_real) :: sum_kappa, sum_nbrs
 #endif
-    double precision, intent(in) ::     q(  qd_lo(1):  qd_hi(1),  qd_lo(2):  qd_hi(2),  qd_lo(3):  qd_hi(3),qvar_2)  !> State
+    double precision, intent(in) ::     q(  qd_lo(1):  qd_hi(1),  qd_lo(2):  qd_hi(2),  qd_lo(3):  qd_hi(3),QVAR)  !> State
     double precision, intent(in) ::  qaux(  qa_lo(1):  qa_hi(1),  qa_lo(2):  qa_hi(2),  qa_lo(3):  qa_hi(3),NQAUX) !> Auxiliary state
     double precision, intent(in) :: flatn(fltd_lo(1):fltd_hi(1),fltd_lo(2):fltd_hi(2),fltd_lo(3):fltd_hi(3))
 
     double precision, intent(in   ) ::    Ax(  Axlo(1):  Axhi(1),  Axlo(2):  Axhi(2),  Axlo(3):  Axhi(3))
-    double precision, intent(inout) :: flux1(fd1_lo(1):fd1_hi(1),fd1_lo(2):fd1_hi(2),fd1_lo(3):fd1_hi(3),nvar_2)
+    double precision, intent(inout) :: flux1(fd1_lo(1):fd1_hi(1),fd1_lo(2):fd1_hi(2),fd1_lo(3):fd1_hi(3),NVAR)
     double precision, intent(in   ) ::    Ay(  Aylo(1):  Ayhi(1),  Aylo(2):  Ayhi(2),  Aylo(3):  Ayhi(3))
-    double precision, intent(inout) :: flux2(fd2_lo(1):fd2_hi(1),fd2_lo(2):fd2_hi(2),fd2_lo(3):fd2_hi(3),nvar_2)
+    double precision, intent(inout) :: flux2(fd2_lo(1):fd2_hi(1),fd2_lo(2):fd2_hi(2),fd2_lo(3):fd2_hi(3),NVAR)
     double precision, intent(in   ) ::    Az(  Azlo(1):  Azhi(1),  Azlo(2):  Azhi(2),  Azlo(3):  Azhi(3))
-    double precision, intent(inout) :: flux3(fd3_lo(1):fd3_hi(1),fd3_lo(2):fd3_hi(2),fd3_lo(3):fd3_hi(3),nvar_2)
+    double precision, intent(inout) :: flux3(fd3_lo(1):fd3_hi(1),fd3_lo(2):fd3_hi(2),fd3_lo(3):fd3_hi(3),NVAR)
     double precision, intent(inout) ::     V(   Vlo(1):   Vhi(1),   Vlo(2):   Vhi(2),   Vlo(3):   Vhi(3))
-    double precision, intent(inout) ::     D(   Dlo(1):   Dhi(1),   Dlo(2):   Dhi(2),   Dlo(3):   Dhi(3),nvar_2)
+    double precision, intent(inout) ::     D(   Dlo(1):   Dhi(1),   Dlo(2):   Dhi(2),   Dlo(3):   Dhi(3),NVAR)
 
-    integer :: i, j, k, n, nsp, L, ivar
+    integer :: i, j, k, nsp, L, ivar
     integer :: qt_lo(3), qt_hi(3)
-    integer :: ilo1, ilo2, ilo3, ihi1, ihi2, ihi3
-    integer :: fglo1, fglo2, fglo3, fghi1, fghi2, fghi3
-    integer :: domlo1, domlo2, domlo3, domhi1, domhi2, domhi3
-    integer :: qd_lo1, qd_lo2, qd_lo3, qd_hi1, qd_hi2, qd_hi3
-    integer :: qt_lo1, qt_lo2, qt_lo3, qt_hi1, qt_hi2, qt_hi3
-    integer :: qa_lo1, qa_lo2, qa_lo3, qa_hi1, qa_hi2, qa_hi3
 
     ! Left and right state arrays (edge centered, cell centered)
-    double precision :: dqx(lo1-nextra:hi1+nextra, lo2-nextra:hi2+nextra, lo3-nextra:hi3+nextra, 1:qvar_2)
-    double precision :: dqy(lo1-nextra:hi1+nextra, lo2-nextra:hi2+nextra, lo3-nextra:hi3+nextra, 1:qvar_2)
-    double precision :: dqz(lo1-nextra:hi1+nextra, lo2-nextra:hi2+nextra, lo3-nextra:hi3+nextra, 1:qvar_2)
+    double precision, pointer :: dqx(:,:,:,:), dqy(:,:,:,:), dqz(:,:,:,:)
 
     ! Other left and right state arrays
-    double precision :: qtempl_x(1:5+nspecies)
-    double precision :: qtempl_y(1:5+nspecies)
-    double precision :: qtempl_z(1:5+nspecies)
-    double precision :: qtempr_x(1:5+nspecies)
-    double precision :: qtempr_y(1:5+nspecies)
-    double precision :: qtempr_z(1:5+nspecies)
-    double precision :: rhoe_l
-    double precision :: rhoe_r
-    double precision :: cspeed
-    double precision :: gamc_l
-    double precision :: gamc_r
-    double precision :: cavg
-    double precision :: csmall
+    double precision :: qtempl(VECLEN,1:5+nspecies)
+    double precision :: qtempr(VECLEN,1:5+nspecies)
+    double precision :: rhoe_l(VECLEN)
+    double precision :: rhoe_r(VECLEN)
+    double precision :: cspeed(VECLEN)
+    double precision :: gamc_l(VECLEN)
+    double precision :: gamc_r(VECLEN)
+    double precision :: cavg(VECLEN)
+    double precision :: csmall(VECLEN)
 
     ! Scratch for neighborhood of cut cells
-    integer :: nbr_x(-1:1,-1:1,-1:1)
-    integer :: nbr_y(-1:1,-1:1,-1:1)
-    integer :: nbr_z(-1:1,-1:1,-1:1)
+#ifdef PELEC_USE_EB
+    integer :: nbr(-1:1,-1:1,-1:1)
+#endif
 
     ! Riemann solve work arrays
-    double precision:: u_gd, v_gd, w_gd, &
-         p_gd, game_gd, re_gd, &
-         r_gd, ustar
-    double precision :: flux_tmp_x(nvar_2)
-    double precision :: flux_tmp_y(nvar_2)
-    double precision :: flux_tmp_z(nvar_2)
+    double precision, dimension(VECLEN) :: u_gd, v_gd, w_gd, &
+                                           p_gd, game_gd, re_gd, &
+                                           r_gd, ustar
+    double precision :: flux_tmp(VECLEN, NVAR)
     integer, parameter :: idir = 1
-    ! integer :: nextra
+    integer :: nextra
     integer, parameter :: coord_type = 0
     integer, parameter :: bc_test_val = 1
 
-    double precision :: eos_state_rho
-    double precision :: eos_state_p
-    double precision :: eos_state_massfrac_x(nspecies)
-    double precision :: eos_state_massfrac_y(nspecies)
-    double precision :: eos_state_massfrac_z(nspecies)
-    double precision :: eos_state_gam1
-    double precision :: eos_state_e
-    double precision :: eos_state_cs
+    type (eos_t) :: eos_state, gdnv_state
 
     integer, parameter :: R_RHO = 1
     integer, parameter :: R_UN  = 2
@@ -186,407 +156,767 @@ module hyp_advection_module
     integer, parameter :: R_P   = 5
     integer, parameter :: R_Y   = 6
 
-    ! do L=1,3
-    !    qt_lo(L) = lo(L) - nextra
-    !    qt_hi(L) = hi(L) + nextra
-    !    !if (qt_lo(L)-1 .lt. qd_lo(L) .or. qt_hi(L)+1 .gt. qd_hi(L)) then
-    !    !   stop 1
-    !    !endif
-    ! enddo
+    !   concept is to advance cells lo to hi
+    !   need fluxes on the boundary
+    !   if tile is eb need to expand by 2 cells in each directions
+    !   would like to do this tile by tile
+#ifdef PELEC_USE_EB
+    nextra = 3
+#else
+    nextra = 0
+#endif
 
-    ilo1=lo1-nextra
-    ilo2=lo2-nextra
-    ilo3=lo3-nextra
-    ihi1=hi1+nextra
-    ihi2=hi2+nextra
-    ihi3=hi3+nextra
-    !fglo1=fglo(1)
-    !fglo2=fglo(2)
-    !fglo3=fglo(3)
-    !fghi1=fghi(1)
-    !fghi2=fghi(2)
-    !fghi3=fghi(3)
-    domlo1=domlo(1)
-    domlo2=domlo(2)
-    domlo3=domlo(3)
-    domhi1=domhi(1)
-    domhi2=domhi(2)
-    domhi3=domhi(3)
-    qd_lo1=qd_lo(1)
-    qd_lo2=qd_lo(2)
-    qd_lo3=qd_lo(3)
-    qd_hi1=qd_hi(1)
-    qd_hi2=qd_hi(2)
-    qd_hi3=qd_hi(3)
-    qt_lo1=lo1-nextra
-    qt_lo2=lo2-nextra
-    qt_lo3=lo3-nextra
-    qt_hi1=hi1+nextra
-    qt_hi2=hi2+nextra
-    qt_hi3=hi3+nextra
-    qa_lo1=qa_lo(1)
-    qa_lo2=qa_lo(2)
-    qa_lo3=qa_lo(3)
-    qa_hi1=qa_hi(1)
-    qa_hi2=qa_hi(2)
-    qa_hi3=qa_hi(3)
+   !initialize flux_tmp to 0
+   !don't want fortran to fill it with wrong values
+    flux_tmp = 0.d0
 
-    !$acc enter data create(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z,nbr_x,nbr_y,nbr_z) async(gpustream)
-
-    !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
-    do n = 1, qvar_2
-       do k = qt_lo3, qt_hi3
-          do j = qt_lo2, qt_hi2
-             do i = qt_lo1, qt_hi1
-                dqx(i,j,k,n) = 0.d0
-             enddo
-          enddo
-       enddo
+    do L=1,dim
+       qt_lo(L) = lo(L) - nextra
+       qt_hi(L) = hi(L) + nextra
+       if (qt_lo(L)-1 .lt. qd_lo(L) .or. qt_hi(L)+1 .gt. qd_hi(L)) then
+          call bl_pd_abort()
+       endif
     enddo
-    !$acc end parallel
-    !if(plm_iorder.ne.1) then
-    !   !$acc parallel default(present) async(gpustream)
-    !   call slopex(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
-    !              dqx,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
-    !              ilo1,ilo2,ilo3, &
-    !              ihi1,ihi2,ihi3,qvar_2,nqaux, &
-    !              domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
-    !              qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
-    !              flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
-    !   !$acc end parallel
-    !end if
 
-    !$acc kernels default(present) async(gpustream)
-    !$acc loop gang vector collapse(3) private(n,qtempl_x,qtempr_x,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac_x, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp_x, csmall, cavg, vic, ivar)
-    do k = ilo3, ihi3
-       do j = ilo2, ihi2
-          do i = ilo1+1, ihi1
-             qtempl_x(R_UN) = q(i-1,j,k,QU) + 0.5d0 * ((dqx(i-1,j,k,2) - dqx(i-1,j,k,1)) / q(i-1,j,k,QRHO))
-             qtempl_x(R_P) = q(i-1,j,k,QPRES) + 0.5d0 * (dqx(i-1,j,k,1) + dqx(i-1,j,k,2)) * qaux(i-1,j,k,QC)
-             qtempl_x(R_UT1) = q(i-1,j,k,QV) + 0.5d0 * dqx(i-1,j,k,3)
-             qtempl_x(R_UT2) = q(i-1,j,k,QW) + 0.5d0 * dqx(i-1,j,k,4)
-             qtempl_x(R_RHO) = 0.d0
-             do n = 1,nspecies
-                qtempl_x(R_Y-1+n) = q(i-1,j,k,QFS-1+n) * q(i-1,j,k,QRHO) + 0.5d0 * (dqx(i-1,j,k,4+n) &
-                                  + q(i-1,j,k,QFS-1+n) * (dqx(i-1,j,k,1) + dqx(i-1,j,k,2)) / qaux(i-1,j,k,QC))
-                qtempl_x(R_RHO) = qtempl_x(R_RHO) + qtempl_x(R_Y-1+n)
+    ! allocate space for eos calls
+    call build(eos_state)
+    call build(gdnv_state)
+
+    !  allocate spaece for slopes
+    call bl_allocate ( dqx, qt_lo(1), qt_hi(1), qt_lo(2), qt_hi(2), qt_lo(3), qt_hi(3), 1, QVAR)
+    call bl_allocate ( dqy, qt_lo(1), qt_hi(1), qt_lo(2), qt_hi(2), qt_lo(3), qt_hi(3), 1, QVAR)
+    call bl_allocate ( dqz, qt_lo(1), qt_hi(1), qt_lo(2), qt_hi(2), qt_lo(3), qt_hi(3), 1, QVAR)
+
+    call bl_proffortfuncstart_int(0)
+    ! Compute all slopes at kc (k3d)
+#ifdef PELEC_USE_EB
+    call slopex(q,flatn,qd_lo,qd_hi, &
+                   dqx,qt_lo,qt_hi, &
+                   lo(1)-nextra,lo(2)-nextra,lo(3)-nextra,  &
+                   hi(1)+nextra,hi(2)+nextra,hi(3)+nextra,QVAR,NQAUX, &
+                   domlo,domhi, &
+                   qaux, qa_lo, qa_hi, &
+                   flag, fglo, fghi)
+#endif
+    call bl_proffortfuncstop_int(0)
+      !  alphas   1,2,3 correspond to u-c,  u+c  repeated u  repsectively, 
+      !  3 and 4 are transverse velocities
+      !  species alphas are for rho Y_k
+      ! right eigenvectors are rho, u, p, v, w
+      ! i-1 => vis-1:vie-1
+      ! i => vis:vie
+      ! noidx => 1:vic
+      !   in qtemp, 1 is rho, 2 is u, 3 is v , 4 is w and 5 is p,
+      !   species after  . . note predicted rho is sum of predicted rho Y_k
+
+    call bl_proffortfuncstart_int(1)
+    do k = lo(3)-nextra, hi(3)+nextra
+       do j = lo(2)-nextra, hi(2)+nextra
+          do i = lo(1)-nextra+1, hi(1)+nextra, VECLEN
+             vis = i
+             vie = min(vis+VECLEN-1, hi(1)+nextra)
+             vic = vie - vis + 1
+
+             cspeed(1:vic) = qaux(vis-1:vie-1,j,k,QC)
+
+             ! Left u
+             qtempl(1:vic,R_UN ) = q(vis-1:vie-1,j,k,QU   ) + 0.5d0*((dqx(vis-1:vie-1,j,k,2)-dqx(vis-1:vie-1,j,k,1))/q(vis-1:vie-1,j,k,QRHO))
+
+             ! Left p
+             qtempl(1:vic,R_P  ) = q(vis-1:vie-1,j,k,QPRES) + 0.5d0*( dqx(vis-1:vie-1,j,k,1)+dqx(vis-1:vie-1,j,k,2))*cspeed(1:vic)
+
+             ! Left v
+             qtempl(1:vic,R_UT1) = q(vis-1:vie-1,j,k,QV   ) + 0.5d0*  dqx(vis-1:vie-1,j,k,3)
+
+             ! Left w
+             qtempl(1:vic,R_UT2) = q(vis-1:vie-1,j,k,QW   ) + 0.5d0*  dqx(vis-1:vie-1,j,k,4)
+
+             ! Left rho - computed as sum(rhoY_k) below after species
+             qtempl(1:vic,R_RHO) = 0.d0
+             do nsp = 1,nspecies
+
+                qtempl(1:vic,R_Y - 1 +nsp) = q(vis-1:vie-1,j,k,QFS-1+nsp) * q(vis-1:vie-1,j,k,QRHO) + 0.5d0*(dqx(vis-1:vie-1,j,k,4+nsp) &
+                     + q(vis-1:vie-1,j,k,QFS-1+nsp) * (dqx(vis-1:vie-1,j,k,1) + dqx(vis-1:vie-1,j,k,2))/cspeed(1:vic) )
+                qtempl(1:vic,R_RHO) = qtempl(1:vic,R_RHO) + qtempl(1:vic,R_Y - 1 +nsp)
+
              enddo
 
-             do n = 1,nspecies
-               qtempl_x(R_Y-1+n) = qtempl_x(R_Y-1+n) / qtempl_x(R_RHO)
+             do nsp = 1,nspecies
+               qtempl(1:vic,R_Y -1 +nsp) = qtempl(1:vic,R_Y - 1 +nsp)/qtempl(1:vic,R_RHO)
              enddo
 
-             qtempr_x(R_UN) = q(i,j,k,QU) - 0.5d0 * ((dqx(i,j,k,2) - dqx(i,j,k,1)) / q(i,j,k,QRHO))
-             qtempr_x(R_P) = q(i,j,k,QPRES) - 0.5d0 * (dqx(i,j,k,1) + dqx(i,j,k,2)) * qaux(i,j,k,QC)
-             qtempr_x(R_UT1) = q(i,j,k,QV) - 0.5d0 * dqx(i,j,k,3)
-             qtempr_x(R_UT2) = q(i,j,k,QW) - 0.5d0 * dqx(i,j,k,4)
-             qtempr_x(R_RHO) = 0.d0
+             cspeed(1:vic) = qaux(vis:vie,j,k,QC  )
 
-             do n = 1,nspecies
-                qtempr_x(R_Y-1+n) = q(i,j,k,QFS-1+n) * q(i,j,k,QRHO) - 0.5d0 * &
-                                    (dqx(i,j,k,4+n) + q(i,j,k,QFS-1+n) * &
-                                    (dqx(i,j,k,1) + dqx(i,j,k,2)) / qaux(i,j,k,QC))
-                qtempr_x(R_RHO) = qtempr_x(R_RHO) + qtempr_x(R_Y-1+n)
+             ! Right u
+             qtempr(1:vic,R_UN ) = q(vis:vie,j,k,QU   ) - 0.5d0 * ((dqx(vis:vie,j,k,2)-dqx(vis:vie,j,k,1))/q(vis:vie,j,k,QRHO))
+
+             ! Right p
+             qtempr(1:vic,R_P  ) = q(vis:vie,j,k,QPRES) - 0.5d0 * ( dqx(vis:vie,j,k,1)+dqx(vis:vie,j,k,2))*cspeed(1:vic)
+
+             ! Right v
+             qtempr(1:vic,R_UT1) = q(vis:vie,j,k,QV   ) - 0.5d0 *   dqx(vis:vie,j,k,3)
+
+             ! Right w
+             qtempr(1:vic,R_UT2) = q(vis:vie,j,k,QW   ) - 0.5d0 *   dqx(vis:vie,j,k,4)
+
+             ! Right rho - computed as sum(rhoY_k) below after species
+             qtempr(1:vic,R_RHO) = 0.d0
+
+             do nsp = 1,nspecies
+
+                qtempr(1:vic,R_Y - 1 +nsp) = q(vis:vie,j,k,QFS-1+nsp)*q(vis:vie,j,k,QRHO) - 0.5d0*(dqx(vis:vie,j,k,4+nsp) &
+                     + q(vis:vie,j,k,QFS-1+nsp)*(dqx(vis:vie,j,k,1)+dqx(vis:vie,j,k,2))/cspeed(1:vic) )
+                qtempr(1:vic,R_RHO) = qtempr(1:vic,R_RHO) + qtempr(1:vic,R_Y - 1 + nsp)
+
              enddo
 
-             do n = 1,nspecies
-                qtempr_x(R_Y-1+n) = qtempr_x(R_Y-1+n)/qtempr_x(R_RHO)
+             do nsp = 1,nspecies
+                qtempr(1:vic,R_Y - 1 +nsp) = qtempr(1:vic,R_Y - 1 +nsp)/qtempr(1:vic,R_RHO)
              enddo
 
-             cavg = 0.5d0 * (qaux(i,j,k,QC) + qaux(i-1,j,k,QC))
-             csmall = min(qaux(i,j,k,QCSML), qaux(i-1,j,k,QCSML))
+             ! Small and avg c
+             cavg(1:vic) = HALF * ( qaux(vis:vie,j,k,QC) + qaux(vis-1:vie-1,j,k,QC) )
+             csmall(1:vic) = min( qaux(vis:vie,j,k,QCSML), qaux(vis-1:vie-1,j,k,QCSML) )
 
-             eos_state_rho = qtempl_x(R_RHO)
-             eos_state_p = qtempl_x(R_P)
-             eos_state_massfrac_x = qtempl_x(R_Y:R_Y-1+nspecies)
-             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac_x, eos_state_e, eos_state_gam1, eos_state_cs)
-             rhoe_l = eos_state_rho * eos_state_e
-             gamc_l = eos_state_gam1
+             ! TODO: Make this loop a call to a vector EOS routine
+             do vii = 1, vic
+                ! Have p, rhoY (composition is rhoY), rho 
+                !  - evaluate T, use that to evaluate internal energy
+                eos_state%rho = qtempl(vii,R_RHO)
+                eos_state%p = qtempl(vii,R_P)
+                eos_state%massfrac = qtempl(vii,R_Y:R_Y-1+nspecies)
+                !dir$ inline recursive
+                call eos_rp(eos_state)
+                rhoe_l(vii) = eos_state%rho * eos_state%e
+                gamc_l(vii) = eos_state%gam1
 
-             eos_state_rho = qtempr_x(R_RHO)
-             eos_state_p = qtempr_x(R_P)
-             eos_state_massfrac_x = qtempr_x(R_Y:R_Y-1+nspecies)
-             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac_x, eos_state_e, eos_state_gam1, eos_state_cs)
-             rhoe_r = eos_state_rho * eos_state_e
-             gamc_r = eos_state_gam1
-
-             call riemann_md_vec(qtempl_x(R_RHO), qtempl_x(R_UN), qtempl_x(R_UT1), qtempl_x(R_UT2), &
-                                 qtempl_x(R_P), rhoe_l, qtempl_x(R_Y:R_Y-1+nspecies), gamc_l, &
-                                 qtempr_x(R_RHO), qtempr_x(R_UN), qtempr_x(R_UT1), qtempr_x(R_UT2), &
-                                 qtempr_x(R_P), rhoe_r, qtempr_x(R_Y:R_Y-1+nspecies), gamc_r,&
-                                 u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, &
-                                 eos_state_rho, eos_state_p, eos_state_massfrac_x, &
-                                 eos_state_e, eos_state_gam1, eos_state_cs, nspecies, &
-                                 flux_tmp_x(URHO), flux_tmp_x(UMX), flux_tmp_x(UMY), flux_tmp_x(UMZ), &
-                                 flux_tmp_x(UEDEN), flux_tmp_x(UEINT), bc_test_val, csmall, cavg, vic)
-
-             do n = 0, nspecies-1
-                flux_tmp_x(UFS+n) = merge(flux_tmp_x(URHO)*qtempl_x(R_Y+n), flux_tmp_x(URHO)*qtempr_x(R_Y+n), ustar .ge. 0.d0)
-                flux_tmp_x(UFS+n) = merge(flux_tmp_x(URHO)*0.5d0*(qtempl_x(R_Y+n) + qtempr_x(R_Y+n)), flux_tmp_x(UFS+n), ustar .eq. 0.d0)
+                eos_state%rho = qtempr(vii,R_RHO)
+                eos_state%p = qtempr(vii,R_P)
+                eos_state%massfrac = qtempr(vii,R_Y:R_Y-1+nspecies)
+                !dir$ inline recursive
+                call eos_rp(eos_state)
+                rhoe_r(vii) = eos_state%rho * eos_state%e
+                gamc_r(vii) = eos_state%gam1
              enddo
 
-             flux_tmp_x(UTEMP) = 0.0
-             do n = UFX, UFX+naux
-                flux_tmp_x(n) = merge(0.d0, flux_tmp_x(n), naux .gt. 0)
-             enddo
-             do n = UFA, UFA+nadv
-                flux_tmp_x(n) = merge(0.d0, flux_tmp_x(n), nadv .gt. 0)
-             enddo
-
-             do ivar = 1, nvar_2
-                flux1(i,j,k,ivar) = flux1(i,j,k,ivar) + flux_tmp_x(ivar) * ax(i,j,k)
-             enddo
-          enddo
-       enddo
-    enddo
-    !$acc end kernels
-
-    !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
-    do n = 1, qvar_2
-       do k = qt_lo3, qt_hi3
-          do j = qt_lo2, qt_hi2
-             do i = qt_lo1, qt_hi1
-                dqy(i,j,k,n) = 0.d0
-             enddo
-          enddo
-       enddo
-    enddo
-    !$acc end parallel
-    !if(plm_iorder.ne.1) then
-    !   !$acc parallel default(present) async(gpustream)
-    !   call slopey(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
-    !              dqy,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
-    !              ilo1,ilo2,ilo3, &
-    !              ihi1,ihi2,ihi3,qvar_2,nqaux, &
-    !              domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
-    !              qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
-    !              flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
-    !   !$acc end parallel
-    !end if
-
-    !$acc kernels default(present) async(gpustream)
-    !$acc loop gang vector collapse(3) private(n,qtempl_y,qtempr_y,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac_y, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp_y, csmall, cavg, vic, ivar)
-    do k = ilo3, ihi3
-       do j = ilo2+1, ihi2
-          do i = ilo1, ihi1
-             qtempl_y(R_UN) = q(i,j-1,k,QV) + 0.5d0 * ((dqy(i,j-1,k,2) - dqy(i,j-1,k,1)) / q(i,j-1,k,QRHO))
-             qtempl_y(R_P) = q(i,j-1,k,QPRES) + 0.5d0 * (dqy(i,j-1,k,1) + dqy(i,j-1,k,2)) * qaux(i,j-1,k,QC)
-             qtempl_y(R_UT1) = q(i,j-1,k,QU) + 0.5d0 * dqy(i,j-1,k,3)
-             qtempl_y(R_UT2) = q(i,j-1,k,QW) + 0.5d0 * dqy(i,j-1,k,4)
-             qtempl_y(R_RHO) = 0.d0
-             do n = 1,nspecies
-               qtempl_y(R_Y-1+n) = q(i,j-1,k,QFS-1+n) * q(i,j-1,k,QRHO) + 0.5d0 * (dqy(i,j-1,k,4+n) &
-                                 + q(i,j-1,k,QFS-1+n) * (dqy(i,j-1,k,1) + dqy(i,j-1,k,2)) / qaux(i,j-1,k,QC))
-               qtempl_y(R_RHO) = qtempl_y(R_RHO) + qtempl_y(R_Y-1+n)
-             enddo
-
-             do n = 1,nspecies
-               qtempl_y(R_Y-1+n) = qtempl_y(R_Y-1+n)/qtempl_y(R_RHO)
-             enddo
-
-             qtempr_y(R_UN) = q(i,j,k,QV) - 0.5d0 * ((dqy(i,j,k,2) - dqy(i,j,k,1)) / q(i,j,k,QRHO))
-             qtempr_y(R_P) = q(i,j,k,QPRES) - 0.5d0 * (dqy(i,j,k,1) + dqy(i,j,k,2)) * qaux(i,j,k,QC)
-             qtempr_y(R_UT1) = q(i,j,k,QU) - 0.5d0 * dqy(i,j,k,3)
-             qtempr_y(R_UT2) = q(i,j,k,QW) - 0.5d0 * dqy(i,j,k,4)
-             qtempr_y(R_RHO) = 0.d0
-
-             do n = 1,nspecies
-               qtempr_y(R_Y-1+n) = q(i,j,k,QFS-1+n) &
-                                   * q(i,j,k,QRHO) - 0.5d0*(dqy(i,j,k,4+n) &
-                                   + q(i,j,k,QFS-1+n) &
-                                   * (dqy(i,j,k,1) + dqy(i,j,k,2)) &
-                                   / qaux(i,j,k,QC))
-               qtempr_y(R_RHO) = qtempr_y(R_RHO) + qtempr_y(R_Y-1+n)
-             enddo
-
-             do n = 1,nspecies
-               qtempr_y(R_Y-1+n) = qtempr_y(R_Y-1+n)/qtempr_y(R_RHO)
-             enddo
-
-             cavg = 0.5d0 * (qaux(i,j,k,QC) + qaux(i,j-1,k,QC))
-             csmall = min(qaux(i,j,k,QCSML), qaux(i,j-1,k,QCSML))
-
-             eos_state_rho = qtempl_y(R_RHO)
-             eos_state_p = qtempl_y(R_P)
-             eos_state_massfrac_y = qtempl_y(R_Y:R_Y-1+nspecies)
-             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac_y, eos_state_e, eos_state_gam1, eos_state_cs)
-             rhoe_l = eos_state_rho * eos_state_e
-             gamc_l = eos_state_gam1
-
-             eos_state_rho = qtempr_y(R_RHO)
-             eos_state_p = qtempr_y(R_P)
-             eos_state_massfrac_y = qtempr_y(R_Y:R_Y-1+nspecies)
-             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac_y, eos_state_e, eos_state_gam1, eos_state_cs)
-             rhoe_r = eos_state_rho * eos_state_e
-             gamc_r = eos_state_gam1
-
+             ! Single point version of multi-component Riemann solve
+             ! Argument order:
+             ! Input Left state: rho, vel, trans vel 1, trans vel 2, pressure, reint, 1:nspecies species, gamc
+             ! Input Right states: rho, vel, trans vel 1, trans vel 2, pressure, reint, 1:nspecies species, gamc,
+             ! Output Godunov states: iu, trans vel 1, trans vel 2, pressure, game, regd, rgd, ustar
+             ! Work arrays: eos_state, gdnv_state
+             ! Array sizes: nspecies
+             ! Fluxes: rho, umx, umy, ueden, ueint
+             ! Tests: idir=1, coord_type=0, bc_test = 1.0, 
+             ! smallc = max( csml(i), csml(i-1)
+             ! cav = HALF*( c(i,j), c(i-1,j))
              call riemann_md_vec( &
-                  qtempl_y(R_RHO), qtempl_y(R_UN), qtempl_y(R_UT1), qtempl_y(R_UT2), qtempl_y(R_P), rhoe_l, qtempl_y(R_Y:R_Y-1+nspecies), gamc_l,&
-                  qtempr_y(R_RHO), qtempr_y(R_UN), qtempr_y(R_UT1), qtempr_y(R_UT2), qtempr_y(R_P), rhoe_r, qtempr_y(R_Y:R_Y-1+nspecies), gamc_r,&
-                  v_gd, u_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar,&
-                  eos_state_rho, eos_state_p, eos_state_massfrac_y, &
-                  eos_state_e, eos_state_gam1, eos_state_cs, nspecies,&
-                  flux_tmp_y(URHO), flux_tmp_y(UMY), flux_tmp_y(UMX), flux_tmp_y(UMZ), flux_tmp_y(UEDEN), flux_tmp_y(UEINT), &
-                  bc_test_val, csmall, cavg, vic)
+                  qtempl(1:vic,R_RHO), qtempl(1:vic,R_UN), qtempl(1:vic,R_UT1), qtempl(1:vic,R_UT2), qtempl(1:vic,R_P), rhoe_l(1:vic), qtempl(1:vic,R_Y:R_Y-1+nspecies), gamc_l(1:vic),&
+                  qtempr(1:vic,R_RHO), qtempr(1:vic,R_UN), qtempr(1:vic,R_UT1), qtempr(1:vic,R_UT2), qtempr(1:vic,R_P), rhoe_r(1:vic), qtempr(1:vic,R_Y:R_Y-1+nspecies), gamc_r(1:vic),&
+                  u_gd(1:vic), v_gd(1:vic), w_gd(1:vic), p_gd(1:vic), game_gd(1:vic), re_gd(1:vic), r_gd(1:vic), ustar(1:vic),&
+                  eos_state, nspecies,&
+                  flux_tmp(1:vic,URHO), flux_tmp(1:vic,UMX), flux_tmp(1:vic,UMY), flux_tmp(1:vic,UMZ), flux_tmp(1:vic,UEDEN), flux_tmp(1:vic,UEINT), &
+                  bc_test_val, csmall(1:vic), cavg(1:vic), vic )
 
-             do n = 0, nspecies-1
-                flux_tmp_y(UFS+n) = merge(flux_tmp_y(URHO)*qtempl_y(R_Y+n), flux_tmp_y(URHO)*qtempr_y(R_Y+n), ustar .ge. 0.d0)
-                flux_tmp_y(UFS+n) = merge(flux_tmp_y(URHO)*0.5d0*(qtempl_y(R_Y+n) + qtempr_y(R_Y+n)), flux_tmp_y(UFS+n), ustar .eq. 0.d0)
-             enddo
+             vii = 0
+             do vi = vis, vie ! source/dest array index space   
+                vii = vii + 1 ! work array index
 
-             flux_tmp_y(UTEMP) = 0.0
-             do n = UFX, UFX+naux
-                flux_tmp_y(n) = merge(0.d0, flux_tmp_y(n), naux .gt. 0)
-             enddo
-             do n = UFA, UFA+nadv
-                flux_tmp_y(n) = merge(0.d0, flux_tmp_y(n), nadv .gt. 0)
-             enddo
+                ! Compute species flux like passive scalar from intermediate state
+                do nsp = 0, nspecies-1
+                   if (ustar(vii) .gt. ZERO) then
+                      flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)*qtempl(vii,R_Y+nsp)
+                   else if (ustar(vii) .lt. ZERO) then
+                      flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)*qtempr(vii,R_Y+nsp)
+                   else
+                      flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)&
+                           *HALF*(qtempl(vii,R_Y+nsp) + qtempr(vii,R_Y+nsp) )
+                   endif
+                enddo
 
-             do ivar = 1, nvar_2
-                flux2(i,j,k,ivar) = flux2(i,j,k,ivar) + flux_tmp_y(ivar) * ay(i,j,k)
+                ! Clear unused flux slots
+                flux_tmp(vii, UTEMP) = 0.0
+                if (naux .gt. 0) then
+                   flux_tmp(vii, UFX:UFX+naux) = 0.0
+                endif
+                if (nadv .gt. 0) then
+                   flux_tmp(vii, UFA:UFA+nadv) = 0.0
+                endif
+             enddo ! end of loop over vi
+
+             do ivar = 1, NVAR
+                flux1(vis:vie,j,k, ivar) = flux1(vis:vie,j,k, ivar ) + flux_tmp(1:vic,ivar) * Ax(vis:vie,j,k)
+
              enddo
           enddo
        enddo
     enddo
-    !$acc end kernels
+    call bl_proffortfuncstop_int(1)
 
-    !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
-    do n = 1, qvar_2
-       do k = qt_lo3, qt_hi3
-          do j = qt_lo2, qt_hi2
-             do i = qt_lo1, qt_hi1
-                dqz(i,j,k,n) = 0.d0
+    call bl_proffortfuncstart_int(2)
+#ifdef PELEC_USE_EB
+    call slopey(q,flatn,qd_lo,qd_hi, &
+         dqy,qt_lo,qt_hi, &
+         lo(1)-nextra,lo(2)-nextra,lo(3)-nextra,  &
+         hi(1)+nextra,hi(2)+nextra,hi(3)+nextra,QVAR,NQAUX,&
+         domlo,domhi, &
+         qaux, qa_lo, qa_hi, &
+         flag, fglo, fghi)
+#endif
+    call bl_proffortfuncstop_int(2)
+
+    call bl_proffortfuncstart_int(3)
+    do k = lo(3)-nextra, hi(3)+nextra
+       do j = lo(2)-nextra+1, hi(2)+nextra
+
+          do i = lo(1)-nextra, hi(1)+nextra, VECLEN
+             vis = i
+             vie = min(vis+VECLEN-1, hi(1)+nextra)
+             vic = vie - vis + 1
+
+
+             !     1,2,3 correspond to u-c, u, u+c repsectively
+             ! right eigenvectors are rho, v, p, u, w
+             !   in qtemp, 1 is rho, 2 is v, 3 is q , 4 is u and 5 is w
+
+
+              cspeed(1:vic      ) = qaux(vis:vie,j-1,k,QC)
+
+              ! Left v
+              qtempl(1:vic,R_UN ) = q(vis:vie,j-1,k,QV   ) + 0.5d0*((dqy(vis:vie,j-1,k,2)-dqy(vis:vie,j-1,k,1))/q(vis:vie,j-1,k,QRHO))
+     
+              ! Left p
+              qtempl(1:vic,R_P  ) = q(vis:vie,j-1,k,QPRES) + 0.5d0* (dqy(vis:vie,j-1,k,1)+dqy(vis:vie,j-1,k,2))*cspeed(1:vic)
+
+              ! Left u
+              qtempl(1:vic,R_UT1) = q(vis:vie,j-1,k,QU   ) + 0.5d0*  dqy(vis:vie,j-1,k,3)
+
+              ! Left w
+              qtempl(1:vic,R_UT2) = q(vis:vie,j-1,k,QW   ) + 0.5d0*  dqy(vis:vie,j-1,k,4)
+
+              ! Left rho - computed as sum(rhoY_k) below after species
+              qtempl(1:vic,R_RHO) = 0.d0
+              do nsp = 1,nspecies
+
+                qtempl(1:vic,R_Y-1+nsp) = q(vis:vie,j-1,k,QFS-1+nsp) * q(vis:vie,j-1,k,QRHO) + 0.5d0*(dqy(vis:vie,j-1,k,4+nsp) &
+                                          + q(vis:vie,j-1,k,QFS-1+nsp) * (dqy(vis:vie,j-1,k,1) + dqy(vis:vie,j-1,k,2))/cspeed(1:vic) )
+                qtempl(1:vic,R_RHO) = qtempl(1:vic,R_RHO) + qtempl(1:vic,R_Y-1+nsp)
+
+               enddo
+
+              do nsp = 1,nspecies
+                qtempl(1:vic,R_Y-1+nsp) = qtempl(1:vic,R_Y-1+nsp)/qtempl(1:vic,R_RHO)
+              enddo
+
+              cspeed(1:vic) = qaux(vis:vie,j,k,QC)
+
+              ! Right v
+              qtempr(1:vic,R_UN ) = q(vis:vie,j,k,QV   ) - 0.5d0 * ((dqy(vis:vie,j,k,2)-dqy(vis:vie,j,k,1))/q(vis:vie,j,k,QRHO))
+
+              ! Right p
+              qtempr(1:vic,R_P  ) = q(vis:vie,j,k,QPRES) - 0.5d0 * ( dqy(vis:vie,j,k,1)+dqy(vis:vie,j,k,2))*cspeed(1:vic)
+
+              ! Right u
+              qtempr(1:vic,R_UT1) = q(vis:vie,j,k,QU   ) - 0.5d0 *   dqy(vis:vie,j,k,3)
+
+              ! Right w
+              qtempr(1:vic,R_UT2) = q(vis:vie,j,k,QW) - 0.5d0 * dqy(vis:vie,j,k,4)
+
+              ! Right rho - computed as sum(rhoY_k) below after species
+              qtempr(1:vic,R_RHO) = 0.d0
+              do nsp = 1,nspecies
+
+                qtempr(1:vic,R_Y-1+nsp) = q(vis:vie,j,k,QFS-1+nsp) &
+                                          * q(vis:vie,j,k,QRHO) - 0.5d0*(dqy(vis:vie,j,k,4+nsp) &
+                                          + q(vis:vie,j,k,QFS-1+nsp) &
+                                             * (dqy(vis:vie,j,k,1) + dqy(vis:vie,j,k,2)) &
+                                             /cspeed(1:vic) )
+                qtempr(1:vic,R_RHO) = qtempr(1:vic,R_RHO) + qtempr(1:vic,R_Y-1+nsp)
+
+               enddo
+              do nsp = 1,nspecies
+                qtempr(1:vic,R_Y-1+nsp) = qtempr(1:vic,R_Y-1+nsp)/qtempr(1:vic,R_RHO)
+              enddo
+
+              ! Small and avg c
+             cavg(1:vic) = HALF * ( qaux(vis:vie,j,k,QC) + qaux(vis:vie,j-1,k,QC) )
+             csmall(1:vic) = min( qaux(vis:vie,j,k,QCSML), qaux(vis:vie,j-1,k,QCSML) )
+
+            ! TODO: Make this loop a call to a vector EOS routine
+             do vii = 1, vic
+               ! Have p, rhoY (composition is rhoY), rho 
+               !  - evaluate T, use that to evaluate internal energy
+
+               eos_state%rho = qtempl(vii,R_RHO)
+               eos_state%p = qtempl(vii,R_P)
+               eos_state%massfrac = qtempl(vii,R_Y:R_Y-1+nspecies)
+               !dir$ inline recursive
+               call eos_rp(eos_state)
+               rhoe_l(vii) = eos_state%rho * eos_state%e
+               gamc_l(vii) = eos_state%gam1
+
+               eos_state%rho = qtempr(vii,R_RHO)
+               eos_state%p = qtempr(vii,R_P)
+               eos_state%massfrac = qtempr(vii,R_Y:R_Y-1+nspecies)
+               !dir$ inline recursive
+               call eos_rp(eos_state)
+               rhoe_r(vii) = eos_state%rho * eos_state%e
+               gamc_r(vii) = eos_state%gam1
+             enddo
+
+        ! Single point version of multi-component Riemann solve
+        ! Argument order:
+        ! Input Left state: rho, vel, trans vel 1, trans vel 2, pressure, reint, 1:nspecies species, gamc
+        ! Input Right states: rho, vel, trans vel 1, trans vel 2, pressure, reint, 1:nspecies species, gamc,
+        ! Output Godunov states: iu, trans vel 1, trans vel 2, pressure, game, regd, rgd, ustar
+        ! Work arrays: eos_state, gdnv_state
+        ! Array sizes: nspecies
+        ! Fluxes: rho, umx, umy, ueden, ueint
+        ! Tests: idir=1, coord_type=0, bc_test = 1.0, 
+        ! smallc = max( csml(i), csml(i-1)
+        ! cav = HALF*( c(i,j), c(i-1,j))
+        call riemann_md_vec( &
+             qtempl(1:vic,R_RHO), qtempl(1:vic,R_UN), qtempl(1:vic,R_UT1), qtempl(1:vic,R_UT2), qtempl(1:vic,R_P), rhoe_l(1:vic), qtempl(1:vic,R_Y:R_Y-1+nspecies), gamc_l(1:vic),&
+             qtempr(1:vic,R_RHO), qtempr(1:vic,R_UN), qtempr(1:vic,R_UT1), qtempr(1:vic,R_UT2), qtempr(1:vic,R_P), rhoe_r(1:vic), qtempr(1:vic,R_Y:R_Y-1+nspecies), gamc_r(1:vic),&
+             v_gd(1:vic), u_gd(1:vic), w_gd(1:vic), p_gd(1:vic), game_gd(1:vic), re_gd(1:vic), r_gd(1:vic), ustar(1:vic),&
+             eos_state, nspecies,&
+             flux_tmp(1:vic,URHO), flux_tmp(1:vic,UMY), flux_tmp(1:vic,UMX), flux_tmp(1:vic,UMZ), flux_tmp(1:vic,UEDEN), flux_tmp(1:vic,UEINT), &
+             bc_test_val, csmall(1:vic), cavg(1:vic), vic )
+
+        vii = 0
+        do vi = vis, vie ! source/dest array index space
+          vii = vii + 1 ! work array index
+
+
+                ! Compute species flux like passive scalar from intermediate state
+                do nsp = 0, nspecies-1
+                   if (ustar(vii) .gt. ZERO) then
+                      flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)*qtempl(vii,R_Y+nsp)
+                   else if (ustar(vii) .lt. ZERO) then
+                      flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)*qtempr(vii,R_Y+nsp)
+                   else
+                      flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)&
+                           *HALF*(qtempl(vii,R_Y+nsp) + qtempr(vii,R_Y+nsp) )
+                   endif
+                enddo
+
+                ! Clear unused flux slots
+                flux_tmp(vii, UTEMP) = 0.0
+                if (naux .gt. 0) then
+                   flux_tmp(vii, UFX:UFX+naux) = 0.0
+                endif
+                if (nadv .gt. 0) then
+                   flux_tmp(vii, UFA:UFA+nadv) = 0.0
+                endif
+             enddo
+
+             do ivar = 1, NVAR
+                 flux2(vis:vie,j,k, ivar) = flux2(vis:vie,j,k, ivar ) + flux_tmp(1:vic,ivar) * Ay(vis:vie,j,k)
+
              enddo
           enddo
        enddo
     enddo
-    !$acc end parallel
-    !if(plm_iorder.ne.1) then
-    !   !$acc parallel default(present) async(gpustream)
-    !   call slopez(q,flatn,qd_lo1,qd_lo2,qd_lo3,qd_hi1,qd_hi2,qd_hi3, &
-    !              dqz,qt_lo1,qt_lo2,qt_lo3,qt_hi1,qt_hi2,qt_hi3, &
-    !              ilo1,ilo2,ilo3, &
-    !              ihi1,ihi2,ihi3,qvar_2,nqaux, &
-    !              domlo1,domlo2,domlo3,domhi1,domhi2,domhi3, &
-    !              qaux,qa_lo1,qa_lo2,qa_lo3,qa_hi1,qa_hi2,qa_hi3, &
-    !              flag,fglo1,fglo2,fglo3,fghi1,fghi2,fghi3)
-    !   !$acc end parallel
-    !end if
+    call bl_proffortfuncstop_int(3)
 
-    !$acc kernels default(present) async(gpustream)
-    !$acc loop gang vector collapse(3) private(n,qtempl_z,qtempr_z,gamc_l,rhoe_l,rhoe_r,gamc_r,u_gd, v_gd, w_gd, p_gd, game_gd, re_gd, r_gd, ustar, eos_state_rho, eos_state_p, eos_state_massfrac_z, eos_state_e, eos_state_gam1, eos_state_cs, flux_tmp_z, csmall, cavg, vic, ivar)
-    do k = ilo3+1, ihi3
-       do j = ilo2, ihi2
-          do i = ilo1, ihi1
-             qtempl_z(R_UN) = q(i,j,k-1,QW) + 0.5d0 * ((dqz(i,j,k-1,2) - dqz(i,j,k-1,1)) / q(i,j,k-1,QRHO))
-             qtempl_z(R_P) = q(i,j,k-1,QPRES) + 0.5d0 * (dqz(i,j,k-1,1) + dqz(i,j,k-1,2)) * qaux(i,j,k-1,QC)
-             qtempl_z(R_UT1) = q(i,j,k-1,QU) + 0.5d0 * dqz(i,j,k-1,3)
-             qtempl_z(R_UT2) = q(i,j,k-1,QV) + 0.5d0 * dqz(i,j,k-1,4)
-             qtempl_z(R_RHO) = 0.d0
-             do n = 1,nspecies
-               qtempl_z(R_Y-1+n) = q(i,j,k-1,QFS-1+n) &
-                                 * q(i,j,k-1,QRHO) + 0.5d0*(dqz(i,j,k-1,4+n) &
-                                 + q(i,j,k-1,QFS-1+n) &
-                                 * (dqz(i,j,k-1,1) + dqz(i,j,k-1,2)) &
-                                 / qaux(i,j,k-1,QC))
-               qtempl_z(R_RHO) = qtempl_z(R_RHO) + qtempl_z(R_Y-1+n)
+    call bl_proffortfuncstart_int(4)
+          ! Compute all slopes at kc (k3d)
+#ifdef PELEC_USE_EB
+    call slopez(q,flatn,qd_lo,qd_hi, &
+         dqz,qt_lo,qt_hi, &
+         lo(1)-nextra,lo(2)-nextra,lo(3)-nextra,  &
+         hi(1)+nextra,hi(2)+nextra,hi(3)+nextra,QVAR,NQAUX, &
+         domlo,domhi, &
+         qaux, qa_lo, qa_hi, &
+         flag, fglo, fghi)
+#endif
+    call bl_proffortfuncstop_int(4)
+
+    call bl_proffortfuncstart_int(5)
+    do k = lo(3)-nextra+1, hi(3)+nextra
+       do j = lo(2)-nextra, hi(2)+nextra
+
+          do i = lo(1)-nextra, hi(1)+nextra, VECLEN
+             vis = i
+             vie = min(vis+VECLEN-1, hi(1)+nextra)
+             vic = vie - vis + 1
+
+
+             cspeed(1:vic) = qaux(vis:vie,j,k-1,QC)
+
+             ! Left w
+             qtempl(1:vic,R_UN ) = q(vis:vie,j,k-1,QW   ) + 0.5d0 *((dqz(vis:vie,j,k-1,2)-dqz(vis:vie,j,k-1,1))/q(vis:vie,j,k-1,QRHO))
+
+             ! Left p
+             qtempl(1:vic,R_P  )=  q(vis:vie,j,k-1,QPRES) + 0.5d0 * (dqz(vis:vie,j,k-1,1)+dqz(vis:vie,j,k-1,2))*cspeed(1:vic)
+
+             ! Left u
+             qtempl(1:vic,R_UT1) = q(vis:vie,j,k-1,QU   ) + 0.5d0 *  dqz(vis:vie,j,k-1,3)
+
+             ! Left v
+             qtempl(1:vic,R_UT2) = q(vis:vie,j,k-1,QV   ) + 0.5d0 *  dqz(vis:vie,j,k-1,4)
+
+
+             ! Left rho - computed as sum(rhoY_k) below after species
+             qtempl(1:vic,R_RHO) = 0.d0
+             do nsp = 1,nspecies
+
+               qtempl(1:vic,R_Y-1+nsp) = q(vis:vie,j,k-1,QFS-1+nsp) &
+                                         * q(vis:vie,j,k-1,QRHO) + 0.5d0*(dqz(vis:vie,j,k-1,4+nsp) &
+                                         + q(vis:vie,j,k-1,QFS-1+nsp) &
+                                            * (dqz(vis:vie,j,k-1,1) + dqz(vis:vie,j,k-1,2)) &
+                                            /cspeed(1:vic) )
+               qtempl(1:vic,R_RHO) = qtempl(1:vic,R_RHO) + qtempl(1:vic,R_Y-1+nsp)
+              enddo
+
+             do nsp = 1,nspecies
+               qtempl(1:vic,R_Y-1+nsp) = qtempl(1:vic,R_Y-1+nsp)/qtempl(1:vic,R_RHO)
              enddo
 
-             do n = 1,nspecies
-               qtempl_z(R_Y-1+n) = qtempl_z(R_Y-1+n)/qtempl_z(R_RHO)
+             cspeed(1:vic) = qaux(vis:vie,j,k,QC)
+
+             ! Right w
+             qtempr(1:vic,R_UN ) = q(vis:vie,j,k,QW   ) - 0.5d0 * ((dqz(vis:vie,j,k,2)-dqz(vis:vie,j,k,1))/q(vis:vie,j,k,QRHO))
+
+             ! Right p
+             qtempr(1:vic,R_P  ) = q(vis:vie,j,k,QPRES) - 0.5d0 *  (dqz(vis:vie,j,k,1)+dqz(vis:vie,j,k,2))*cspeed(1:vic)
+
+             ! Right u
+             qtempr(1:vic,R_UT1) = q(vis:vie,j,k,QU   ) - 0.5d0 *   dqz(vis:vie,j,k,3)
+
+             ! Right v
+             qtempr(1:vic,R_UT2) = q(vis:vie,j,k,QV   ) - 0.5d0 *   dqz(vis:vie,j,k,4)
+
+             ! Right rho - computed as sum(rhoY_k) below after species
+             qtempr(1:vic,R_RHO) = 0.d0
+             do nsp = 1,nspecies
+
+                qtempr(1:vic,R_Y-1+nsp) = q(vis:vie,j,k,QFS-1+nsp) &
+                                          * q(vis:vie,j,k,QRHO) - 0.5d0*(dqz(vis:vie,j,k,4+nsp) &
+                                          + q(vis:vie,j,k,QFS-1+nsp) &
+                                             * (dqz(vis:vie,j,k,1) + dqz(vis:vie,j,k,2)) &
+                                             /cspeed(1:vic) )
+                qtempr(1:vic,R_RHO) = qtempr(1:vic,R_RHO) + qtempr(1:vic,R_Y-1+nsp)
+
+
+             enddo
+             do nsp = 1,nspecies
+               qtempr(1:vic,R_Y-1+nsp) = qtempr(1:vic,R_Y-1+nsp)/qtempr(1:vic,R_RHO)
              enddo
 
-             qtempr_z(R_UN) = q(i,j,k,QW) - 0.5d0 * ((dqz(i,j,k,2) - dqz(i,j,k,1)) / q(i,j,k,QRHO))
-             qtempr_z(R_P) = q(i,j,k,QPRES) - 0.5d0 * (dqz(i,j,k,1) + dqz(i,j,k,2)) * qaux(i,j,k,QC)
-             qtempr_z(R_UT1) = q(i,j,k,QU) - 0.5d0 * dqz(i,j,k,3)
-             qtempr_z(R_UT2) = q(i,j,k,QV) - 0.5d0 * dqz(i,j,k,4)
-             qtempr_z(R_RHO) = 0.d0
+             ! Small and avg c
+             cavg(1:vic) = HALF * ( qaux(vis:vie,j,k,QC) + qaux(vis:vie,j,k-1,QC) )
+             csmall(1:vic) = min( qaux(vis:vie,j,k,QCSML), qaux(vis:vie,j,k-1,QCSML) )
+             ! TODO: Make this loop a call to a vector EOS routine
+             do vii = 1, vic
+                ! Have p, rhoY (composition is rhoY), rho 
+                !  - evaluate T, use that to evaluate internal energy
+                eos_state%rho = qtempl(vii,R_RHO)
+                eos_state%p = qtempl(vii,R_P)
+                eos_state%massfrac = qtempl(vii,R_Y:R_Y-1+nspecies)
+                !dir$ inline recursive
+                call eos_rp(eos_state)
+                rhoe_l(vii) = eos_state%rho * eos_state%e
+                gamc_l(vii) = eos_state%gam1
 
-             do n = 1,nspecies
-                qtempr_z(R_Y-1+n) = q(i,j,k,QFS-1+n) &
-                                  * q(i,j,k,QRHO) - 0.5d0*(dqz(i,j,k,4+n) &
-                                  + q(i,j,k,QFS-1+n) &
-                                  * (dqz(i,j,k,1) + dqz(i,j,k,2)) &
-                                  / qaux(i,j,k,QC))
-                qtempr_z(R_RHO) = qtempr_z(R_RHO) + qtempr_z(R_Y-1+n)
+                eos_state%rho = qtempr(vii,R_RHO)
+                eos_state%p = qtempr(vii,R_P)
+                eos_state%massfrac = qtempr(vii,R_Y:R_Y-1+nspecies)
+                !dir$ inline recursive
+                call eos_rp(eos_state)
+                rhoe_r(vii) = eos_state%rho * eos_state%e
+                gamc_r(vii) = eos_state%gam1
              enddo
 
-             do n = 1,nspecies
-               qtempr_z(R_Y-1+n) = qtempr_z(R_Y-1+n)/qtempr_z(R_RHO)
-             enddo
-
-             cavg = 0.5d0 * (qaux(i,j,k,QC) + qaux(i,j,k-1,QC))
-             csmall = min(qaux(i,j,k,QCSML), qaux(i,j,k-1,QCSML))
-
-             eos_state_rho = qtempl_z(R_RHO)
-             eos_state_p = qtempl_z(R_P)
-             eos_state_massfrac_z = qtempl_z(R_Y:R_Y-1+nspecies)
-             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac_z, eos_state_e, eos_state_gam1, eos_state_cs)
-             rhoe_l = eos_state_rho * eos_state_e
-             gamc_l = eos_state_gam1
-
-             eos_state_rho = qtempr_z(R_RHO)
-             eos_state_p = qtempr_z(R_P)
-             eos_state_massfrac_z = qtempr_z(R_Y:R_Y-1+nspecies)
-             call eos_rp_gpu(eos_state_rho, eos_state_p, eos_state_massfrac_z, eos_state_e, eos_state_gam1, eos_state_cs)
-             rhoe_r = eos_state_rho * eos_state_e
-             gamc_r = eos_state_gam1
-
+             ! Single point version of multi-component Riemann solve
+             ! Argument order:
+             ! Input Left state: rho, vel, trans vel 1, trans vel 2, pressure, reint, 1:nspecies species, gamc
+             ! Input Right states: rho, vel, trans vel 1, trans vel 2, pressure, reint, 1:nspecies species, gamc,
+             ! Output Godunov states: iu, trans vel 1, trans vel 2, pressure, game, regd, rgd, ustar
+             ! Work arrays: eos_state, gdnv_state
+             ! Array sizes: nspecies
+             ! Fluxes: rho, umx, umy, ueden, ueint
+             ! Tests: idir=1, coord_type=0, bc_test = 1.0, 
+             ! smallc = max( csml(i), csml(i-1)
+             ! cav = HALF*( c(i,j), c(i-1,j))
              call riemann_md_vec( &
-                  qtempl_z(R_RHO), qtempl_z(R_UN), qtempl_z(R_UT1), qtempl_z(R_UT2), qtempl_z(R_P), rhoe_l, qtempl_z(R_Y:R_Y-1+nspecies), gamc_l,&
-                  qtempr_z(R_RHO), qtempr_z(R_UN), qtempr_z(R_UT1), qtempr_z(R_UT2), qtempr_z(R_P), rhoe_r, qtempr_z(R_Y:R_Y-1+nspecies), gamc_r,&
-                  w_gd, u_gd, v_gd, p_gd, game_gd, re_gd, r_gd, ustar,&
-                  eos_state_rho, eos_state_p, eos_state_massfrac_z, &
-                  eos_state_e, eos_state_gam1, eos_state_cs, nspecies,&
-                  flux_tmp_z(URHO), flux_tmp_z(UMZ), flux_tmp_z(UMX), flux_tmp_z(UMY), flux_tmp_z(UEDEN), flux_tmp_z(UEINT), &
-                  bc_test_val, csmall, cavg, vic)
+                  qtempl(1:vic,R_RHO), qtempl(1:vic,R_UN), qtempl(1:vic,R_UT1), qtempl(1:vic,R_UT2), qtempl(1:vic,R_P), rhoe_l(1:vic), qtempl(1:vic,R_Y:R_Y-1+nspecies), gamc_l(1:vic),&
+                  qtempr(1:vic,R_RHO), qtempr(1:vic,R_UN), qtempr(1:vic,R_UT1), qtempr(1:vic,R_UT2), qtempr(1:vic,R_P), rhoe_r(1:vic), qtempr(1:vic,R_Y:R_Y-1+nspecies), gamc_r(1:vic),&
+                  w_gd(1:vic), u_gd(1:vic), v_gd(1:vic), p_gd(1:vic), game_gd(1:vic), re_gd(1:vic), r_gd(1:vic), ustar(1:vic),&
+                  eos_state, nspecies,&
+                  flux_tmp(1:vic,URHO), flux_tmp(1:vic,UMZ), flux_tmp(1:vic,UMX), flux_tmp(1:vic,UMY), flux_tmp(1:vic,UEDEN), flux_tmp(1:vic,UEINT), &
+                  bc_test_val, csmall(1:vic), cavg(1:vic), vic )
 
-             do n = 0, nspecies-1
-                flux_tmp_z(UFS+n) = merge(flux_tmp_z(URHO)*qtempl_z(R_Y+n), flux_tmp_z(URHO)*qtempr_z(R_Y+n), ustar .ge. 0.d0)
-                flux_tmp_z(UFS+n) = merge(flux_tmp_z(URHO)*0.5d0*(qtempl_z(R_Y+n) + qtempr_z(R_Y+n)), flux_tmp_z(UFS+n), ustar .eq. 0.d0)
-             enddo
+             vii = 0
+             do vi = vis, vie ! source/dest array index space
+                vii = vii + 1 ! work array index
 
-             flux_tmp_z(UTEMP) = 0.0
-             do n = UFX, UFX+naux
-                flux_tmp_z(n) = merge(0.d0, flux_tmp_z(n), naux .gt. 0)
-             enddo
-             do n = UFA, UFA+nadv
-                flux_tmp_z(n) = merge(0.d0, flux_tmp_z(n), nadv .gt. 0)
-             enddo
 
-             do ivar = 1, nvar_2
-                flux3(i,j,k,ivar) = flux3(i,j,k,ivar) + flux_tmp_z(ivar) * az(i,j,k)
+                do nsp = 0, nspecies-1
+                   if (ustar(vii) .gt. ZERO) then
+                      flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)*qtempl(vii,R_Y+nsp)
+                   else if (ustar(vii) .lt. ZERO) then
+                      flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)*qtempr(vii,R_Y+nsp)
+                   else
+                      flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)&
+                           *HALF*(qtempl(vii,R_Y+nsp) + qtempr(vii,R_Y+nsp) )
+                   endif
+                enddo
+
+                
+                ! Clear unused flux slots
+                flux_tmp(vii, UTEMP) = 0.0
+                if (naux .gt. 0) then
+                   flux_tmp(vii, UFX:UFX+naux) = 0.0
+                endif
+                if (nadv .gt. 0) then
+                   flux_tmp(vii, UFA:UFA+nadv) = 0.0
+                endif
+
+             enddo ! end of loop over vi
+
+             do ivar = 1, NVAR
+                flux3(vis:vie,j,k, ivar) = flux3(vis:vie,j,k,ivar ) + flux_tmp(1:vic,ivar) * Az(vis:vie,j,k)
              enddo
           enddo
        enddo
     enddo
-    !$acc end kernels
+    call bl_proffortfuncstop_int(5)
 
-    !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
-    do ivar=1,nvar_2
-       do k = ilo3+1, ihi3-1
-          do j = ilo2+1, ihi2-1
-             do i = ilo1+1, ihi1-1
-                d(i,j,k,ivar) = - (flux1(i+1,j,k,ivar) - flux1(i,j,k,ivar) &
-                                +  flux2(i,j+1,k,ivar) - flux2(i,j,k,ivar) &
-                                +  flux3(i,j,k+1,ivar) - flux3(i,j,k,ivar)) / v(i,j,k)
+    ! Done computing flux through regular faces.
+
+    ! TODO: Flux through wall face here...
+#ifdef PELEC_USE_EB
+
+    call bl_proffortfuncstart_int(6)
+    full_area = h(1)**(dim - 1)
+
+    ! Loop over cut cells only - need to pass in a list of these (lift the list Marc built for diffusion)
+    do L = 0, nebflux-1, VECLEN
+       vis = L
+       vie = min(vis+VECLEN-1, nebflux-1)
+       vic = vie - vis +1
+
+       do vii = 1, vic
+          i = ebg(vis+vii-1) % iv(0)
+          j = ebg(vis+vii-1) % iv(1)
+          k = ebg(vis+vii-1) % iv(2)
+          if (i.ge.lo(1)-nextra .and. i.le.hi(1)+nextra &
+               .and. j.ge.lo(2)-nextra .and. j.le.hi(2)+nextra &
+               .and. k.ge.lo(3)-nextra .and. k.le.hi(3)+nextra ) then
+           ! Get normal - checkto make sure this is facing outward!
+             eb_norm = ebg(vis+vii-1)%eb_normal
+
+    !        eb_norm(1) = ebg(vis+vii-1)%eb_apertureX(2) - ebg(vis+vii-1)%eb_apertureX(1)
+    !        eb_norm(2) = ebg(vis+vii-1)%eb_apertureY(2) - ebg(vis+vii-1)%eb_apertureY(1)
+    !        eb_norm(3) = ebg(vis+vii-1)%eb_apertureZ(2) - ebg(vis+vii-1)%eb_apertureZ(1)
+
+             eb_norm = eb_norm / sqrt(eb_norm(1)**2 + eb_norm(2)**2 + eb_norm(3)**2)
+
+
+             ! Replace q for cut cell with average of neighborhood so that ebflux is consistent with cell merging
+             call get_neighbor_cells(flag(i,j,k),nbr)
+
+             if( vfrac(i,j,k) < eb_small_vfrac ) then
+                nbr(0,0,0) = 0
+                sum_kappa = sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1))
+
+                ! Construct left state from volume weighted average of neighbourhood
+                sum_nbrs =   sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1) * qaux(i-1:i+1,j-1:j+1,k-1:k+1,QC))
+                cspeed(vii) = sum_nbrs/sum_kappa
+
+                qtempl(vii,R_UN) = 0.0d0
+                sum_nbrs =   sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1) * q(i-1:i+1,j-1:j+1,k-1:k+1,QU))
+                qtempl(vii,R_UN) = qtempl(vii,R_UN) -sum_nbrs/sum_kappa*eb_norm(1)
+
+                sum_nbrs =   sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1) * q(i-1:i+1,j-1:j+1,k-1:k+1,QV))
+                qtempl(vii,R_UN) = qtempl(vii,R_UN) -sum_nbrs/sum_kappa*eb_norm(2)
+
+                sum_nbrs =   sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1) * q(i-1:i+1,j-1:j+1,k-1:k+1,QW))
+                qtempl(vii,R_UN) = qtempl(vii,R_UN) -sum_nbrs/sum_kappa*eb_norm(3)
+
+                qtempl(vii,R_UT1) = 0.0
+                qtempl(vii,R_UT2) = 0.0
+
+                sum_nbrs =   sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1) * q(i-1:i+1,j-1:j+1,k-1:k+1,QPRES))
+                qtempl(vii,R_P  ) = sum_nbrs/sum_kappa
+
+                sum_nbrs =   sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1) * q(i-1:i+1,j-1:j+1,k-1:k+1,QRHO))
+
+                qtempl(vii,R_RHO) = sum_nbrs/sum_kappa
+
+                do nsp = 1,nspecies
+                   sum_nbrs =   sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1) * q(i-1:i+1,j-1:j+1,k-1:k+1,QFS-1+nsp))
+                   qtempl(vii,R_Y-1+nsp) = sum_nbrs/sum_kappa
+                enddo
+
+                ! Flip the velocity about the normal for the right state - will use left
+                ! state for remainder of right state
+                qtempr(vii,R_UN  ) = -1.0*qtempl(vii,R_UN)
+
+                ! Small and avg c
+                sum_nbrs =   sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1) * qaux(i-1:i+1,j-1:j+1,k-1:k+1,QC))
+                cavg(vii)  = sum_nbrs/sum_kappa
+
+                sum_nbrs =   sum(nbr(-1:1,-1:1,-1:1) * vfrac(i-1:i+1,j-1:j+1,k-1:k+1) * qaux(i-1:i+1,j-1:j+1,k-1:k+1,QCSML))
+                csmall(vii) = sum_nbrs/sum_kappa
+
+
+             else
+                ! Assume left state is the cell centered state - normal veclocity
+                cspeed(vii) = qaux(i,j,k,QC)
+
+                qtempl(vii,R_UN ) = - q(i,j,k,QU)*eb_norm(1) &
+                     -                q(i,j,k,QV)*eb_norm(2) &
+                     -                q(i,j,k,QW)*eb_norm(3)
+
+                qtempl(vii,R_UT1) = 0.0
+                qtempl(vii,R_UT2) = 0.0
+                qtempl(vii,R_P  ) = q(i,j,k,QPRES)
+                qtempl(vii,R_RHO) = q(i,j,k,QRHO)
+
+                do nsp = 1,nspecies
+                   qtempl(vii,R_Y-1+nsp) = q(i,j,k,QFS-1+nsp)
+                enddo
+
+                ! Flip the velocity about the normal for the right state - will use left
+                ! state for remainder of right state
+                qtempr(vii,R_UN  ) = -1.0*qtempl(vii,R_UN)
+
+                ! Small and avg c
+                cavg(vii)  =  qaux(i,j,k,QC)
+                csmall(vii) = qaux(i,j,k,QCSML)
+
+             endif
+
+
+
+
+          endif
+       enddo
+
+
+    !     TODO: Make this loop a call to a vector EOS routine
+       do vii = 1, vic
+
+          ! Have p, rhoY (composition is rhoY), rho 
+          i = ebg(vis+vii-1) % iv(0)
+          j = ebg(vis+vii-1) % iv(1)
+          k = ebg(vis+vii-1) % iv(2)
+          if (i.ge.lo(1)-nextra .and. i.le.hi(1)+nextra &
+               .and. j.ge.lo(2)-nextra .and. j.le.hi(2)+nextra &
+               .and. k.ge.lo(3)-nextra .and. k.le.hi(3)+nextra ) then
+          !  - evaluate T, use that to evaluate internal energy
+        
+                eos_state%rho =      qtempl(vii,R_RHO)
+                eos_state%p   =      qtempl(vii,R_P)
+                eos_state%massfrac = qtempl(vii,R_Y:R_Y-1+nspecies)
+                !dir$ inline recursive
+                call eos_rp(eos_state)
+                rhoe_l(vii) = eos_state%rho * eos_state%e
+                gamc_l(vii) = eos_state%gam1
+         endif
+
+       enddo
+
+       ! Solve Riemann problem; store flux in flux4 - cell centered data structure
+       vii = 0
+       do vi = vis, vie ! source/dest array index space
+          vii = vii + 1 ! work array index
+
+          i = ebg(vis+vii-1) % iv(0)
+          j = ebg(vis+vii-1) % iv(1)
+          k = ebg(vis+vii-1) % iv(2)
+          ! this is going to prevent vectorization, but until vector riemann solver
+          ! is in place might as well avoid copying into a temporary 
+          if (       i.ge.lo(1)-nextra+1 .and. i.le.hi(1)+nextra-1 &
+               .and. j.ge.lo(2)-nextra+1 .and. j.le.hi(2)+nextra-1 &
+               .and. k.ge.lo(3)-nextra+1 .and. k.le.hi(3)+nextra-1 ) then
+
+             call riemann_md_singlepoint( &
+                  qtempl(vii,R_RHO), qtempl(vii,R_UN), qtempl(vii,R_UT1), qtempl(vii,R_UT2), qtempl(vii,R_P), rhoe_l(vii), qtempl(vii,R_Y:R_Y-1+nspecies), gamc_l(vii),&
+                  qtempl(vii,R_RHO), qtempr(vii,R_UN), qtempl(vii,R_UT1), qtempl(vii,R_UT2), qtempl(vii,R_P), rhoe_l(vii), qtempl(vii,R_Y:R_Y-1+nspecies), gamc_l(vii),&
+                  u_gd(vii), v_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii),&
+                  eos_state, gdnv_state, nspecies,&
+                  flux_tmp(vii,URHO), flux_tmp(vii,UMX), flux_tmp(vii,UMY), flux_tmp(vii,UMZ), flux_tmp(vii,UEDEN), flux_tmp(vii,UEINT), &
+                  idir, coord_type, bc_test_val, csmall(vii), cavg(vii) )
+          
+  
+             eb_norm = ebg(vis+vii-1)%eb_normal
+
+             eb_norm = eb_norm / sqrt(eb_norm(1)**2 + eb_norm(2)**2 + eb_norm(3)**2)
+
+             flux_tmp(vii,UMY) = -flux_tmp(vii,UMX) * eb_norm(2)
+             flux_tmp(vii,UMZ) = -flux_tmp(vii,UMX) * eb_norm(3)
+             flux_tmp(vii,UMX) = -flux_tmp(vii,UMX) * eb_norm(1)
+             !   Compute species flux like passive scalar from intermediate state
+             do nsp = 0, nspecies-1
+                flux_tmp(vii,UFS+nsp) = flux_tmp(vii,URHO)*qtempl(vii,R_Y+nsp)
+             enddo
+          endif
+
+       enddo ! End future vector loop
+
+       ! Copy result into ebflux vector. Being a bit chicken here and only copy values where ebg % iv is within box
+       vii = 0
+       do vi = vis, vie ! source/dest array index space
+          vii = vii + 1 ! work array index
+
+          i = ebg(vis+vii-1) % iv(0)
+          j = ebg(vis+vii-1) % iv(1)
+          k = ebg(vis+vii-1) % iv(2)
+          ! this is going to prevent vectorization, but until vector riemann solver
+          ! is in place might as well avoid copying into a temporary 
+          if (       i.ge.lo(1)-nextra+1 .and. i.le.hi(1)+nextra-1 &
+               .and. j.ge.lo(2)-nextra+1 .and. j.le.hi(2)+nextra-1 &
+               .and. k.ge.lo(3)-nextra+1 .and. k.le.hi(3)+nextra-1 ) then
+
+             do ivar = 1, NVAR
+                ebflux(vi,ivar) = ebflux(vi,ivar) + flux_tmp(vii,ivar) * ebg(vi)%eb_area * full_area
+             enddo
+
+          endif
+       enddo ! End future vector loop
+    enddo ! End loop over cut cells
+
+    call bl_proffortfuncstop_int(6)
+#endif
+
+    ! Deallocate arrays
+    call bl_deallocate (dqx)
+    call bl_deallocate (dqy)
+    call bl_deallocate (dqz)
+
+    call destroy(eos_state)
+    call destroy(gdnv_state)
+
+    ! Now, all faces flux done - now ready for Marc's magic; flux in x-direction 
+    ! is loaded into flux1
+    ! where flux1(i,j,k,N) has edge based flux of rho,u,v,w,eden,eint,species indexed by
+    ! URHO, UMX, UMY, UMZ, UEDEN, UEINT, UFS:UFS+nspecies-1, and similar for flux2, flux3
+    ! EB face flux assuming wall BC is loaded into ebflux with same ordering
+
+    ! Call Marc's routine to multiply fluxes by aperatures and interpolate to face centers 
+    ! (includes multiplying covered faces by 0.0) - or just return the fluxes and add 'em
+    ! up with the diffusion fluxes before calling Marc's routine to compute hybrid divergence
+
+    call bl_proffortfuncstart_int(7)
+
+    do ivar=1,NVAR
+       do k = lo(3)-nextra+1, hi(3)+nextra-1
+          do j = lo(2)-nextra+1, hi(2)+nextra-1
+             do i = lo(1)-nextra+1, hi(1)+nextra-1
+
+                D(i,j,k,ivar) = - (flux1(i+1,j,k,ivar) - flux1(i,j,k,ivar) &
+                     +             flux2(i,j+1,k,ivar) - flux2(i,j,k,ivar) &
+                     +             flux3(i,j,k+1,ivar) - flux3(i,j,k,ivar) )/V(i,j,k)
+
              enddo
           enddo
        enddo
     enddo
-    !$acc end parallel
 
-    !$acc exit data delete(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z,nbr_x,nbr_y,nbr_z) async(gpustream)
-
-    !do ivar=1,nvar_2
-    !   do k = lo(3)-nextra+1, hi(3)+nextra-1
-    !      do j = lo(2)-nextra+1, hi(2)+nextra-1
-    !         do i = lo(1)-nextra+1, hi(1)+nextra-1
-    !            print *, "FLUX3: ", flux3(i,j,k,ivar)
-    !         enddo
-    !      enddo
-    !   enddo
-    !enddo
+    call bl_proffortfuncstop_int(7)
 
   end subroutine pc_hyp_mol_flux
-end module hyp_advection_module
+end module hyp_advection_module 

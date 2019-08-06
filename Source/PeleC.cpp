@@ -154,7 +154,7 @@ IntVect      PeleC::hydro_tile_size(1024);
 //IntVect      PeleC::hydro_tile_size(1024,16);
 IntVect      PeleC::hydro_tile_size(1024,1024);
 #else
-IntVect      PeleC::hydro_tile_size(1024,1024,1024);
+IntVect      PeleC::hydro_tile_size(1024,16,16);
 #endif
 
 // this will be reset upon restart
@@ -915,7 +915,7 @@ PeleC::estTimeStep (Real dt_old)
     auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
-    if(do_gpu){
+    if(do_cuda){
         prefetchToDevice(stateMF); //This should accelerate the below operations.  
         amrex::Real D_DECL(dx1 = dx[0], dx2 = dx[1], dx3 = dx[2]); 
         if(do_hydro){
@@ -1336,8 +1336,8 @@ PeleC::post_init (Real stop_time)
   if (do_react == 1)
   {
     bool react_init = true;
-    if(do_gpu || do_gpu_react)
-         react_state_gpu(cumtime, dtlev, react_init);
+    if(do_cuda || do_cuda_react)
+         react_state_cuda(cumtime, dtlev, react_init);
     else 
         react_state(cumtime,dtlev,react_init);
   }
@@ -1972,7 +1972,7 @@ PeleC::close_reactor ()
 void
 PeleC::init_transport ()
 {
-  if(do_gpu)
+  if(do_cuda)
       PeleC_transport_init(); 
   else
       pc_transport_init();
@@ -1981,7 +1981,7 @@ PeleC::init_transport ()
 void
 PeleC::close_transport ()
 {
-  if(do_gpu) 
+  if(do_cuda) 
       PeleC_transport_close();
   else
       pc_transport_close();
@@ -2010,7 +2010,7 @@ PeleC::reset_internal_energy(MultiFab& S_new, int ng)
 {
     Real sum  = 0.;
     Real sum0 = 0.;
-    if(!do_gpu){
+    if(!do_cuda){
         if (parent->finestLevel() == 0 && print_energy_diagnostics)
         {
         // Pass in the multifab and the component
@@ -2024,7 +2024,7 @@ PeleC::reset_internal_energy(MultiFab& S_new, int ng)
     for (MFIter mfi(S_new,TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.growntilebox(ng);
-        if(do_gpu){
+        if(do_cuda){
             const auto& sarr = S_new.array(mfi); 
             AMREX_PARALLEL_FOR_3D(bx, i, j, k, {
                 PeleC_rst_int_e(i,j,k, sarr); 
@@ -2038,7 +2038,7 @@ PeleC::reset_internal_energy(MultiFab& S_new, int ng)
     }
 
     // Flush Fortran output
-    if(!do_gpu){
+    if(!do_cuda){
         if (verbose)
         flush_output();
 
@@ -2071,7 +2071,7 @@ PeleC::computeTemp(MultiFab& S, int ng)
   auto const& flags = fact.getMultiEBCellFlagFab();
 #endif
 
-  if(do_gpu){
+  if(do_cuda){
 #ifdef _OPENMP
 #pragma omp parallel
 #endif

@@ -1,5 +1,5 @@
 CEXE_sources += PeleC_trans_params.cpp
-CEXE_sources += PeleC_transport_gpu.cpp 
+CEXE_sources += PeleC_transport_cuda.cpp 
 
 CEXE_headers += PeleC_simple_transport.H 
 CEXE_headers += PeleC_trans_params.H
