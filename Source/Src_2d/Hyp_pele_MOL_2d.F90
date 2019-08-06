@@ -265,7 +265,7 @@ module hyp_advection_module
                 call riemann_cg_singlepoint( &
                      qtempl(vii,R_RHO), qtempl(vii,R_UN), qtempl(vii,R_UT1), qtempl(vii,R_UT2), qtempl(vii,R_P), rhoe_l(vii), qtempl(vii,R_Y:R_Y-1+nspecies), gamc_l(vii),&
                      qtempr(vii,R_RHO), qtempr(vii,R_UN), qtempr(vii,R_UT1), qtempr(vii,R_UT2), qtempr(vii,R_P), rhoe_r(vii), qtempr(vii,R_Y:R_Y-1+nspecies), gamc_r(vii),&
-                     u_gd(vii), v_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii),&
+                     u_gd(vii), v_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii),nspecies,&
                      flux_tmp(vii,URHO), flux_tmp(vii,UMX), flux_tmp(vii,UMY), flux_tmp(vii,UMZ), flux_tmp(vii,UEDEN), flux_tmp(vii,UEINT), &
                      idir, coord_type, bc_test_val, csmall(vii), cav(vii) )
              else
@@ -409,14 +409,14 @@ module hyp_advection_module
                 call riemann_md_singlepoint( &
                      qtempl(vii,R_RHO), qtempl(vii,R_UN), qtempl(vii,R_UT1), qtempl(vii,R_UT2), qtempl(vii,R_P), rhoe_l(vii), qtempl(vii,R_Y:R_Y-1+nspecies), gamc_l(vii),&
                      qtempr(vii,R_RHO), qtempr(vii,R_UN), qtempr(vii,R_UT1), qtempr(vii,R_UT2), qtempr(vii,R_P), rhoe_r(vii), qtempr(vii,R_Y:R_Y-1+nspecies), gamc_r(vii),&
-                     v_gd(vii), u_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii), eos_state, gdnv_state, &
+                     v_gd(vii), u_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii), eos_state, gdnv_state, nspecies,&
                      flux_tmp(vii,URHO), flux_tmp(vii,UMY), flux_tmp(vii,UMX), flux_tmp(vii,UMZ), flux_tmp(vii,UEDEN), flux_tmp(vii,UEINT), &
                      idir, coord_type, bc_test_val, csmall(vii), cav(vii) )
              else if (riemann_solver .eq. 1) then
                 call riemann_cg_singlepoint( &
                      qtempl(vii,R_RHO), qtempl(vii,R_UN), qtempl(vii,R_UT1), qtempl(vii,R_UT2), qtempl(vii,R_P), rhoe_l(vii), qtempl(vii,R_Y:R_Y-1+nspecies), gamc_l(vii),&
                      qtempr(vii,R_RHO), qtempr(vii,R_UN), qtempr(vii,R_UT1), qtempr(vii,R_UT2), qtempr(vii,R_P), rhoe_r(vii), qtempr(vii,R_Y:R_Y-1+nspecies), gamc_r(vii),&
-                     v_gd(vii), u_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii), &
+                     v_gd(vii), u_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii), nspecies,&
                      flux_tmp(vii,URHO), flux_tmp(vii,UMY), flux_tmp(vii,UMX), flux_tmp(vii,UMZ), flux_tmp(vii,UEDEN), flux_tmp(vii,UEINT), &
                      idir, coord_type, bc_test_val, csmall(vii), cav(vii) )
              else
@@ -543,14 +543,14 @@ module hyp_advection_module
                 call riemann_md_singlepoint( &
                      qtempl(vii,R_RHO), qtempl(vii,R_UN), qtempl(vii,R_UT1), qtempl(vii,R_UT2), qtempl(vii,R_P), rhoe_l(vii), qtempl(vii,R_Y:R_Y-1+nspecies), gamc_l(vii),&
                      qtempl(vii,R_RHO), qtempr(vii,R_UN), qtempl(vii,R_UT1), qtempl(vii,R_UT2), qtempl(vii,R_P), rhoe_l(vii), qtempl(vii,R_Y:R_Y-1+nspecies), gamc_l(vii),&
-                     u_gd(vii), v_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii), eos_state, gdnv_state, &
+                     u_gd(vii), v_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii), eos_state, gdnv_state, nspecies,&
                      flux_tmp(vii,URHO), tflux(1), tflux(2), tflux(3),  flux_tmp(vii,UEDEN), flux_tmp(vii,UEINT), &
                      idir, coord_type, bc_test_val, csmall(vii), cav(vii) )
              else if (riemann_solver .eq. 1) then
                 call riemann_cg_singlepoint( &
                      qtempl(vii,R_RHO), qtempl(vii,R_UN), qtempl(vii,R_UT1), qtempl(vii,R_UT2), qtempl(vii,R_P), rhoe_l(vii), qtempl(vii,R_Y:R_Y-1+nspecies), gamc_l(vii),&
                      qtempl(vii,R_RHO), qtempr(vii,R_UN), qtempl(vii,R_UT1), qtempl(vii,R_UT2), qtempl(vii,R_P), rhoe_l(vii), qtempl(vii,R_Y:R_Y-1+nspecies), gamc_l(vii),&
-                     u_gd(vii), v_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii), &
+                     u_gd(vii), v_gd(vii), w_gd(vii), p_gd(vii), game_gd(vii), re_gd(vii), r_gd(vii), ustar(vii), nspecies,&
                      flux_tmp(vii,URHO), tflux(1), tflux(2), tflux(3), flux_tmp(vii,UEDEN), flux_tmp(vii,UEINT), &
                      idir, coord_type, bc_test_val, csmall(vii), cav(vii) )
              else

@@ -1280,7 +1280,7 @@ contains
           qr(i,j,QRHO), ur, vr, v2r, qr(i,j,QPRES), rer, qr(i,j,QFS:QFS+nspecies-1), gamcr(i,j), &
           qint(i,j,iu), qint(i,j,iv1), qint(i,j,iv2), qint(i,j,GDPRES),qint(i,j,GDGAME), &
           regd, rgd, ustar, &
-          eos_state, gdnv_state, &
+          eos_state, gdnv_state, nspecies, &
           uflx(i,j,URHO), uflx(i,j,UMX), uflx(i,j,UMY), uflx_w_dummy, uflx(i,j,UEDEN), uflx(i,j,UEINT), &
           idir, coord_type, bc_test_mask, smallc(i,j), cav(i,j) )
 
