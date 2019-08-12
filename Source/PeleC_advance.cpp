@@ -169,9 +169,9 @@ PeleC::do_mol_advance(Real time,
     MultiFab::Subtract(S, I_R, NumSpec,Eden,      1,       0);
 
     // Compute I_R and U^{n+1} = U^n + dt*(F_{AD} + I_R)
-    if(do_cuda_react)
-      react_state_cuda(time, dt);
-    else
+    //if(do_cuda || do_cuda_react)
+    //  react_state_cuda(time, dt);
+    //else
       react_state(time, dt, false, &S);  // false = not react_init
   }
 #endif
@@ -194,9 +194,9 @@ PeleC::do_mol_advance(Real time,
       MultiFab::LinComb(S, 0.5, S_old, 0, 0.5, S_new, 0, 0, NUM_STATE, 0);
 
       // Compute I_R and U^{n+1} = U^n + dt*(F_{AD} + I_R)
-      if(do_cuda_react)
-        react_state_cuda(time, dt);
-      else
+      //if(do_cuda || do_cuda_react)
+      //  react_state_cuda(time, dt);
+      //else
         react_state(time, dt, false, &S);  // false = not react_init
       
       computeTemp(U_new,0);
@@ -550,7 +550,7 @@ PeleC::do_sdc_iteration (Real time,
   // Update I_R and rebuild S_new accordingly
   if (do_react == 1)
   {
-    if(do_cuda) 
+    if(do_cuda || do_cuda_react) 
         react_state_cuda(time, dt); 
     else
         react_state(time, dt);

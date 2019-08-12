@@ -122,8 +122,11 @@ PeleC::construct_hydro_source(const MultiFab& S, Real time, Real dt, int amr_ite
 	    q.resize(qbx, QVAR);
 	    qaux.resize(qbx, NQAUX);
 	    src_q.resize(qbx, QVAR);
-      
+#ifdef PELEC_USE_ACC 
 	    ctoprim(0, ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
+#else
+	    ctoprim(ARLIM_3D(qbx.loVect()), ARLIM_3D(qbx.hiVect()),
+#endif
 		    statein.dataPtr(), ARLIM_3D(statein.loVect()), ARLIM_3D(statein.hiVect()),
 		    q.dataPtr(), ARLIM_3D(q.loVect()), ARLIM_3D(q.hiVect()),
 		    qaux.dataPtr(), ARLIM_3D(qaux.loVect()), ARLIM_3D(qaux.hiVect()));

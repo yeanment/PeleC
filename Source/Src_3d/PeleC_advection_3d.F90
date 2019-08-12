@@ -1098,7 +1098,7 @@ contains
                     div,lo,hi,dx,n)
 
     use meth_params_module, only : difmag, NVAR, URHO, UMX, UMY, UMZ
-    use bl_constants_module, only : ZERO, FOURTH
+    use amrex_constants_module, only : ZERO, FOURTH
 
     integer, intent(in) ::       lo(3),       hi(3)
     integer, intent(in) ::   uin_lo(3),   uin_hi(3)
