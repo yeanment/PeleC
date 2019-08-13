@@ -212,7 +212,7 @@ module hyp_advection_module
     qa_hi2=qa_hi(2)
     qa_hi3=qa_hi(3)
 
-    !$acc enter data create(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z,nbr_x,nbr_y,nbr_z) async(gpustream)
+    !$acc enter data create(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z) async(gpustream)
 
     !$acc parallel loop gang vector collapse(4) default(present) async(gpustream)
     do n = 1, qvar_2
@@ -561,7 +561,7 @@ module hyp_advection_module
     enddo
     !$acc end parallel
 
-    !$acc exit data delete(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z,nbr_x,nbr_y,nbr_z) async(gpustream)
+    !$acc exit data delete(dqx,dqy,dqz,qtempl_x,qtempl_y,qtempl_z,qtempr_x,qtempr_y,qtempr_z,eos_state_massfrac_x,eos_state_massfrac_y,eos_state_massfrac_z,flux_tmp_x,flux_tmp_y,flux_tmp_z) async(gpustream)
 
     !do ivar=1,nvar_2
     !   do k = lo(3)-nextra+1, hi(3)+nextra-1
