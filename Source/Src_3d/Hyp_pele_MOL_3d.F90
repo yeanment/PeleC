@@ -877,9 +877,12 @@ module hyp_advection_module
           k = ebg(vis+vii-1) % iv(2)
           ! this is going to prevent vectorization, but until vector riemann solver
           ! is in place might as well avoid copying into a temporary 
-          if (       i.ge.lo(1)-nextra+1 .and. i.le.hi(1)+nextra-1 &
-               .and. j.ge.lo(2)-nextra+1 .and. j.le.hi(2)+nextra-1 &
-               .and. k.ge.lo(3)-nextra+1 .and. k.le.hi(3)+nextra-1 ) then
+          ! if (       i.ge.lo(1)-nextra+1 .and. i.le.hi(1)+nextra-1 &
+          !      .and. j.ge.lo(2)-nextra+1 .and. j.le.hi(2)+nextra-1 &
+          !      .and. k.ge.lo(3)-nextra+1 .and. k.le.hi(3)+nextra-1 ) then
+          if (       i.ge.lo(1) .and. i.le.hi(1) &
+               .and. j.ge.lo(2) .and. j.le.hi(2) &
+               .and. k.ge.lo(3) .and. k.le.hi(3) ) then
 
              do ivar = 1, NVAR
                 ebflux(vi,ivar) = ebflux(vi,ivar) + flux_tmp(vii,ivar) * ebg(vi)%eb_area * full_area
