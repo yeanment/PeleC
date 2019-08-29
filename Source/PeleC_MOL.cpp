@@ -532,9 +532,6 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
               eb_tile_mask[icut] = 0;
           }
       }
-      if (typ == FabType::singlevalued) {
-          sv_eb_flux[local_i].merge(eb_flux_thdlocal,0, NUM_STATE, eb_tile_mask);
-      }
 
       if (typ == FabType::singlevalued) {
         /* Interpolate fluxes from face centers to face centroids
@@ -598,7 +595,7 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
                                       D_DECL(BL_TO_FORTRAN_ANYD(flux_ec[0]),
                                              BL_TO_FORTRAN_ANYD(flux_ec[1]),
                                              BL_TO_FORTRAN_ANYD(flux_ec[2])),
-                                      sv_eb_flux[local_i].dataPtr(), &Nflux,
+                                      eb_flux_thdlocal.dataPtr(), &Nflux,
                                       BL_TO_FORTRAN_ANYD(Dterm),
                                       BL_TO_FORTRAN_N_ANYD(W, wComp),
                                       BL_TO_FORTRAN_ANYD(vfrac[mfi]),
@@ -676,6 +673,17 @@ PeleC::getMOLSrcTerm(const amrex::MultiFab& S,
         }
 
 #ifdef PELEC_USE_EB
+
+      /* Don't need to do this because each thread computed all of the cut cells (two grow
+         cells) necessary to update hybrid divergence. If we wanted a valid flux existing
+         this loop, this is how we'd sync it up, but since the merge code involves
+         locking there is some overhead for this
+
+      if (typ == FabType::singlevalued) {
+          sv_eb_flux[local_i].merge(eb_flux_thdlocal,0, NUM_STATE, eb_tile_mask);
+          } */
+
+
       if (do_mol_load_balance) {
         wt = (ParallelDescriptor::second() - wt) / vbox.d_numPts();
         (*cost)[mfi].plus(wt, vbox);
