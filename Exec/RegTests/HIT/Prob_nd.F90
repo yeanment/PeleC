@@ -10,11 +10,11 @@ contains
 
   subroutine amrex_probinit (init,name,namlen,problo,probhi) bind(C, name = "amrex_probinit")
 
-    use parallel
+    use amrex_paralleldescriptor_module, only: amrex_pd_ioprocessor
     use probdata_module
-    use bl_error_module
-    use bl_constants_module, only: HALF
-    use network, only: nspec, naux, molec_wt
+    use amrex_fort_module
+    use amrex_constants_module, only: HALF
+    use network, only: nspecies, naux, molec_wt
     use extern_probin_module, only: const_viscosity, const_bulk_viscosity, const_conductivity, const_diffusivity
     use prob_params_module, only: dim
     use eos_module
@@ -52,12 +52,12 @@ contains
     iname = ""
     binfmt = .false.
     restart = .false.
-    lambda0 = 0.5_dp_t
-    reynolds_lambda0 = 100.0_dp_t
-    mach_t0 = 0.1_dp_t
-    prandtl = 0.71_dp_t
+    lambda0 = 0.5_amrex_real
+    reynolds_lambda0 = 100.0_amrex_real
+    mach_t0 = 0.1_amrex_real
+    prandtl = 0.71_amrex_real
     inres = 0
-    uin_norm = 1.0_dp_t
+    uin_norm = 1.0_amrex_real
     u0 = 0.d0
     v0 = 0.d0
     w0 = 0.d0
@@ -103,7 +103,7 @@ contains
     const_conductivity = const_viscosity * eos_state % cp / prandtl
 
     ! Write this out to file (might be useful for postprocessing)
-    if ( parallel_ioprocessor() ) then
+    if ( amrex_pd_ioprocessor() ) then
        open(unit=out_unit,file="ic.txt",action="write",status="replace")
        write(out_unit,*)"lambda0, k0, rho0, urms0, tau, p0, T0, gamma, mu, k, c_s0, Reynolds, Mach, Prandtl, u0, v0, w0, forcing"
        write(out_unit,*) lambda0, "," , k0, "," , eos_state % rho, "," , urms0, "," , tau, "," , &
@@ -123,7 +123,7 @@ contains
     ! domain (hence the mod operations in the interpolation).
 
     if (restart) then
-       if ( parallel_ioprocessor() ) then
+       if ( amrex_pd_ioprocessor() ) then
           write(*,*)"Skipping input file reading and assuming restart."
        endif
     else
@@ -199,11 +199,11 @@ contains
        delta,xlo,xhi) bind(C, name = "pc_initdata")
 
     use probdata_module
-    use network, only: nspec, naux, molec_wt
+    use network, only: nspecies, naux, molec_wt
     use eos_type_module
     use meth_params_module, only : URHO, UMX, UMY, UMZ, &
          UEDEN, UEINT, UFS, UTEMP
-    use bl_constants_module, only: ZERO, HALF, M_PI
+    use amrex_constants_module, only: ZERO, HALF, M_PI
     use prob_params_module, only: dim
     use eos_module
     use forcing_src_module, only: u0, v0, w0, forcing
@@ -223,7 +223,7 @@ contains
     double precision :: x, y, z, u, v, w
     double precision :: xmod, ymod, zmod
     integer :: m, mp1, n, np1, p, pp1
-    double precision :: r, s, t, uinterp, vinterp, winterp
+    double precision :: rr, s, t, uinterp, vinterp, winterp
     double precision :: f0, f1, f2, f3, f4, f5, f6, f7
 
     ! Set the equation of state variables
@@ -236,7 +236,7 @@ contains
 
     ! Uniform density, temperature, pressure (internal energy)
     state(:,:,:,URHO)            = rho0
-    do i = 1,nspec
+    do i = 1,nspecies
        state(:,:,:,UFS+i-1)      = rho0 * eos_state % massfrac(i)
     enddo
     state(:,:,:,UTEMP)           = T0
@@ -262,21 +262,21 @@ contains
              xmod = mod(x,Linput)
              call locate(xarray, inres, xmod, m)
              mp1 = mod(m+1,inres)
-             r = (xmod - xarray(m)) / xdiff(m)
+             rr = (xmod - xarray(m)) / xdiff(m)
 
              if (dim .eq. 1) then
-                f0 = (1-r)
-                f1 = r
+                f0 = (1-rr)
+                f1 = rr
                 uinterp = uinput(m,0,0) * f0 + &
                      uinput(mp1,0,0) * f1
                 vinterp = ZERO
                 winterp = ZERO
              elseif (dim .eq. 2) then
                 ! Factors for bilinear interpolation
-                f0 = (1-r) * (1-s)
-                f1 = r * (1-s)
-                f2 = (1-r) * s
-                f3 = r * s
+                f0 = (1-rr) * (1-s)
+                f1 = rr * (1-s)
+                f2 = (1-rr) * s
+                f3 = rr * s
                 uinterp = uinput(m,n,0) * f0 + &
                      uinput(mp1,n,0) * f1 + &
                      uinput(m,np1,0) * f2 + &
@@ -288,14 +288,14 @@ contains
                 winterp = ZERO
              elseif (dim .eq. 3) then
                 ! Factors for trilinear interpolation
-                f0 = (1-r) * (1-s) * (1-t)
-                f1 = r * (1-s) * (1-t)
-                f2 = (1-r) * s * (1-t)
-                f3 = (1-r) * (1-s) * t
-                f4 = r * (1-s) * t
-                f5 = (1-r) * s * t
-                f6 = r * s * (1-t)
-                f7 = r * s * t
+                f0 = (1-rr) * (1-s) * (1-t)
+                f1 = rr * (1-s) * (1-t)
+                f2 = (1-rr) * s * (1-t)
+                f3 = (1-rr) * (1-s) * t
+                f4 = rr * (1-s) * t
+                f5 = (1-rr) * s * t
+                f6 = rr * s * (1-t)
+                f7 = rr * s * t
                 uinterp = uinput(m,n,p) * f0 + &
                      uinput(mp1,n,p) * f1 + &
                      uinput(m,np1,p) * f2 + &

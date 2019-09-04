@@ -11,7 +11,7 @@ contains
   subroutine amrex_probinit (init,name,namlen,problo,probhi) bind(C, name = "amrex_probinit")
     
     use probdata_module
-    use bl_error_module
+    use amrex_fort_module
     implicit none
 
     integer :: init, namlen
@@ -111,15 +111,15 @@ contains
        state,state_lo,state_hi, &
        delta,xlo,xhi) bind(C, name="pc_initdata")
 
-    use parallel
+    use amrex_paralleldescriptor_module, only: amrex_pd_ioprocessor
     use probdata_module
-    use network, only: nspec, naux, molec_wt
+    use network, only: nspecies, naux, molec_wt
     use fundamental_constants_module, only: k_B, n_A
     use eos_type_module
     use meth_params_module, only : URHO, UMX, UMY, UMZ, &
-         UEDEN, UEINT, UFS, UTEMP, small_temp
+         UEDEN, UEINT, UFS, UTEMP, small_temp, Cs, CI, PrT
     use prob_params_module, only: dim
-    use bl_constants_module, only: ZERO, HALF, ONE, M_PI
+    use amrex_constants_module, only: ZERO, HALF, ONE, M_PI
     use extern_probin_module, only: const_viscosity, const_bulk_viscosity, const_conductivity, const_diffusivity
     use eos_module
 
@@ -214,13 +214,13 @@ contains
     call masa_set_param("a_px",a_px)
     call masa_set_param("a_py",a_py)
     call masa_set_param("a_pz",a_pz)
-    call masa_set_param("Cs",ZERO)
-    call masa_set_param("CI",ZERO)
-    call masa_set_param("PrT",ONE)
+    call masa_set_param("Cs",Cs)
+    call masa_set_param("CI",CI)
+    call masa_set_param("PrT",PrT)
     call masa_set_param("deltabar",delta(1))
 
     ! Display and check
-    if ( parallel_ioprocessor() ) then
+    if ( amrex_pd_ioprocessor() ) then
        call masa_display_param()
     endif
     call masa_sanity_check()
@@ -250,7 +250,7 @@ contains
 
              ! Fill the states
              state(i,j,k,URHO)            = rho
-             state(i,j,k,UFS:UFS+nspec-1) = rho * eos_state % massfrac(1:nspec)
+             state(i,j,k,UFS:UFS+nspecies-1) = rho * eos_state % massfrac(1:nspecies)
              state(i,j,k,UMX)             = rho * u
              if (dim .ge. 2) then
                 state(i,j,k,UMY)             = rho * v

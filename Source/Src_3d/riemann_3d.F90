@@ -1,7 +1,7 @@
 module riemann_module
 
-  use bl_types
-  use bl_constants_module
+  use amrex_fort_module
+  use amrex_constants_module
   use riemann_util_module
   use meth_params_module, only : NQ, QVAR, NVAR, QRHO, QU, QV, QW, &
                                  QPRES, QGAME, QREINT, QFS, &
@@ -19,7 +19,7 @@ module riemann_module
 
   public cmpflx, shock
 
-  real (kind=dp_t), parameter :: smallu = 1.e-12_dp_t
+  real (amrex_real), parameter :: smallu = 1.e-12_amrex_real
 
 contains
 
@@ -36,8 +36,10 @@ contains
                     idir,ilo,ihi,jlo,jhi,kc,kflux,k3d,domlo,domhi)
 
     use amrex_mempool_module, only : bl_allocate, bl_deallocate
+    use network, only : nspecies
     use eos_module
 
+    implicit none
     integer, intent(in) :: qpd_lo(3), qpd_hi(3)
     integer, intent(in) :: flx_lo(3), flx_hi(3)
     integer, intent(in) :: q_lo(3), q_hi(3)
@@ -68,7 +70,7 @@ contains
     double precision, intent(in) :: csml(qd_lo(1):qd_hi(1),qd_lo(2):qd_hi(2),qd_lo(3):qd_hi(3))
     double precision, intent(in) ::  shk(s_lo(1):s_hi(1),s_lo(2):s_hi(2),s_lo(3):s_hi(3))
 
-    integer, intent(in) :: bcMask(bcMask_lo(1):bcMask_hi(1),bcMask_lo(2):bcMask_hi(2),bcMask_lo(3):bcMask_hi(3),2)
+    integer, intent(in) :: bcMask(bcMask_lo(1):bcMask_hi(1),bcMask_lo(2):bcMask_hi(2),bcMask_lo(3):bcMask_hi(3))
     
     ! local variables
     integer i, j
@@ -141,7 +143,7 @@ contains
              eos_state % rho      = qm(i,j,kc,QRHO)
              eos_state % p        = qm(i,j,kc,QPRES)
              eos_state % e        = qm(i,j,kc,QREINT)/qm(i,j,kc,QRHO)
-             eos_state % massfrac = qm(i,j,kc,QFS:QFS+nspec-1)
+             eos_state % massfrac = qm(i,j,kc,QFS:QFS+nspecies-1)
              eos_state % aux      = qm(i,j,kc,QFX:QFX+naux-1)
 
              call eos_re(eos_state)
@@ -161,7 +163,7 @@ contains
              eos_state % rho      = qp(i,j,kc,QRHO)
              eos_state % p        = qp(i,j,kc,QPRES)
              eos_state % e        = qp(i,j,kc,QREINT)/qp(i,j,kc,QRHO)
-             eos_state % massfrac = qp(i,j,kc,QFS:QFS+nspec-1) * rhoInv
+             eos_state % massfrac = qp(i,j,kc,QFS:QFS+nspecies-1) * rhoInv
              eos_state % aux      = qp(i,j,kc,QFX:QFX+naux-1) * rhoInv
 
              call eos_re(eos_state)
@@ -258,8 +260,9 @@ contains
   subroutine shock(q,qd_lo,qd_hi,shk,s_lo,s_hi,lo,hi,dx)
 
     use prob_params_module, only : coord_type
-    use bl_constants_module
+    use amrex_constants_module
 
+    implicit none
     integer, intent(in) :: qd_lo(3), qd_hi(3)
     integer, intent(in) :: s_lo(3), s_hi(3)
     integer, intent(in) :: lo(3), hi(3)
@@ -378,11 +381,13 @@ contains
 
     use amrex_mempool_module, only : bl_allocate, bl_deallocate
     use prob_params_module, only : physbc_lo, physbc_hi, Symmetry, SlipWall, NoSlipWall
-    use network, only : nspec, naux
+    use network, only : nspecies, naux
     use eos_type_module
     use eos_module
-    double precision, parameter:: small = 1.d-8
 
+    implicit none
+
+    double precision, parameter:: small = 1.d-8
     integer :: qpd_lo(3),qpd_hi(3)
     integer :: gd_lo(2),gd_hi(2)
     integer :: uflx_lo(3),uflx_hi(3)
@@ -451,8 +456,6 @@ contains
     double precision :: u_adv
 
     integer :: iu, iv1, iv2, im1, im2, im3
-    logical :: special_bnd_lo, special_bnd_hi, special_bnd_lo_x, special_bnd_hi_x
-    double precision :: bnd_fac_x, bnd_fac_y, bnd_fac_z
 
     if (cg_blend .eq. 2 .and. cg_maxiter < 5) then
 
@@ -483,29 +486,6 @@ contains
        im3 = UMY
     end if
 
-    special_bnd_lo = (physbc_lo(idir) .eq. Symmetry &
-         .or.         physbc_lo(idir) .eq. SlipWall &
-         .or.         physbc_lo(idir) .eq. NoSlipWall)
-    special_bnd_hi = (physbc_hi(idir) .eq. Symmetry &
-         .or.         physbc_hi(idir) .eq. SlipWall &
-         .or.         physbc_hi(idir) .eq. NoSlipWall)
-
-    if (idir .eq. 1) then
-       special_bnd_lo_x = special_bnd_lo
-       special_bnd_hi_x = special_bnd_hi
-    else
-       special_bnd_lo_x = .false.
-       special_bnd_hi_x = .false.
-    end if
-
-    bnd_fac_z = ONE
-    if (idir.eq.3) then
-       if ( k3d .eq. domlo(3)   .and. special_bnd_lo .or. &
-            k3d .eq. domhi(3)+1 .and. special_bnd_hi ) then
-          bnd_fac_z = ZERO
-       end if
-    end if
-
     tol = cg_tol
     iter_max = cg_maxiter
 
@@ -515,14 +495,6 @@ contains
     call bl_allocate(us1d, ilo,ihi)
 
     do j = jlo, jhi
-
-       bnd_fac_y = ONE
-       if (idir .eq. 2) then
-          if ( j .eq. domlo(2)   .and. special_bnd_lo .or. &
-               j .eq. domhi(2)+1 .and. special_bnd_hi ) then
-             bnd_fac_y = ZERO
-          end if
-       end if
 
        do i = ilo, ihi
 
@@ -546,7 +518,7 @@ contains
 
              eos_state % T        = small_temp
              eos_state % rho      = rl
-             eos_state % massfrac = ql(i,j,kc,QFS:QFS-1+nspec)
+             eos_state % massfrac = ql(i,j,kc,QFS:QFS-1+nspecies)
              eos_state % aux      = ql(i,j,kc,QFX:QFX-1+naux)
 
              call eos_rt(eos_state)
@@ -573,7 +545,7 @@ contains
 
              eos_state % T        = small_temp
              eos_state % rho      = rr
-             eos_state % massfrac = qr(i,j,kc,QFS:QFS-1+nspec)
+             eos_state % massfrac = qr(i,j,kc,QFS:QFS-1+nspecies)
              eos_state % aux      = qr(i,j,kc,QFX:QFX-1+naux)
 
              call eos_rt(eos_state)
@@ -938,13 +910,9 @@ contains
           u_adv = qint(i,j,kc,iu)
 
           ! Enforce that fluxes through a symmetry plane or wall are hard zero.
-          if ( special_bnd_lo_x .and. i.eq.domlo(1) .or. &
-               special_bnd_hi_x .and. i.eq.domhi(1)+1 ) then
-             bnd_fac_x = ZERO
-          else
-             bnd_fac_x = ONE
-          end if
-          u_adv = u_adv * bnd_fac_x*bnd_fac_y*bnd_fac_z
+          u_adv = u_adv* bc_test_3d(idir, i, j, k3d, &
+                bcMask,bcMask_lo(1),bcMask_lo(2),bcMask_lo(3),bcMask_hi(1),bcMask_hi(2),bcMask_hi(3), &
+                                 domlo, domhi)
 
           ! Compute fluxes, order as conserved state (not q)
           uflx(i,j,kflux,URHO) = qint(i,j,kc,GDRHO)*u_adv
@@ -1002,8 +970,10 @@ contains
 
     use amrex_mempool_module, only : bl_allocate, bl_deallocate
     use prob_params_module, only : physbc_lo, physbc_hi, Symmetry, SlipWall, NoSlipWall
-    double precision, parameter:: small = 1.d-8
 
+    implicit none
+
+    double precision, parameter:: small = 1.d-8
     integer :: qpd_lo(3),qpd_hi(3)
     integer :: gd_lo(2),gd_hi(2)
     integer :: uflx_lo(3),uflx_hi(3)
@@ -1022,7 +992,7 @@ contains
     double precision :: uflx(uflx_lo(1):uflx_hi(1),uflx_lo(2):uflx_hi(2),uflx_lo(3):uflx_hi(3),NVAR)
     double precision ::    qint(q_lo(1):q_hi(1),q_lo(2):q_hi(2),q_lo(3):q_hi(3),NGDNV)
 
-    integer :: bcMask(bcMask_lo(1):bcMask_hi(1),bcMask_lo(2):bcMask_hi(2),bcMask_lo(3):bcMask_hi(3),2)
+    integer :: bcMask(bcMask_lo(1):bcMask_hi(1),bcMask_lo(2):bcMask_hi(2),bcMask_lo(3):bcMask_hi(3))
     
     ! Note:  Here k3d is the k corresponding to the full 3d array --
     !         it should be used for print statements or tests against domlo, domhi, etc
@@ -1048,8 +1018,6 @@ contains
     double precision :: u_adv
 
     integer :: iu, iv1, iv2, im1, im2, im3
-    logical :: special_bnd_lo, special_bnd_hi, special_bnd_lo_x, special_bnd_hi_x
-    double precision :: bnd_fac_x, bnd_fac_y, bnd_fac_z
     double precision :: wwinv, roinv, co2inv
 
     call bl_allocate(us1d,ilo,ihi)
@@ -1079,38 +1047,7 @@ contains
        im3 = UMY
     end if
 
-    special_bnd_lo = (physbc_lo(idir) .eq. Symmetry &
-         .or.         physbc_lo(idir) .eq. SlipWall &
-         .or.         physbc_lo(idir) .eq. NoSlipWall)
-    special_bnd_hi = (physbc_hi(idir) .eq. Symmetry &
-         .or.         physbc_hi(idir) .eq. SlipWall &
-         .or.         physbc_hi(idir) .eq. NoSlipWall)
-
-    if (idir .eq. 1) then
-       special_bnd_lo_x = special_bnd_lo
-       special_bnd_hi_x = special_bnd_hi
-    else
-       special_bnd_lo_x = .false.
-       special_bnd_hi_x = .false.
-    end if
-
-    bnd_fac_z = ONE
-    if (idir.eq.3) then
-       if ( k3d .eq. domlo(3)   .and. special_bnd_lo .or. &
-            k3d .eq. domhi(3)+1 .and. special_bnd_hi ) then
-          bnd_fac_z = ZERO
-       end if
-    end if
-
     do j = jlo, jhi
-
-       bnd_fac_y = ONE
-       if (idir .eq. 2) then
-          if ( j .eq. domlo(2)   .and. special_bnd_lo .or. &
-               j .eq. domhi(2)+1 .and. special_bnd_hi ) then
-             bnd_fac_y = ZERO
-          end if
-       end if
 
        !dir$ ivdep
        do i = ilo, ihi
@@ -1240,14 +1177,9 @@ contains
           u_adv = qint(i,j,kc,iu)
 
           ! Enforce that fluxes through a symmetry plane or wall are hard zero.
-          if ( special_bnd_lo_x .and. i.eq.domlo(1) .or. &
-               special_bnd_hi_x .and. i.eq.domhi(1)+1 ) then
-             bnd_fac_x = ZERO
-          else
-             bnd_fac_x = ONE
-          end if
-          u_adv = u_adv * bnd_fac_x*bnd_fac_y*bnd_fac_z
-
+          u_adv = u_adv* bc_test_3d(idir, i, j, k3d, &
+                bcMask,bcMask_lo(1),bcMask_lo(2),bcMask_lo(3),bcMask_hi(1),bcMask_hi(2),bcMask_hi(3), &
+                                 domlo, domhi)
 
           ! Compute fluxes, order as conserved state (not q)
           uflx(i,j,kflux,URHO) = qint(i,j,kc,GDRHO)*u_adv
@@ -1314,8 +1246,9 @@ contains
     use amrex_mempool_module, only : bl_allocate, bl_deallocate
     use prob_params_module, only : physbc_lo, physbc_hi, Symmetry, SlipWall, NoSlipWall
 
-    double precision, parameter:: small = 1.d-8
+    implicit none
 
+    double precision, parameter:: small = 1.d-8
     integer :: qpd_lo(3),qpd_hi(3)
     integer :: gd_lo(2),gd_hi(2)
     integer :: uflx_lo(3),uflx_hi(3)
@@ -1333,7 +1266,7 @@ contains
     double precision :: uflx(uflx_lo(1):uflx_hi(1),uflx_lo(2):uflx_hi(2),uflx_lo(3):uflx_hi(3),NVAR)
     double precision :: qint(q_lo(1):q_hi(1),q_lo(2):q_hi(2),q_lo(3):q_hi(3),NGDNV)
 
-    integer :: bcMask(bcMask_lo(1):bcMask_hi(1),bcMask_lo(2):bcMask_hi(2),bcMask_lo(3):bcMask_hi(3),2)
+    integer :: bcMask(bcMask_lo(1):bcMask_hi(1),bcMask_lo(2):bcMask_hi(2),bcMask_lo(3):bcMask_hi(3))
     
     ! Note:  Here k3d is the k corresponding to the full 3d array --
     !         it should be used for print statements or tests against domlo, domhi, etc
@@ -1354,8 +1287,7 @@ contains
     double precision :: wsmall, csmall
 
     integer :: iu, iv1, iv2, im1, im2, im3
-    logical :: special_bnd_lo, special_bnd_hi, special_bnd_lo_x, special_bnd_hi_x
-    integer :: bnd_fac_x, bnd_fac_y, bnd_fac_z, bnd_fac
+    integer :: bnd_fac
     double precision :: wwinv, roinv, co2inv
 
     double precision :: U_hllc_state(nvar), U_state(nvar), F_state(nvar)
@@ -1384,38 +1316,7 @@ contains
        im3 = UMY
     end if
 
-    special_bnd_lo = (physbc_lo(idir) .eq. Symmetry &
-         .or.         physbc_lo(idir) .eq. SlipWall &
-         .or.         physbc_lo(idir) .eq. NoSlipWall)
-    special_bnd_hi = (physbc_hi(idir) .eq. Symmetry &
-         .or.         physbc_hi(idir) .eq. SlipWall &
-         .or.         physbc_hi(idir) .eq. NoSlipWall)
-
-    if (idir .eq. 1) then
-       special_bnd_lo_x = special_bnd_lo
-       special_bnd_hi_x = special_bnd_hi
-    else
-       special_bnd_lo_x = .false.
-       special_bnd_hi_x = .false.
-    end if
-
-    bnd_fac_z = 1
-    if (idir.eq.3) then
-       if ( k3d .eq. domlo(3)   .and. special_bnd_lo .or. &
-            k3d .eq. domhi(3)+1 .and. special_bnd_hi ) then
-          bnd_fac_z = 0
-       end if
-    end if
-
     do j = jlo, jhi
-
-       bnd_fac_y = 1
-       if (idir .eq. 2) then
-          if ( j .eq. domlo(2)   .and. special_bnd_lo .or. &
-               j .eq. domhi(2)+1 .and. special_bnd_hi ) then
-             bnd_fac_y = 0
-          end if
-       end if
 
        !dir$ ivdep
        do i = ilo, ihi
@@ -1523,14 +1424,9 @@ contains
 
 
           ! Enforce that the fluxes through a symmetry plane or wall are hard zero.
-          if ( special_bnd_lo_x .and. i.eq.domlo(1) .or. &
-               special_bnd_hi_x .and. i.eq.domhi(1)+1 ) then
-             bnd_fac_x = 0
-          else
-             bnd_fac_x = 1
-          end if
-
-          bnd_fac = bnd_fac_x*bnd_fac_y*bnd_fac_z
+          bnd_fac = bc_test_3d(idir, i, j, k3d, &
+                bcMask,bcMask_lo(1),bcMask_lo(2),bcMask_lo(3),bcMask_hi(1),bcMask_hi(2),bcMask_hi(3), &
+                                 domlo, domhi) 
 
           ! use the simplest estimates of the wave speeds
           S_l = min(ul - sqrt(gamcl(i,j)*pl/rl), ur - sqrt(gamcr(i,j)*pr/rr))

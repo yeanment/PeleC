@@ -11,7 +11,7 @@ contains
   subroutine amrex_probinit (init,name,namlen,problo,probhi) bind(C, name = "amrex_probinit")
     
     use probdata_module
-    use bl_error_module
+    use amrex_fort_module
     use extern_probin_module, only: const_viscosity, const_bulk_viscosity, const_conductivity, const_diffusivity
     use eos_module
 
@@ -95,10 +95,10 @@ contains
   subroutine pc_initdata(level,time,lo,hi,nvar, &
        state,state_lo,state_hi, &
        delta,xlo,xhi) bind(C, name="pc_initdata")
-    use network, only: nspec
+    use network, only: nspecies
     use probdata_module
     use meth_params_module, only : URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, UFS
-    use bl_constants_module, only: M_PI, FOUR3RD, ONE, HALF, ZERO
+    use amrex_constants_module, only: M_PI, FOUR3RD, ONE, HALF, ZERO
     use eos_type_module
     use eos_module
     implicit none
@@ -124,7 +124,7 @@ contains
     eos_state % p   = p_domain
     eos_state % T   = 300.0
     eos_state % massfrac = ZERO
-    eos_state % massfrac(nspec) = ONE
+    eos_state % massfrac(nspecies) = ONE
     call eos_rp(eos_state)
 
 
@@ -144,7 +144,7 @@ contains
                 state(i,j,k,UEINT) = eos_state % rho * eos_state % e
                 state(i,j,k,UEDEN) = state(i,j,k,UEINT) +  &
                      0.5d0*dens_domain*(vx_in**2 + vy_in**2)
-                state(i,j,k,UFS:UFS+nspec-1) = eos_state % massfrac(:) * state(i,j,k,URHO)
+                state(i,j,k,UFS:UFS+nspecies-1) = eos_state % massfrac(:) * state(i,j,k,URHO)
                 state(i,j,k,UTEMP) = eos_state % T
 
              enddo

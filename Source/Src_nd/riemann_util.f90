@@ -1,109 +1,142 @@
 module riemann_util_module
 
+  use amrex_fort_module
   use amrex_constants_module
 
   implicit none
 
 contains
 
-  pure function bc_test(idir, i, j, bcMask, domlo, domhi) result (f)
+  pure function bc_test(idir, i, j, &
+                        bcMask, bcMask_l1, bcMask_l2, bcMask_h1, bcMask_h2, &
+                        domlo, domhi) result (f)
 
     use prob_params_module, only : physbc_lo, physbc_hi, Symmetry, SlipWall, NoSlipWall
-    use meth_params_module, only: i_nscbc
     
-    integer, intent(in) :: idir, i, j, bcMask, domlo(*), domhi(*)
+    implicit none
+    integer, intent(in) :: idir, i, j, domlo(*), domhi(*)
+    integer, intent(in) :: bcMask_l1, bcMask_l2, bcMask_h1, bcMask_h2
+    integer, intent(in) :: bcMask(bcMask_l1:bcMask_h1,bcMask_l2:bcMask_h2)
     integer :: f
 
     ! Enforce that fluxes through a symmetry plane or wall are hard zero.
     f = 1
-
-    if (i_nscbc == 1) then
-   
-      if (idir == 1) then
-         if (i == domlo(1) .and. &
-              (physbc_lo(1) == Symmetry .or. &
-              physbc_lo(1) == SlipWall .or. &
-              bcMask == SlipWall .or. &
-              bcMask == NoSlipWall .or. &
-              physbc_lo(1) == NoSlipWall) ) then
+      
+    if (idir == 1) then
+      
+      if (i == domlo(1) .and. &
+              (bcMask(i,j) == Symmetry .or. &
+              bcMask(i,j) == SlipWall .or. &
+              bcMask(i,j) == NoSlipWall )) then
             f = 0
-         endif
-  
-         if (i == domhi(1)+1 .and. &
-              (physbc_hi(1) == Symmetry .or. &
-              physbc_hi(1) == SlipWall .or. &
-              bcMask == SlipWall .or. &
-              bcMask == NoSlipWall .or. &
-              physbc_hi(1) == NoSlipWall) ) then
-            f = 0
-         endif
-      end if
-  
-      if (idir == 2) then
-         if (j == domlo(2) .and. &
-              (physbc_lo(2) == Symmetry .or. &
-              physbc_lo(2) == SlipWall .or. &
-              bcMask == SlipWall .or. &
-              bcMask == NoSlipWall .or. &
-              physbc_lo(2) == NoSlipWall) ) then
-            f = 0
-         endif
-  
-         if (j == domhi(2)+1 .and. &
-              (physbc_hi(2) == Symmetry .or. &
-              physbc_hi(2) == SlipWall .or. &
-              bcMask == SlipWall .or. &
-              bcMask == NoSlipWall .or. &
-              physbc_hi(2) == NoSlipWall) ) then
-            f = 0
-         end if
       endif
       
-    elseif (i_nscbc == 0) then
-  
-       if (idir == 1) then
-         if (i == domlo(1) .and. &
-              (physbc_lo(1) == Symmetry .or. &
-               physbc_lo(1) == SlipWall .or. &
-               physbc_lo(1) == NoSlipWall) ) then
+      if (i == domhi(1)+1 .and. &
+              (bcMask(i,j) == Symmetry .or. &
+              bcMask(i,j) == SlipWall .or. &
+              bcMask(i,j) == NoSlipWall )) then
             f = 0
-         endif
-  
-         if (i == domhi(1)+1 .and. &
-              (physbc_hi(1) == Symmetry .or. &
-               physbc_hi(1) == SlipWall .or. &
-               physbc_hi(1) == NoSlipWall) ) then
-            f = 0
-         endif
-      end if
-  
-      if (idir == 2) then
-         if (j == domlo(2) .and. &
-              (physbc_lo(2) == Symmetry .or. &
-               physbc_lo(2) == SlipWall .or. &
-               physbc_lo(2) == NoSlipWall) ) then
-            f = 0
-         endif
-  
-         if (j == domhi(2)+1 .and. &
-              (physbc_hi(2) == Symmetry .or. &
-               physbc_hi(2) == SlipWall .or. &
-               physbc_hi(2) == NoSlipWall) ) then
-            f = 0
-         end if
       endif
-  
+    end if
+      
+    if (idir == 2) then
+            
+      if (j == domlo(2) .and. &
+              (bcMask(i,j) == Symmetry .or. &
+              bcMask(i,j) == SlipWall .or. &
+              bcMask(i,j) == NoSlipWall )) then
+            f = 0
+      endif
+      
+      if (j == domhi(2)+1 .and. &
+              (bcMask(i,j) == Symmetry .or. &
+              bcMask(i,j) == SlipWall .or. &
+              bcMask(i,j) == NoSlipWall )) then
+            f = 0
+      end if
     endif
   
   end function bc_test
+  
+  pure function bc_test_3d(idir, i, j, k, &
+                        bcMask, bcMask_l1, bcMask_l2, bcMask_l3, bcMask_h1, bcMask_h2, bcMask_h3, &
+                        domlo, domhi) result (f)
+
+    use prob_params_module, only : physbc_lo, physbc_hi, Symmetry, SlipWall, NoSlipWall
+    
+    implicit none
+    integer, intent(in) :: idir, i, j, k, domlo(*), domhi(*)
+    integer, intent(in) :: bcMask_l1, bcMask_l2, bcMask_l3, bcMask_h1, bcMask_h2, bcMask_h3
+    integer, intent(in) :: bcMask(bcMask_l1:bcMask_h1,bcMask_l2:bcMask_h2,bcMask_l3:bcMask_h3)
+    integer :: f
+
+    ! Enforce that fluxes through a symmetry plane or wall are hard zero.
+    f = 1
+     
+    if (idir == 1) then
+      
+      if (i == domlo(1) .and. &
+              (bcMask(i,j,k) == SlipWall .or. &
+               bcMask(i,j,k) == Symmetry .or. &
+               bcMask(i,j,k) == NoSlipWall  )) then
+            f = 0
+      endif
+      
+      if (i == domhi(1)+1 .and. &
+              (bcMask(i,j,k) == SlipWall .or. &
+               bcMask(i,j,k) == Symmetry .or. &
+               bcMask(i,j,k) == NoSlipWall  )) then
+            f = 0
+      endif
+    end if
+      
+    if (idir == 2) then
+            
+      if (j == domlo(2) .and. &
+              (bcMask(i,j,k) == SlipWall .or. &
+               bcMask(i,j,k) == Symmetry .or. &
+               bcMask(i,j,k) == NoSlipWall  )) then
+            f = 0
+      endif
+      
+      if (j == domhi(2)+1 .and. &
+              (bcMask(i,j,k) == SlipWall .or. &
+               bcMask(i,j,k) == Symmetry .or. &
+               bcMask(i,j,k) == NoSlipWall  )) then
+            f = 0
+      end if
+    endif
+      
+    if (idir == 3) then
+            
+      if (k == domlo(3) .and. &
+              (bcMask(i,j,k) == SlipWall .or. &
+               bcMask(i,j,k) == Symmetry .or. &
+               bcMask(i,j,k) == NoSlipWall  )) then
+            f = 0
+      endif
+      
+      if (k == domhi(3)+1 .and. &
+              (bcMask(i,j,k) == SlipWall .or. &
+               bcMask(i,j,k) == Symmetry .or. &
+               bcMask(i,j,k) == NoSlipWall  )) then
+            f = 0
+      end if
+    endif
+        
+  end function bc_test_3d
 
   pure subroutine outflow_hack(ul,ur,vl,vr,v2l,v2r,rel,rer,&
-       idir, i, j, domlo, domhi)
+                               bcMask, bcMask_l1, bcMask_l2, bcMask_h1, bcMask_h2, &
+                               idir, i, j, domlo, domhi)
 
     use prob_params_module, only : physbc_lo, physbc_hi, Outflow
 
+    implicit none
     double precision, intent(inout) :: ul,ur,vl,vr,v2l,v2r,rel,rer
     integer, intent(in) :: idir, i, j, domlo(*), domhi(*)
+    integer, intent(in) :: bcMask_l1, bcMask_l2, bcMask_h1, bcMask_h2
+    integer, intent(in) :: bcMask(bcMask_l1:bcMask_h1,bcMask_l2:bcMask_h2)
     integer :: idx
 
     if (idir == 1) then
@@ -112,14 +145,14 @@ contains
        idx = j
     endif
 
-    if (idx == domlo(idir) .and. physbc_lo(idir) == Outflow) then
+    if (idx == domlo(idir) .and. bcMask(i,j) == Outflow) then
        ul = ur
        vl = vr
        v2l = v2r
        rel = rer
     endif
 
-    if (idx == domhi(idir)+1 .and. physbc_hi(idir) == Outflow) then
+    if (idx == domhi(idir)+1 .and. bcMask(i,j) == Outflow) then
        ur = ul
        vr = vl
        v2r = v2l
@@ -132,6 +165,7 @@ contains
 
     ! compute the lagrangian wave speeds.
 
+    implicit none
     double precision, intent(in) :: p,v,gam,gdot,pstar,csq,gmin,gmax
     double precision, intent(out) :: wsq, gstar
 
@@ -178,6 +212,7 @@ contains
 
     use meth_params_module, only : cg_maxiter, cg_tol
 
+    implicit none
     double precision, intent(inout) :: pstar_lo, pstar_hi
     double precision, intent(in) :: ul, pl, taul, gamel, clsql
     double precision, intent(in) :: ur, pr, taur, gamer, clsqr
@@ -272,6 +307,7 @@ contains
          npassive, upass_map, qpass_map
     use prob_params_module, only : coord_type
 
+    implicit none
     double precision, intent(in) :: ql(QVAR), qr(QVAR), cl, cr
     double precision, intent(inout) :: f(NVAR)
     integer, intent(in) :: idir, ndim
@@ -427,10 +463,9 @@ contains
          NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, &
          npassive, upass_map, qpass_map
 
-    use amrex_fort_module, only : rt => amrex_real
-
-    real (kind=rt), intent(in)  :: q(QVAR)
-    real (kind=rt), intent(out) :: U(NVAR)
+    implicit none
+    real (amrex_real), intent(in)  :: q(QVAR)
+    real (amrex_real), intent(out) :: U(NVAR)
 
     integer :: ipassive, n, nq
 
@@ -464,14 +499,13 @@ contains
          NVAR, URHO, UMX, UMY, UMZ, UEDEN, UEINT, UTEMP, &
          npassive, upass_map, qpass_map
 
-    use amrex_fort_module, only : rt => amrex_real
-
+    implicit none
     integer, intent(in) :: idir
-    real (kind=rt), intent(in)  :: S_k, S_c
-    real (kind=rt), intent(in)  :: q(QVAR)
-    real (kind=rt), intent(out) :: U(NVAR)
+    real (amrex_real), intent(in)  :: S_k, S_c
+    real (amrex_real), intent(in)  :: q(QVAR)
+    real (amrex_real), intent(out) :: U(NVAR)
 
-    real (kind=rt) :: hllc_factor, u_k
+    real (amrex_real) :: hllc_factor, u_k
     integer :: ipassive, n, nq
 
     if (idir == 1) then
@@ -520,15 +554,14 @@ contains
          npassive, upass_map
     use prob_params_module, only : coord_type
 
-    use amrex_fort_module, only : rt => amrex_real
-
+    implicit none
     integer, intent(in) :: idir, ndim, bnd_fac
-    real (kind=rt), intent(in) :: U(NVAR)
-    real (kind=rt), intent(in) :: p
-    real (kind=rt), intent(out) :: F(NVAR)
+    real (amrex_real), intent(in) :: U(NVAR)
+    real (amrex_real), intent(in) :: p
+    real (amrex_real), intent(out) :: F(NVAR)
 
     integer :: ipassive, n
-    real (kind=rt) :: u_flx
+    real (amrex_real) :: u_flx
 
     if (idir == 1) then
        u_flx = U(UMX)/U(URHO)
@@ -577,8 +610,6 @@ contains
     use eos_module
     use meth_params_module, only : small_dens, small_pres
 
-    use amrex_fort_module, only : rt => amrex_real
-
     implicit none
 
     ! Inputs
@@ -610,15 +641,7 @@ contains
 
     ! Yuck.
     double precision, parameter:: small = 1.d-8
-    real (kind=rt), parameter :: smallu = 1.e-12
-
-
-    ! Double yuck.
-    ! TODO: Do this outside, pass in a flag to set left = right or right=left
-    !call outflow_hack(ul,ur,vl,vr,v2l,v2r,pl,pr,rel,rer,&
-
-    !                  idir, i, j, domlo, domhi)
-    !
+    real (amrex_real), parameter :: smallu = 1.e-12_amrex_real
 
     wsmall = small_dens*csmall
 
@@ -812,7 +835,6 @@ contains
 
     use eos_module
     use meth_params_module, only : small_dens, small_pres
-    use amrex_fort_module, only : rt => amrex_real
 
     implicit none
 
@@ -849,16 +871,9 @@ contains
 
     ! Yuck.
     double precision, parameter:: small = 1.d-8
-    real (kind=rt), parameter :: smallu = 1.e-12
-    real (kind=rt), parameter :: Hsmallu = 0.5e-12
+    real (amrex_real), parameter :: smallu = 1.e-12_amrex_real
+    real (amrex_real), parameter :: Hsmallu = 0.5e-12_amrex_real
 
-
-    ! Double yuck.
-    ! TODO: Do this outside, pass in a flag to set left = right or right=left
-    !call outflow_hack(ul,ur,vl,vr,v2l,v2r,pl,pr,rel,rer,&
-
-    !                  idir, i, j, domlo, domhi)
-    !
     rsmall = small_dens
     wsmall = small_dens*csmall
     psmall = small_pres
@@ -1047,14 +1062,12 @@ contains
     double precision, intent(in) :: csmall, cav
 
     ! Work values sent back to compute passive scalar flux
-    double precision, intent(out) :: rgd, regd, ustar 
+    double precision, intent(in) :: regd !currently not used, and only set to intent(in) to avoid warning
+    double precision, intent(out) :: rgd, ustar
     double precision, intent(out) :: ugd, v1gd, v2gd, pgd, gamegd
 
-
     ! Outputs
-
     double precision, intent(inout):: uflx_rho, uflx_u, uflx_v, uflx_w, uflx_eden, uflx_eint
-
 
     double precision, parameter:: small = 1.d-8
     double precision, parameter :: small_u = 1.d-10

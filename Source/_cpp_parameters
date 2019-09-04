@@ -70,8 +70,10 @@ do_hydro                     int          -1                  y
 # uses MOL aapproach to timestep advection and diffusion
 do_mol_AD                 int          0                   y
 
-# permits Ghost-Cells Navier-Stokes Boundary Conditions to be turned on and off 
-i_nscbc                     int          0                  y
+# permits Ghost-Cells Navier-Stokes Boundary Conditions to be turned on and off
+# for advective terms (adv) and for diffusion terms (diff)
+nscbc_adv                      int          1                  y
+nscbc_diff                     int          0                  y 
 
 # if true, define an additional source term
 add_ext_src                  int           0
@@ -88,7 +90,15 @@ hybrid_hydro                 int           0                  y
 # 0: piecewise linear;
 # 1: classic Colella \& Woodward ppm;
 # 2: extrema-preserving ppm
+# 3: Hybrid WENO-PPM
 ppm_type                     int           1                  y
+
+# For Hybrid WENO-PPM (ppm_type=3), which kind of WENO reconstruction method at faces?
+# 0 : Classical 5th-order JS method (quite dissipative)
+# 1 : WENO-Z 5th-order (more robust than JS)
+# 2 : WENO-Z 3rd-order (dissipative)
+# 3 : WENO-Z 7th-order (good spectral properties but may be unstable with strong shocks)
+weno_variant                 int           1                  y
 
 # to we reconstruct and trace under the parabolas of the source
 # terms to the velocity
@@ -226,6 +236,24 @@ zl_ext_bc_type               string        ""                 y
 # if we are doing an external +z boundary condition, who do we interpret it?
 zr_ext_bc_type               string        ""                 y
 
+#-----------------------------------------------------------------------------
+# category: large eddy simulation
+#-----------------------------------------------------------------------------
+
+# permits LES to be turned on and off
+do_les                       int           0                  y
+
+# permits explicit LES to be turned on and off
+use_explicit_filter          int           0                  y
+
+# Constant Smagorinsky Cs coefficient
+Cs                           Real          0.0                y
+
+# Constant Smagorinsky CI coefficient
+CI                           Real          0.0                y
+
+# Constant Smagorinsky PrT coefficient
+PrT                          Real          1.0                y
 
 #-----------------------------------------------------------------------------
 # category: EB diffusion
@@ -233,7 +261,8 @@ zr_ext_bc_type               string        ""                 y
 eb_boundary_T                Real         1.0
 eb_isothermal                int          1
 eb_noslip                    int          1
-
+# Small vfrac - values below this will be pseudo-merged
+eb_small_vfrac               Real         1.0e-2            y
 #-----------------------------------------------------------------------------
 # category: method of manufactured solution
 #-----------------------------------------------------------------------------
@@ -330,6 +359,21 @@ react_rho_max                Real          1.e200             y
 
 # disable burning inside hydrodynamic shock regions
 disable_shock_burning        int           0                  y
+
+# chemistry integrator 1 for vode, 2 for explicit RK
+chem_integrator              int           1                  n
+
+#explict RK chemistry integrator options (minimum substeps)
+adaptrk_nsubsteps_min        int          20                  n
+
+#explict RK chemistry integrator options (maximum substeps)
+adaptrk_nsubsteps_max        int          300                 n
+
+#explict RK chemistry integrator options (guess substeps)
+adaptrk_nsubsteps_guess      int          50                  n
+
+#explict RK chemistry integrator options (absolute error tol.)
+adaptrk_errtol               Real          1e-16              n
 
 #-----------------------------------------------------------------------------
 # category: parallelization

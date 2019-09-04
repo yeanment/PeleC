@@ -1,6 +1,7 @@
 subroutine pc_network_init() bind(C, name="pc_network_init")
 
   use network, only: network_init
+  implicit none
 
   call network_init()
 
@@ -14,6 +15,7 @@ end subroutine pc_network_init
 subroutine pc_network_close() bind(C, name="pc_network_close")
 
   use network, only: network_close
+  implicit none
 
   call network_close()
 
@@ -27,6 +29,7 @@ end subroutine pc_network_close
 subroutine pc_transport_init() bind(C, name="pc_transport_init")
 
   use transport_module, only: transport_init
+  implicit none
 
   call transport_init()
 
@@ -40,6 +43,7 @@ end subroutine pc_transport_init
 subroutine pc_transport_close() bind(C, name="pc_transport_close")
 
   use transport_module, only: transport_close
+  implicit none
 
   call transport_close()
 
@@ -55,6 +59,7 @@ subroutine pc_extern_init(name,namlen) bind(C, name="pc_extern_init")
   ! initialize the external runtime parameters in
   ! extern_probin_module
 
+  implicit none
   integer :: namlen
   integer :: name(namlen)
 
@@ -70,7 +75,15 @@ subroutine pc_reactor_init() bind(C, name="pc_reactor_init")
 
   use reactor_module, only: reactor_init
 
-  call reactor_init()
+  implicit none
+
+#ifdef _OPENMP
+!$omp parallel
+#endif
+  call reactor_init(1)
+#ifdef _OPENMP
+!$omp end parallel
+#endif
 
 end subroutine pc_reactor_init
 
@@ -81,8 +94,15 @@ end subroutine pc_reactor_init
 subroutine pc_reactor_close() bind(C, name="pc_reactor_close")
 
   use reactor_module, only: reactor_close
+  implicit none
 
+#ifdef _OPENMP
+!$omp parallel
+#endif
   call reactor_close()
+#ifdef _OPENMP
+!$omp end parallel
+#endif
 
 end subroutine pc_reactor_close
 #endif
@@ -91,15 +111,15 @@ end subroutine pc_reactor_close
 ! ::: ----------------------------------------------------------------
 ! :::
 
-subroutine get_num_spec(nspec_out) bind(C, name="get_num_spec")
+subroutine get_num_spec(nspecies_out) bind(C, name="get_num_spec")
 
-  use network, only : nspec
+  use network, only : nspecies
 
   implicit none
 
-  integer, intent(out) :: nspec_out
+  integer, intent(out) :: nspecies_out
 
-  nspec_out = nspec
+  nspecies_out = nspecies
 
 end subroutine get_num_spec
 
@@ -370,8 +390,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
      bind(C, name="set_method_params")
 
   use meth_params_module
-  use network, only : nspec, naux
-!HK  use parallel, only : parallel_initialize
+  use network, only : nspecies, naux
   use eos_module, only : eos_init, eos_get_small_dens, eos_get_small_temp
   use transport_module, only : transport_init
   use amrex_constants_module, only : ZERO, ONE
@@ -392,8 +411,6 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
 
   integer :: ioproc
 
-!HK  call parallel_initialize()
-
   !---------------------------------------------------------------------
   ! conserved state components
   !---------------------------------------------------------------------
@@ -402,7 +419,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   ! NVAR  : number of total variables in initial system
   NTHERM = 7
 
-  NVAR = NTHERM + nspec + naux + numadv
+  NVAR = NTHERM + nspecies + naux + numadv
 
   nadv = numadv
 
@@ -439,7 +456,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
 
   QTHERM = NTHERM + 1 ! the + 1 is for QGAME which is always defined in primitive mode
 
-  QVAR = QTHERM + nspec + naux + numadv
+  QVAR = QTHERM + nspecies + naux + numadv
   
   ! NQ will be the number of hydro + radiation variables in the primitive
   ! state.  Initialize it just for hydro here
@@ -472,7 +489,7 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   end if
 
   if (naux >= 1) then
-     QFX = QFS + nspec
+     QFX = QFS + nspecies
 
   else
      QFX = 1
@@ -523,11 +540,11 @@ subroutine set_method_params(dm,Density,Xmom,Eden,Eint,Temp, &
   npassive = npassive + nadv
 
   if (QFS > -1) then
-     do ispec = 1, nspec+naux
+     do ispec = 1, nspecies+naux
         upass_map(npassive + ispec) = UFS + ispec - 1
         qpass_map(npassive + ispec) = QFS + ispec - 1
      enddo
-     npassive = npassive + nspec + naux
+     npassive = npassive + nspecies + naux
   endif
 
   !---------------------------------------------------------------------
@@ -582,6 +599,7 @@ subroutine clear_method_params() &
      bind(C, name="clear_method_params")
 
   use meth_params_module
+  implicit none
 
   ! call to match parallel_initialize()?
   deallocate(qpass_map)
@@ -619,7 +637,7 @@ end subroutine init_godunov_indices
 ! :::
 
 subroutine set_problem_params(dm,physbc_lo_in,physbc_hi_in,&
-     Interior_in, Inflow_in, Outflow_in, &
+     Interior_in, UserBC_in, Inflow_in, Outflow_in, &
      Symmetry_in, SlipWall_in, NoSlipWall_in, &
      coord_type_in, &
      problo_in, probhi_in, center_in) &
@@ -633,7 +651,7 @@ subroutine set_problem_params(dm,physbc_lo_in,physbc_hi_in,&
 
   integer, intent(in) :: dm
   integer, intent(in) :: physbc_lo_in(dm),physbc_hi_in(dm)
-  integer, intent(in) :: Interior_in, Inflow_in, Outflow_in, Symmetry_in, SlipWall_in, NoSlipWall_in
+  integer, intent(in) :: Interior_in, UserBC_in, Inflow_in, Outflow_in, Symmetry_in, SlipWall_in, NoSlipWall_in
   integer, intent(in) :: coord_type_in
   double precision, intent(in) :: problo_in(dm), probhi_in(dm), center_in(dm)
 
@@ -643,6 +661,7 @@ subroutine set_problem_params(dm,physbc_lo_in,physbc_hi_in,&
   physbc_hi(1:dm) = physbc_hi_in(1:dm)
 
   Interior   = Interior_in
+  UserBC     = UserBC_in
   Inflow     = Inflow_in
   Outflow    = Outflow_in
   Symmetry   = Symmetry_in
@@ -743,6 +762,7 @@ end subroutine clear_grid_info
 
 subroutine pc_set_special_tagging_flag(dummy,flag) &
      bind(C, name="pc_set_special_tagging_flag")
+  implicit none
   double precision :: dummy
   integer          :: flag
 end subroutine pc_set_special_tagging_flag
@@ -756,6 +776,8 @@ subroutine get_tagging_params(name, namlen) &
 
   use tagging_module
   use amrex_error_module
+
+  implicit none
   ! Initialize the tagging parameters
 
   integer :: namlen

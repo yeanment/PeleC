@@ -33,7 +33,9 @@ contains
                      srcQ, src_lo, src_hi, &
                      lo, hi, dx, dt, &
                      uout, uout_lo, uout_hi, &
-                     bcMask, bcMask_lo, bcMask_hi, &
+                     x_bcMask, x_bcMask_lo, x_bcMask_hi, &
+                     y_bcMask, y_bcMask_lo, y_bcMask_hi, &
+                     z_bcMask, z_bcMask_lo, z_bcMask_hi, &
                      flux1, fd1_lo, fd1_hi, &
                      flux2, fd2_lo, fd2_hi, &
                      flux3, fd3_lo, fd3_hi, &
@@ -56,11 +58,11 @@ contains
                                   transxy, transxz, transyz
     use ppm_module, only : ppm
     use slope_module, only : uslope, pslope
-    use actual_network, only : nspec, naux
+    use network, only : nspecies, naux
     use eos_type_module
     use eos_module, only : eos_t, eos_rt
     use riemann_module, only: cmpflx, shock
-    use bl_constants_module
+    use amrex_constants_module
     implicit none
 
     integer, intent(in) :: qd_lo(3), qd_hi(3)
@@ -68,7 +70,9 @@ contains
     integer, intent(in) :: src_lo(3), src_hi(3)
     integer, intent(in) :: lo(3), hi(3)
     integer, intent(in) :: uout_lo(3), uout_hi(3)
-    integer, intent(in) :: bcMask_lo(3), bcMask_hi(3)
+    integer, intent(in) :: x_bcMask_lo(3), x_bcMask_hi(3)
+    integer, intent(in) :: y_bcMask_lo(3), y_bcMask_hi(3)
+    integer, intent(in) :: z_bcMask_lo(3), z_bcMask_hi(3)
     integer, intent(in) :: fd1_lo(3), fd1_hi(3)
     integer, intent(in) :: fd2_lo(3), fd2_hi(3)
     integer, intent(in) :: fd3_lo(3), fd3_hi(3)
@@ -91,8 +95,10 @@ contains
     double precision, intent(inout) ::    q3(q3_lo(1):q3_hi(1),q3_lo(2):q3_hi(2),q3_lo(3):q3_hi(3),NGDNV)
     double precision, intent(inout) :: pdivu(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3))
     
-    integer, intent(in) :: bcMask(bcMask_lo(1):bcMask_hi(1),bcMask_lo(2):bcMask_hi(2),bcMask_lo(3):bcMask_hi(3),2)
-
+    integer, intent(in) :: x_bcMask(x_bcMask_lo(1):x_bcMask_hi(1),x_bcMask_lo(2):x_bcMask_hi(2),x_bcMask_lo(3):x_bcMask_hi(3))
+    integer, intent(in) :: y_bcMask(y_bcMask_lo(1):y_bcMask_hi(1),y_bcMask_lo(2):y_bcMask_hi(2),y_bcMask_lo(3):y_bcMask_hi(3))
+    integer, intent(in) :: z_bcMask(z_bcMask_lo(1):z_bcMask_hi(1),z_bcMask_lo(2):z_bcMask_hi(2),z_bcMask_lo(3):z_bcMask_hi(3))
+    
     double precision, intent(in) :: dx(3), dt
 
 
@@ -334,7 +340,7 @@ contains
                          eos_state % rho      = Ip(i,j,kc,idim,iwave,QRHO)
                          eos_state % T        = Ip(i,j,kc,idim,iwave,QTEMP)
 
-                         eos_state % massfrac = Ip(i,j,kc,idim,iwave,QFS:QFS+nspec-1)
+                         eos_state % massfrac = Ip(i,j,kc,idim,iwave,QFS:QFS+nspecies-1)
                          eos_state % aux      = Ip(i,j,kc,idim,iwave,QFX:QFX+naux-1)
 
                          call eos_rt(eos_state)
@@ -350,7 +356,7 @@ contains
                          eos_state % rho      = Im(i,j,kc,idim,iwave,QRHO)
                          eos_state % T        = Im(i,j,kc,idim,iwave,QTEMP)
 
-                         eos_state % massfrac = Im(i,j,kc,idim,iwave,QFS:QFS+nspec-1)
+                         eos_state % massfrac = Im(i,j,kc,idim,iwave,QFS:QFS+nspecies-1)
                          eos_state % aux      = Im(i,j,kc,idim,iwave,QFX:QFX+naux-1)
 
                          call eos_rt(eos_state)
@@ -402,7 +408,7 @@ contains
                    qgdnvx,qt_lo,qt_hi, &
                    qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                    shk,shk_lo,shk_hi, &
-                   bcMask,bcMask_lo,bcMask_hi, &
+                   x_bcMask,x_bcMask_lo,x_bcMask_hi, &
                    1,lo(1),hi(1)+1,lo(2)-1,hi(2)+1,kc,kc,k3d,domlo,domhi)
 
        ! Compute \tilde{F}^y at kc (k3d)
@@ -411,7 +417,7 @@ contains
                    qgdnvy,qt_lo,qt_hi, &
                    qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                    shk,shk_lo,shk_hi, &
-                   bcMask,bcMask_lo,bcMask_hi, &
+                   y_bcMask,y_bcMask_lo,y_bcMask_hi, &
                    2,lo(1)-1,hi(1)+1,lo(2),hi(2)+1,kc,kc,k3d,domlo,domhi)
 
        ! Compute U'^y_x at kc (k3d)
@@ -434,7 +440,7 @@ contains
                    qgdnvtmpx,qt_lo,qt_hi, &
                    qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                    shk,shk_lo,shk_hi, &
-                   bcMask,bcMask_lo,bcMask_hi, &
+                   x_bcMask,x_bcMask_lo,x_bcMask_hi, &
                    1,lo(1),hi(1)+1,lo(2),hi(2),kc,kc,k3d,domlo,domhi)
 
        ! Compute F^{y|x} at kc (k3d)
@@ -443,7 +449,7 @@ contains
                    qgdnvtmpy,qt_lo,qt_hi, &
                    qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                    shk,shk_lo,shk_hi, &
-                   bcMask,bcMask_lo,bcMask_hi, &
+                   y_bcMask,y_bcMask_lo,y_bcMask_hi, &
                    2,lo(1),hi(1),lo(2),hi(2)+1,kc,kc,k3d,domlo,domhi)
 
        if (k3d.ge.lo(3)) then
@@ -468,7 +474,7 @@ contains
                       qgdnvz,qt_lo,qt_hi, &
                       qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                       shk,shk_lo,shk_hi, &
-                      bcMask,bcMask_lo,bcMask_hi, &
+                      z_bcMask,z_bcMask_lo,z_bcMask_hi, &
                       3,lo(1)-1,hi(1)+1,lo(2)-1,hi(2)+1,kc,kc,k3d,domlo,domhi)
 
           ! Compute U'^y_z at kc (k3d)
@@ -491,7 +497,7 @@ contains
                       qgdnvtmpz1,qt_lo,qt_hi, &
                       qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                       shk,shk_lo,shk_hi, &
-                      bcMask,bcMask_lo,bcMask_hi, &
+                      z_bcMask,z_bcMask_lo,z_bcMask_hi, &
                       3,lo(1),hi(1),lo(2)-1,hi(2)+1,kc,kc,k3d,domlo,domhi)
 
           ! Compute F^{z|y} at kc (k3d)
@@ -500,7 +506,7 @@ contains
                       qgdnvtmpz2,qt_lo,qt_hi, &
                       qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                       shk,shk_lo,shk_hi, &
-                      bcMask,bcMask_lo,bcMask_hi, &
+                      z_bcMask,z_bcMask_lo,z_bcMask_hi, &
                       3,lo(1)-1,hi(1)+1,lo(2),hi(2),kc,kc,k3d,domlo,domhi)
 
           ! Compute U''_z at kc (k3d)
@@ -519,7 +525,7 @@ contains
                       qgdnvzf,qt_lo,qt_hi, &
                       qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                       shk,shk_lo,shk_hi, &
-                      bcMask,bcMask_lo,bcMask_hi, &
+                      z_bcMask,z_bcMask_lo,z_bcMask_hi, &
                       3,lo(1),hi(1),lo(2),hi(2),kc,k3d,k3d,domlo,domhi)
 
           do j=lo(2)-1,hi(2)+1
@@ -553,7 +559,7 @@ contains
                          qgdnvx,qt_lo,qt_hi, &
                          qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                          shk,shk_lo,shk_hi, &
-                         bcMask,bcMask_lo,bcMask_hi, &
+                         x_bcMask,x_bcMask_lo,x_bcMask_hi, &
                          1,lo(1),hi(1)+1,lo(2)-1,hi(2)+1,km,km,k3d-1,domlo,domhi)
 
              ! Compute F^{y|z} at km (k3d-1)
@@ -562,7 +568,7 @@ contains
                          qgdnvy,qt_lo,qt_hi, &
                          qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                          shk,shk_lo,shk_hi, &
-                         bcMask,bcMask_lo,bcMask_hi, &
+                         y_bcMask,y_bcMask_lo,y_bcMask_hi, &
                          2,lo(1)-1,hi(1)+1,lo(2),hi(2)+1,km,km,k3d-1,domlo,domhi)
 
              ! Compute U''_x at km (k3d-1)
@@ -591,7 +597,7 @@ contains
                          qgdnvxf,qt_lo,qt_hi, &
                          qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                          shk,shk_lo,shk_hi, &
-                         bcMask,bcMask_lo,bcMask_hi, &
+                         x_bcMask,x_bcMask_lo,x_bcMask_hi, &
                          1,lo(1),hi(1)+1,lo(2),hi(2),km,k3d-1,k3d-1,domlo,domhi)
 
              do j=lo(2)-1,hi(2)+1
@@ -606,7 +612,7 @@ contains
                          qgdnvyf,qt_lo,qt_hi, &
                          qaux(:,:,:,QGAMC),qaux(:,:,:,QCSML),qaux(:,:,:,QC),qd_lo,qd_hi, &
                          shk,shk_lo,shk_hi, &
-                         bcMask,bcMask_lo,bcMask_hi, &
+                         y_bcMask,y_bcMask_lo,y_bcMask_hi, &
                          2,lo(1),hi(1),lo(2),hi(2)+1,km,k3d-1,k3d-1,domlo,domhi)
 
              do j=lo(2)-1,hi(2)+2
@@ -735,10 +741,10 @@ contains
                     eden_lost,xang_lost,yang_lost,zang_lost, &
                     verbose)
 
-    use network, only : nspec, naux
+    use network, only : nspecies, naux
     use meth_params_module, only : difmag, NVAR, URHO, UMX, UMY, UMZ, &
                                    UEDEN, UEINT, UTEMP, NGDNV, QVAR, track_grid_losses, limit_fluxes_on_small_dens
-    use bl_constants_module, only : ZERO, FOURTH, ONE
+    use amrex_constants_module, only : ZERO, FOURTH, ONE
     use advection_util_3d_module, only : normalize_species_fluxes
     use advection_util_module, only : limit_hydro_fluxes_on_small_dens
     use pelec_util_module, only : position, linear_to_angular_momentum

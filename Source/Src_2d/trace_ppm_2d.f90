@@ -18,11 +18,11 @@ contains
                        gamc,gc_l1,gc_l2,gc_h1,gc_h2, &
                        ilo1,ilo2,ihi1,ihi2,dx,dy,dt)
 
-    use network, only : nspec
+    use network, only : nspecies
     use eos_type_module
     use eos_module
     use amrex_constants_module
-   use amrex_error_module
+    use amrex_error_module
     use meth_params_module, only : QVAR, QRHO, QU, QV, QREINT, QPRES, &
          QTEMP, QFS, QFX, QGAME, &
          small_dens, small_pres, &
@@ -183,7 +183,7 @@ contains
                 do iwave = 1, 3
                    eos_state%rho         = Ip(i,j,idim,iwave,QRHO)
                    eos_state%T           = Ip(i,j,idim,iwave,QTEMP)
-                   eos_state%massfrac(:) = Ip(i,j,idim,iwave,QFS:QFS-1+nspec)
+                   eos_state%massfrac(:) = Ip(i,j,idim,iwave,QFS:QFS-1+nspecies)
                    eos_state%aux         = Ip(i,j,idim,iwave,QFX:QFX-1+naux)
 
                    call eos_rt(eos_state)
@@ -194,7 +194,7 @@ contains
 
                    eos_state%rho         = Im(i,j,idim,iwave,QRHO)
                    eos_state%T           = Im(i,j,idim,iwave,QTEMP)
-                   eos_state%massfrac(:) = Im(i,j,idim,iwave,QFS:QFS-1+nspec)
+                   eos_state%massfrac(:) = Im(i,j,idim,iwave,QFS:QFS-1+nspecies)
                    eos_state%aux         = Im(i,j,idim,iwave,QFX:QFX-1+naux)
 
                    call eos_rt(eos_state)

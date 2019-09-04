@@ -16,8 +16,10 @@ contains
     ! solution and the MMS solution
     !
 
-    use amrex_constants_module
     use amrex_error_module
+    use meth_params_module, only : URHO
+
+    use amrex_constants_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -49,7 +51,7 @@ contains
 
              ! Get error
              rho = masa_eval_3d_exact_rho(x,y,z)
-             rhommserror(i,j,k,1) = dat(i,j,k,1) - rho
+             rhommserror(i,j,k,1) = dat(i,j,k,URHO) - rho
 
           end do
        end do
@@ -71,8 +73,9 @@ contains
     ! solution and the MMS solution
     !
 
-    use amrex_constants_module
     use amrex_error_module
+    use meth_params_module, only : URHO, UMX
+    use amrex_constants_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -104,8 +107,8 @@ contains
 
              ! Get error
              u = masa_eval_3d_exact_u(x,y,z)
-             rhoinv = 1.d0/dat(i,j,k,1)
-             ummserror(i,j,k,1) = dat(i,j,k,2) * rhoinv - u
+             rhoinv = 1.d0/dat(i,j,k,URHO)
+             ummserror(i,j,k,1) = dat(i,j,k,UMX) * rhoinv - u
 
           end do
        end do
@@ -125,8 +128,9 @@ contains
     ! solution and the MMS solution
     !
 
-    use amrex_constants_module
     use amrex_error_module
+    use meth_params_module, only : URHO, UMY
+    use amrex_constants_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -158,8 +162,8 @@ contains
 
              ! Get error
              v = masa_eval_3d_exact_v(x,y,z)
-             rhoinv = 1.d0/dat(i,j,k,1)
-             vmmserror(i,j,k,1) = dat(i,j,k,2) * rhoinv - v
+             rhoinv = 1.d0/dat(i,j,k,URHO)
+             vmmserror(i,j,k,1) = dat(i,j,k,UMY) * rhoinv - v
 
           end do
        end do
@@ -178,9 +182,9 @@ contains
     ! This routine will calculate the error between the velocity
     ! solution and the MMS solution
     !
-
-    use amrex_constants_module
     use amrex_error_module
+    use meth_params_module, only : URHO, UMZ
+    use amrex_constants_module
 #ifdef USE_MASA
     use masa
 #endif
@@ -212,8 +216,8 @@ contains
 
              ! Get error
              w = masa_eval_3d_exact_w(x,y,z)
-             rhoinv = 1.d0/dat(i,j,k,1)
-             wmmserror(i,j,k,1) = dat(i,j,k,2) * rhoinv - w
+             rhoinv = 1.d0/dat(i,j,k,URHO)
+             wmmserror(i,j,k,1) = dat(i,j,k,UMZ) * rhoinv - w
 
           end do
        end do
@@ -274,7 +278,7 @@ contains
              eos_state % e        = dat(i,j,k,UEINT) * rhoinv
              eos_state % T        = dat(i,j,k,UTEMP)
              eos_state % rho      = dat(i,j,k,URHO)
-             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspec-1) * rhoinv
+             eos_state % massfrac = dat(i,j,k,UFS:UFS+nspecies-1) * rhoinv
              eos_state % aux      = dat(i,j,k,UFX:UFX+naux-1) * rhoinv
              call eos_re(eos_state)
              p = masa_eval_3d_exact_p(x,y,z)

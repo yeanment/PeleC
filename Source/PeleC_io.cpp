@@ -23,9 +23,14 @@
 #endif
 
 #include "AMReX_buildInfo.H"
+#ifdef REACTIONS
+#include "chemistry_file.H"
+#endif
 
 using std::string;
 using namespace amrex;
+
+const std::string ascii_spray_particle_file("Spray");
 
 // PeleC maintains an internal checkpoint version numbering system.
 // This allows us to maintain backwards compatibility with checkpoints
@@ -144,7 +149,7 @@ PeleC::restart (Amr&     papa,
     // get the elapsed CPU time to now;
     if (level == 0 && ParallelDescriptor::IOProcessor())
     {
-      // get ellapsed CPU time
+      // get elapsed CPU time
       std::ifstream CPUFile;
       std::string FullPathCPUFile = parent->theRestartFile();
       FullPathCPUFile += "/CPUtime";
@@ -202,7 +207,7 @@ PeleC::restart (Amr&     papa,
                         geom, papa.Geom(level-1),
                         papa.refRatio(level-1), level, NUM_STATE);
 
-	if (!Geometry::IsCartesian()) {
+	if (!DefaultGeometry().IsCartesian()) {
             pres_reg.define(grids, papa.boxArray(level-1),
                             dmap, papa.DistributionMap(level-1),
                             geom, papa.Geom(level-1),
@@ -263,8 +268,6 @@ PeleC::checkPoint(const std::string& dir,
     AmrLevel::checkPoint(dir, os, how, dump_old);
 
 #ifdef AMREX_PARTICLES
-   amrex::Print() << "SKIPPING PARTICLE CHECKPOINT" << std::endl;
-
    bool is_checkpoint = true;
 
    Vector<std::string> real_comp_names;
@@ -274,18 +277,27 @@ PeleC::checkPoint(const std::string& dir,
 #if (BL_SPACEDIM > 2)
    real_comp_names.push_back("zvel");
 #endif
-   real_comp_names.push_back("temp");
+   real_comp_names.push_back("temperature");
    real_comp_names.push_back("diam");
    real_comp_names.push_back("density");
-   real_comp_names.push_back("mass_frac");
+// real_comp_names.push_back("mass_frac");
+   AMREX_ASSERT(real_comp_names.size()==NSR_SPR);
 
-#if 0
-  if (PeleC::theSprayPC())
-       PeleC::theSprayPC()->Checkpoint(dir,"PC",is_checkpoint,real_comp_names,int_comp_names);
-#else
-  amrex::Print() << "SKIPPING PARTICLE CHECKPOINT" << std::endl;
-#endif
+  if (PeleC::theSprayPC()) 
+  {
+       PeleC::theSprayPC()->Checkpoint(dir,"Spray",
+                                       is_checkpoint,real_comp_names,int_comp_names);
 
+       // Here we write ascii information every time we write a checkpoint file
+       if (level == 0)
+       {
+         if (do_spray_particles==1) {
+           theSprayPC()->Checkpoint(dir, ascii_spray_particle_file);
+           std::string fname = "spray" + dir.substr (3,6) + ".p3d";
+           theSprayPC()->WriteAsciiFile(fname);
+         }
+       }
+  }
 #endif
 
     if (level == 0 && ParallelDescriptor::IOProcessor())
@@ -384,14 +396,6 @@ PeleC::setPlotVariables ()
 {
     AmrLevel::setPlotVariables();
 
-    // Don't add the SDC_React_Type data to the plotfile, we only
-    // want to store it in the checkpoints.
-
-#ifdef REACTIONS
-    for (int i = 0; i < desc_lst[SDC_React_Type].nComp(); i++)
-	parent->deleteStatePlotVar(desc_lst[SDC_React_Type].name(i));
-#endif
-
     ParmParse pp("pelec");
 
 #ifdef AMREX_USE_EB
@@ -420,36 +424,42 @@ PeleC::setPlotVariables ()
 
     bool plot_massfrac = false;
     pp.query("plot_massfrac",plot_massfrac);
-    if (plot_massfrac)
-    {
-	if (plot_massfrac)
-	{
-	    //
-	    // Get the number of species from the network model.
-	    //
-	    get_num_spec(&NumSpec);
-	    //
-	    // Get the species names from the network model.
-	    //
-	    for (int i = 0; i < NumSpec; i++)
-	    {
-		int len = 20;
-		Vector<int> int_spec_names(len);
-		//
-		// This call return the actual length of each string in "len"
-		//
-		get_spec_names(int_spec_names.dataPtr(),&i,&len);
-		char* spec_name = new char[len+1];
-		for (int j = 0; j < len; j++)
-		    spec_name[j] = int_spec_names[j];
-		spec_name[len] = '\0';
-		string spec_string = "Y(";
-		spec_string += spec_name;
-		spec_string += ')';
-		parent->addDerivePlotVar(spec_string);
-		delete [] spec_name;
-	    }
-	}
+//    if (plot_massfrac)
+//    {
+//	if (plot_massfrac)
+//	{
+//	    //
+//	    // Get the number of species from the network model.
+//	    //
+//	    get_num_spec(&NumSpec);
+//	    //
+//	    // Get the species names from the network model.
+//	    //
+//	    for (int i = 0; i < NumSpec; i++)
+//	    {
+//		int len = 20;
+//		Vector<int> int_spec_names(len);
+//		//
+//		// This call return the actual length of each string in "len"
+//		//
+//		get_spec_names(int_spec_names.dataPtr(),&i,&len);
+//		char* spec_name = new char[len+1];
+//		for (int j = 0; j < len; j++)
+//		    spec_name[j] = int_spec_names[j];
+//		spec_name[len] = '\0';
+//		string spec_string = "Y(";
+//		spec_string += spec_name;
+//		spec_string += ')';
+//		parent->addDerivePlotVar(spec_string);
+//		delete [] spec_name;
+//	    }
+//	}
+//    }
+ 
+    if (plot_massfrac) {
+        parent->addDerivePlotVar("massfrac");
+    } else {
+        parent->deleteDerivePlotVar("massfrac");
     }
     
     bool plot_moleFrac = false;
@@ -586,7 +596,8 @@ PeleC::writeJobInfo (const std::string& dir)
     }
 
     jobInfoFile << " Boundary conditions\n";
-    Vector<int> lo_bc_out(BL_SPACEDIM), hi_bc_out(BL_SPACEDIM);
+    Vector<string> lo_bc_out(BL_SPACEDIM);
+    Vector<string> hi_bc_out(BL_SPACEDIM);
     ParmParse pp("pelec");
     pp.getarr("lo_bc",lo_bc_out,0,BL_SPACEDIM);
     pp.getarr("hi_bc",hi_bc_out,0,BL_SPACEDIM);
@@ -594,20 +605,16 @@ PeleC::writeJobInfo (const std::string& dir)
 
     // these names correspond to the integer flags setup in the
     // PeleC_setup.cpp
-    const char* names_bc[] =
-	{ "interior", "inflow", "outflow",
-	  "symmetry", "slipwall", "noslipwall" };
 
-
-    jobInfoFile << "   -x: " << names_bc[lo_bc_out[0]] << "\n";
-    jobInfoFile << "   +x: " << names_bc[hi_bc_out[0]] << "\n";
+    jobInfoFile << "   -x: " << lo_bc_out[0] << "\n";
+    jobInfoFile << "   +x: " << hi_bc_out[0] << "\n";
     if (BL_SPACEDIM >= 2) {
-	jobInfoFile << "   -y: " << names_bc[lo_bc_out[1]] << "\n";
-	jobInfoFile << "   +y: " << names_bc[hi_bc_out[1]] << "\n";
+	jobInfoFile << "   -y: " << lo_bc_out[1] << "\n";
+	jobInfoFile << "   +y: " << hi_bc_out[1] << "\n";
     }
     if (BL_SPACEDIM == 3) {
-	jobInfoFile << "   -z: " << names_bc[lo_bc_out[2]] << "\n";
-	jobInfoFile << "   +z: " << names_bc[hi_bc_out[2]] << "\n";
+	jobInfoFile << "   -z: " << lo_bc_out[2] << "\n";
+	jobInfoFile << "   +z: " << hi_bc_out[2] << "\n";
     }
 
     jobInfoFile << "\n\n";
@@ -651,10 +658,199 @@ PeleC::writeJobInfo (const std::string& dir)
     jobInfoFile << PrettyLine;
 
     ParmParse::dumpTable(jobInfoFile, true);
-
     jobInfoFile.close();
 
 }
+
+/*
+ * PeleC::writeBuildInfo
+ * Similar to writeJobInfo, but the subset of information that makes sense without
+ * an input file to enable --describe in format similar to CASTRO
+ *
+ */
+
+void
+PeleC::writeBuildInfo (std::ostream& os)
+
+{
+    std::string PrettyLine = std::string(78, '=') + "\n";
+    std::string OtherLine = std::string(78, '-') + "\n";
+    std::string SkipSpace = std::string(8, ' ');
+
+ // build information
+    os << PrettyLine;
+    os << " PeleC Build Information\n";
+    os << PrettyLine;
+
+    os << "build date:    " << buildInfoGetBuildDate() << "\n";
+    os << "build machine: " << buildInfoGetBuildMachine() << "\n";
+    os << "build dir:     " << buildInfoGetBuildDir() << "\n";
+    os << "AMReX dir:     " << buildInfoGetAMReXDir() << "\n";
+
+    os << "\n";
+
+    os << "COMP:          " << buildInfoGetComp() << "\n";
+    os << "COMP version:  " << buildInfoGetCompVersion() << "\n";
+
+
+    std::cout << "C++ compiler:  " << buildInfoGetCXXName() << "\n";
+    std::cout << "C++ flags:     " << buildInfoGetCXXFlags() << "\n";
+
+    os << "\n";
+
+    os << "FCOMP:         " << buildInfoGetFcomp() << "\n";
+    os << "FCOMP version: " << buildInfoGetFcompVersion() << "\n";
+
+    os << "\n";
+
+
+    std::cout << "Link flags:    " << buildInfoGetLinkFlags() << "\n";
+    std::cout << "Libraries:     " << buildInfoGetLibraries() << "\n";
+
+    os << "\n";
+
+    for (int n = 1; n <= buildInfoGetNumModules(); n++) {
+	os << buildInfoGetModuleName(n) << ": " << buildInfoGetModuleVal(n) << "\n";
+    }
+
+    os << "\n";
+    const char* githash1 = buildInfoGetGitHash(1);
+    const char* githash2 = buildInfoGetGitHash(2);
+    const char* githash3 = buildInfoGetGitHash(3);
+    if (strlen(githash1) > 0) {
+	os << "PeleC       git hash: " << githash1 << "\n";
+    }
+    if (strlen(githash2) > 0) {
+	os << "AMReX       git hash: " << githash2 << "\n";
+    }
+    if (strlen(githash3) > 0) {
+	os << "PelePhysics git hash: " << githash3 << "\n";
+    }
+
+    const char* buildgithash = buildInfoGetBuildGitHash();
+    const char* buildgitname = buildInfoGetBuildGitName();
+    if (strlen(buildgithash) > 0){
+	os << buildgitname << " git hash: " << buildgithash << "\n";
+    }
+
+    os << "\n";
+    os << " PeleC Compile time variables: \n";
+
+#ifdef REACTIONS
+    int mm, kk, ii, nfit;
+    CKINDX(&mm, &kk, &ii, &nfit);
+    os << std::setw(40) << std::left << "Number elements from chem cpp : " << mm << std::endl;
+    os << std::setw(40) << std::left << "Number species from chem cpp : " << kk << std::endl;
+    os << std::setw(40) << std::left << "Number reactions from chem cpp : " << ii << std::endl;
+#endif
+
+
+
+    os << "\n";
+    os << " PeleC Defines: \n";
+#ifdef _OPENMP
+    os << std::setw(35) << std::left << "_OPENMP " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "_OPENMP " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef MPI_VERSION
+    os << std::setw(35) << std::left << "MPI_VERSION " << std::setw(6) << MPI_VERSION << std::endl;
+#else
+    os << std::setw(35) << std::left << "MPI_VERSION " << std::setw(6) << "UNDEFINED" << std::endl;
+#endif
+
+#ifdef MPI_SUBVERSION
+    os << std::setw(35) << std::left << "MPI_SUBVERSION " << std::setw(6) << MPI_SUBVERSION << std::endl;
+#else
+    os << std::setw(35) << std::left << "MPI_SUBVERSION " << std::setw(6) << "UNDEFINED" << std::endl;
+#endif
+
+#ifdef REACTIONS
+    os << std::setw(35) << std::left << "REACTIONS " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "REACTIONS " << std::setw(6) << "OFF" << std::endl;
+#endif
+#ifdef NUM_ADV
+    os << std::setw(35) << std::left << "NUM_ADV=" << NUM_ADV << std::endl;
+#else
+    os << std::setw(35) << std::left << "NUM_ADV" << "is undefined (0)" << std::endl;
+#endif
+
+
+#ifdef DO_HIT_FORCE
+    os << std::setw(35) << std::left << "DO_HIT_FORCE " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "DO_HIT_FORCE " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef PELEC_USE_EB
+    os << std::setw(35) << std::left << "PELEC_USE_EB " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "PELEC_USE_EB " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+
+#ifdef USE_MASA
+    os << std::setw(35) << std::left << "USE_MASA " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "USE_MASA " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef PELE_USE_EB
+    os << std::setw(35) << std::left << "PELE_USE_EB " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "PELE_USE_EB " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef AMREX_USE_EB
+    os << std::setw(35) << std::left << "AMREX_USE_EB " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "AMREX_USE_EB " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef AMREX_PARTICLES
+    os << std::setw(35) << std::left << "AMREX_PARTICLES " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "AMREX_PARTICLES " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef PELE_UNIT_TEST_DN
+    os << std::setw(35) << std::left << "PELE_UNIT_TEST_DN " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "PELE_UNIT_TEST_DN " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef PELEC_USE_MOL
+    os << std::setw(35) << std::left << "PELEC_USE_MOL " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "PELEC_USE_MOL " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef DO_PROBLEM_POST_TIMESTEP
+    os << std::setw(35) << std::left << "DO_PROBLEM_POST_TIMESTEP " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "DO_PROBLEM_POST_TIMESTEP " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef DO_PROBLEM_POST_RESTART
+    os << std::setw(35) << std::left << "DO_PROBLEM_POST_RESTART " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "DO_PROBLEM_POST_RESTART " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+#ifdef DO_PROBLEM_POST_INIT
+    os << std::setw(35) << std::left << "DO_PROBLEM_POST_INIT " << std::setw(6) << "ON" << std::endl;
+#else
+    os << std::setw(35) << std::left << "DO_PROBLEM_POST_INIT " << std::setw(6) << "OFF" << std::endl;
+#endif
+
+
+    os << "\n\n";
+
+
+}
+
 
 void
 PeleC::writePlotFile (const std::string& dir,
@@ -743,10 +939,10 @@ PeleC::writePlotFile (const std::string& dir,
         int f_lev = parent->finestLevel();
         os << f_lev << '\n';
         for (i = 0; i < BL_SPACEDIM; i++)
-            os << Geometry::ProbLo(i) << ' ';
+            os << DefaultGeometry().ProbLo(i) << ' ';
         os << '\n';
         for (i = 0; i < BL_SPACEDIM; i++)
-            os << Geometry::ProbHi(i) << ' ';
+            os << DefaultGeometry().ProbHi(i) << ' ';
         os << '\n';
         for (i = 0; i < f_lev; i++)
             os << parent->refRatio(i)[0] << ' ';
@@ -763,7 +959,7 @@ PeleC::writePlotFile (const std::string& dir,
                 os << parent->Geom(i).CellSize()[k] << ' ';
             os << '\n';
         }
-        os << (int) Geometry::Coord() << '\n';
+        os << (int) DefaultGeometry().Coord() << '\n';
         os << "0\n"; // Write bndry data.
 
 	writeJobInfo(dir);
@@ -889,13 +1085,9 @@ PeleC::writePlotFile (const std::string& dir,
        real_comp_names.push_back("temp");
        real_comp_names.push_back("diam");
        real_comp_names.push_back("density");
-       real_comp_names.push_back("mass_frac");
+//     real_comp_names.push_back("mass_frac");
 
-#if 0
        PeleC::theSprayPC()->Checkpoint(dir,"PC",is_checkpoint,real_comp_names,int_comp_names);
-#else
-       amrex::Print() << "SKIPPING PARTICLE CHECKPOINT" << std::endl;
-#endif
     }
 #endif
 }
@@ -949,10 +1141,10 @@ PeleC::writeSmallPlotFile (const std::string& dir,
         int f_lev = parent->finestLevel();
         os << f_lev << '\n';
         for (i = 0; i < BL_SPACEDIM; i++)
-            os << Geometry::ProbLo(i) << ' ';
+            os << DefaultGeometry().ProbLo(i) << ' ';
         os << '\n';
         for (i = 0; i < BL_SPACEDIM; i++)
-            os << Geometry::ProbHi(i) << ' ';
+            os << DefaultGeometry().ProbHi(i) << ' ';
         os << '\n';
         for (i = 0; i < f_lev; i++)
             os << parent->refRatio(i)[0] << ' ';
@@ -969,7 +1161,7 @@ PeleC::writeSmallPlotFile (const std::string& dir,
                 os << parent->Geom(i).CellSize()[k] << ' ';
             os << '\n';
         }
-        os << (int) Geometry::Coord() << '\n';
+        os << (int) DefaultGeometry().Coord() << '\n';
         os << "0\n"; // Write bndry data.
 
         // job_info file with details about the run
