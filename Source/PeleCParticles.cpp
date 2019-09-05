@@ -4,7 +4,7 @@
 #include <string>
 #include "PeleC.H"
 #include "PeleC_F.H"
-//HK #include "Spray_F.H"
+#include "Spray_F.H"
 
 using namespace amrex;
 
@@ -292,7 +292,7 @@ PeleC::ParticleCheckPoint(const std::string& dir)
     if (level == 0)
     {
       if (theSprayPC() && do_spray_particles==1) {
-        theSprayPC()->Checkpoint(dir, chk_spray_particle_file);
+        theSprayPC()->Checkpoint(dir, chk_particle_file);
 //HK        theSprayPC()->WriteAsciiFile(fname);
       }
     }
