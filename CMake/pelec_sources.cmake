@@ -70,7 +70,7 @@ function(get_pelec_sources pelec_exe_name)
   endif()
   if("${PELEC_TRANSPORT_TYPE}" STREQUAL "IDEAL_GAS")
      add_sources(GlobalSourceList
-       ${PELEC_SOURCE_DIR}/diffterm_${PELEC_DIM}d.f90
+       ${PELEC_SOURCE_DIR}/diffterm_${PELEC_DIM}d.F90
      )
   elseif("${PELEC_TRANSPORT_TYPE}" STREQUAL "REAL_GAS")
      add_sources(GlobalSourceList

@@ -11,7 +11,11 @@ module diffterm_module
 
 contains
 
-  subroutine pc_diffterm(gpustream, lo,  hi,&
+  subroutine pc_diffterm(&
+#ifdef PELEC_USE_ACC
+                         gpustream,&
+#endif
+                         lo,  hi,&
                          dmnlo, dmnhi,&
                          Q,   Qlo,   Qhi,&
                          Dx,  Dxlo,  Dxhi,&
@@ -45,7 +49,9 @@ contains
 
     implicit none
 
+#ifdef PELEC_USE_ACC
     integer, intent(in) :: gpustream
+#endif
     integer, intent(in) ::     lo(3),    hi(3)
     integer, intent(in) ::  dmnlo(3), dmnhi(3)
     integer, intent(in) ::    Qlo(3),   Qhi(3)
@@ -117,8 +123,10 @@ contains
     double precision, parameter :: twoThirds = 2.d0/3.d0
     double precision :: dxinv1, dxinv2, dxinv3
 
+#ifdef PELEC_USE_ACC
     !$acc routine(eos_ytx_vec_gpu) gang
     !$acc routine(eos_hi_vec_gpu) gang
+#endif
 
     dxinv1 = 1.d0/deltax(1)
     dxinv2 = 1.d0/deltax(2)
@@ -131,15 +139,24 @@ contains
     hi2 = hi(2)
     hi3 = hi(3)
 
+#ifdef PELEC_USE_ACC
     !$acc enter data create(hii,x,vcx,vcy,vcz) async(gpustream)
+#endif
 
+#ifdef PELEC_USE_ACC
     !$acc parallel default(present) async(gpustream)
     call eos_ytx_vec_gpu(q,x,lo1,lo2,lo3,hi1,hi2,hi3,qfs,qvar)
     call eos_hi_vec_gpu(q,hii,lo1,lo2,lo3,hi1,hi2,hi3,qtemp,qvar,qfs)
     !$acc end parallel
+#else
+    call eos_ytx_vec(Q(lo1-1:hi1+1,lo2-1:hi2+1,lo3-1:hi3+1,QFS:QFS+nspecies-1),lo,hi,X,lo,hi,lo,hi,nspecies)
+    call eos_hi_vec(Q(lo1-1:hi1+1,lo2-1:hi2+1,lo3-1:hi3+1,QFS:QFS+nspecies-1),lo,hi,Q(lo1-1:hi1+1,lo2-1:hi2+1,lo3-1:hi3+1,QTEMP),lo,hi,hii,lo,hi,lo,hi,nspecies)
+#endif
 
+#ifdef PELEC_USE_ACC
     !$acc kernels default(present) async(gpustream)
     !$acc loop collapse(3)
+#endif
     do k=lo3,hi3
        do j=lo2,hi2
           do i=lo1,hi1+1
@@ -165,7 +182,9 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop collapse(3)
+#endif
     do k=lo3,hi3
        do j=lo2,hi2
           do i=lo1,hi1+1
@@ -173,9 +192,13 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop seq
+#endif
     do n=1,nspecies
+#ifdef PELEC_USE_ACC
        !$acc loop collapse(3)
+#endif
        do k=lo3,hi3
           do j=lo2,hi2
              do i=lo1,hi1+1
@@ -193,9 +216,13 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop seq
+#endif
     do n=1,nspecies
+#ifdef PELEC_USE_ACC
        !$acc loop collapse(3)
+#endif
        do k=lo3,hi3
           do j=lo2,hi2
              do i=lo1,hi1+1
@@ -207,7 +234,9 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop collapse(3)
+#endif
     do k=lo3,hi3
        do j=lo2,hi2
           do i=lo1,hi1+1
@@ -218,7 +247,9 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop collapse(4)
+#endif
     do n=UFS,UFS+nspecies-1
        do k=lo3,hi3
           do j=lo2,hi2
@@ -228,10 +259,12 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc end kernels
 
     !$acc kernels default(present) async(gpustream)
     !$acc loop collapse(3)
+#endif
     do k=lo3,hi3
        do j=lo2,hi2+1
           do i=lo1,hi1
@@ -257,7 +290,9 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop collapse(3)
+#endif
     do k=lo3,hi3
        do j=lo2,hi2+1
           do i=lo1,hi1
@@ -265,9 +300,13 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop seq
+#endif
     do n=1,nspecies
+#ifdef PELEC_USE_ACC
        !$acc loop collapse(3)
+#endif
        do k=lo3,hi3
           do j=lo2,hi2+1
              do i=lo1,hi1
@@ -285,9 +324,13 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop seq
+#endif
     do n=1,nspecies
+#ifdef PELEC_USE_ACC
        !$acc loop collapse(3)
+#endif
        do k=lo3,hi3
           do j=lo2,hi2+1
              do i=lo1,hi1
@@ -299,7 +342,9 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop collapse(3)
+#endif
     do k=lo3,hi3
        do j=lo2,hi2+1
           do i=lo1,hi1
@@ -310,7 +355,9 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop collapse(4)
+#endif
     do n=UFS,UFS+nspecies-1
        do k=lo3,hi3
           do j=lo2,hi2+1
@@ -320,10 +367,12 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc end kernels
 
     !$acc kernels default(present) async(gpustream)
     !$acc loop collapse(3)
+#endif
     do k=lo3,hi3+1
        do j=lo2,hi2
           do i=lo1,hi1
@@ -349,7 +398,9 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop collapse(3)
+#endif
     do k=lo3,hi3+1
        do j=lo2,hi2
           do i=lo1,hi1
@@ -357,9 +408,13 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop seq
+#endif
     do n=1,nspecies
+#ifdef PELEC_USE_ACC
        !$acc loop collapse(3)
+#endif
        do k=lo3,hi3+1
           do j=lo2,hi2
              do i=lo1,hi1
@@ -377,9 +432,13 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop seq
+#endif
     do n=1,nspecies
+#ifdef PELEC_USE_ACC
        !$acc loop collapse(3)
+#endif
        do k=lo3,hi3+1
           do j=lo2,hi2
              do i=lo1,hi1
@@ -391,7 +450,9 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop collapse(3)
+#endif
     do k=lo3,hi3+1
        do j=lo2,hi2
           do i=lo1,hi1
@@ -402,7 +463,9 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc loop collapse(4)
+#endif
     do n=UFS,UFS+nspecies-1
        do k=lo3,hi3+1
           do j=lo2,hi2
@@ -412,9 +475,11 @@ contains
           enddo
        enddo
     enddo
+#ifdef PELEC_USE_ACC
     !$acc end kernels
 
     !$acc parallel loop collapse(4) default(present) async(gpustream)
+#endif
     do n=1,NVAR
        do k = lo3, hi3
           do j = lo2, hi2
@@ -426,10 +491,11 @@ contains
           end do
        end do
     end do
+#ifdef PELEC_USE_ACC
     !$acc end parallel loop
 
     !$acc exit data delete(hii,x,vcx,vcy,vcz) async(gpustream)
-
+#endif
   end subroutine pc_diffterm
 
 end module diffterm_module

@@ -20,11 +20,7 @@ else
 endif
 
 ifeq ($(TRANSPORT_TYPE), IDEAL_GAS)
-  ifeq ($(USE_ACC_FILES), TRUE)
-    f90EXE_sources += diffterm_$(DIM)d_acc.f90
-  else
-    f90EXE_sources += diffterm_$(DIM)d.f90
-  endif
+  F90EXE_sources += diffterm_$(DIM)d.F90
 else
   f90EXE_sources += diffterm_nonideal_$(DIM)d.f90
 endif
