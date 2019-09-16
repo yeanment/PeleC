@@ -88,7 +88,7 @@ use amrex_ebcellflag_module, only : is_covered_cell
                 
                 cost(i,j,k) = react(rY, rY_src,&
                                     energy, energy_src,&
-                                    pressure,dt_react,time,0)
+                                    pressure,dt_react,time)
 
 
                 rho_new = sum(rY(1:nspecies))
@@ -309,7 +309,8 @@ use amrex_ebcellflag_module, only : is_covered_cell
 
            !Returns the molar production rate of species
            !Given rho, T, and mass fractions
-           ! Currently disabled for gpu/acc/cuda
+
+           !Currently disabled for gpu/acc/cuda
            !call VCKWYR(npts, urk(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),URHO), &
            !    urk(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),UTEMP), &
            !    yrk(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),1:nspecies), &

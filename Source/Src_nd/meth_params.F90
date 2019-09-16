@@ -119,6 +119,11 @@ module meth_params_module
   character (len=128), save :: yr_ext_bc_type
   character (len=128), save :: zl_ext_bc_type
   character (len=128), save :: zr_ext_bc_type
+  integer         , save :: do_les
+  integer         , save :: use_explicit_filter
+  double precision, save :: Cs
+  double precision, save :: CI
+  double precision, save :: PrT
   double precision, save :: eb_small_vfrac
   integer         , save :: do_mms
   double precision, save :: cfl
@@ -138,7 +143,32 @@ module meth_params_module
   ! Create versions of these variables on the GPU
   ! the device update is then done in PeleC_nd.f90
 
+  !Currently used
   !$acc declare create(ntherm,nvar,nq,urho,umx,umy,umz,ueden,ueint,utemp,ufa,ufs,ufx,ushk,qtherm,qvar,qrho,qu,qv,qw,qpres,qreint,qtemp,qgame,qfa,qfs,qfx,nqaux,qgamc,qc,qcsml,qdpdr,qdpde,qrspec,small_dens,small_temp,npassive,upass_map,qpass_map,nqaux,qc,qcsml,nadv,plm_iorder)
+
+  !Currently unused
+  !acc declare &
+  !acc create(levmsk_interior, levmsk_covered, levmsk_notcovered) &
+  !acc create(levmsk_physbnd, difmag, small_dens) &
+  !acc create(small_massfrac, small_temp, small_pres) &
+  !acc create(small_ener, do_hydro, do_mol_AD) &
+  !acc create(nscbc_adv, nscbc_diff, hybrid_hydro) &
+  !acc create(ppm_type, weno_variant, ppm_trace_sources) &
+  !acc create(ppm_temp_fix, ppm_predict_gammae, ppm_reference_eigenvectors) &
+  !acc create(plm_iorder, hybrid_riemann, riemann_solver) &
+  !acc create(cg_maxiter, cg_tol, cg_blend) &
+  !acc create(use_flattening, transverse_use_eos, transverse_reset_density) &
+  !acc create(transverse_reset_rhoe, dual_energy_update_E_from_e, dual_energy_eta1) &
+  !acc create(dual_energy_eta2, dual_energy_eta3, use_pslope) &
+  !acc create(fix_mass_flux, limit_fluxes_on_small_dens, density_reset_method) &
+  !acc create(allow_negative_energy, allow_small_energy, first_order_hydro) &
+  !acc create(do_les, use_explicit_filter, Cs) &
+  !acc create(CI, PrT, eb_small_vfrac) &
+  !acc create(do_mms, cfl, dtnuc_e) &
+  !acc create(dtnuc_X, dtnuc_mode, dxnuc) &
+  !acc create(do_react, react_T_min, react_T_max) &
+  !acc create(react_rho_min, react_rho_max, disable_shock_burning) &
+  !acc create(do_acc, track_grid_losses)
 
   ! End the declarations of the ParmParse parameters
 
@@ -204,6 +234,11 @@ contains
     yr_ext_bc_type = "";
     zl_ext_bc_type = "";
     zr_ext_bc_type = "";
+    do_les = 0;
+    use_explicit_filter = 0;
+    Cs = 0.0d0;
+    CI = 0.0d0;
+    PrT = 1.0d0;
     eb_small_vfrac = 1.0d-2;
     do_mms = 0;
     cfl = 0.8d0;
@@ -268,6 +303,11 @@ contains
     call pp%query("yr_ext_bc_type", yr_ext_bc_type)
     call pp%query("zl_ext_bc_type", zl_ext_bc_type)
     call pp%query("zr_ext_bc_type", zr_ext_bc_type)
+    call pp%query("do_les", do_les)
+    call pp%query("use_explicit_filter", use_explicit_filter)
+    call pp%query("Cs", Cs)
+    call pp%query("CI", CI)
+    call pp%query("PrT", PrT)
     call pp%query("eb_small_vfrac", eb_small_vfrac)
     call pp%query("do_mms", do_mms)
     call pp%query("cfl", cfl)
@@ -283,6 +323,30 @@ contains
     call pp%query("disable_shock_burning", disable_shock_burning)
     call pp%query("do_acc", do_acc)
     call pp%query("track_grid_losses", track_grid_losses)
+
+    !Currently not used
+    !acc update &
+    !acc device(levmsk_interior, levmsk_covered, levmsk_notcovered) &
+    !acc device(levmsk_physbnd, difmag, small_dens) &
+    !acc device(small_massfrac, small_temp, small_pres) &
+    !acc device(small_ener, do_hydro, do_mol_AD) &
+    !acc device(nscbc_adv, nscbc_diff, hybrid_hydro) &
+    !acc device(ppm_type, weno_variant, ppm_trace_sources) &
+    !acc device(ppm_temp_fix, ppm_predict_gammae, ppm_reference_eigenvectors) &
+    !acc device(plm_iorder, hybrid_riemann, riemann_solver) &
+    !acc device(cg_maxiter, cg_tol, cg_blend) &
+    !acc device(use_flattening, transverse_use_eos, transverse_reset_density) &
+    !acc device(transverse_reset_rhoe, dual_energy_update_E_from_e, dual_energy_eta1) &
+    !acc device(dual_energy_eta2, dual_energy_eta3, use_pslope) &
+    !acc device(fix_mass_flux, limit_fluxes_on_small_dens, density_reset_method) &
+    !acc device(allow_negative_energy, allow_small_energy, first_order_hydro) &
+    !acc device(do_les, use_explicit_filter, Cs) &
+    !acc device(CI, PrT, eb_small_vfrac) &
+    !acc device(do_mms, cfl, dtnuc_e) &
+    !acc device(dtnuc_X, dtnuc_mode, dxnuc) &
+    !acc device(do_react, react_T_min, react_T_max) &
+    !acc device(react_rho_min, react_rho_max, disable_shock_burning) &
+    !acc device(do_acc, track_grid_losses)
 
     ! now set the external BC flags
     select case (xl_ext_bc_type)
