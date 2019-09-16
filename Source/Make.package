@@ -10,7 +10,6 @@ CEXE_sources += PeleC_hydro.cpp
 CEXE_sources += PeleC_init_eb.cpp
 CEXE_sources += PeleC_io.cpp 
 CEXE_sources += PeleC_les.cpp
-CEXE_sources += PeleC_MOL.cpp
 CEXE_sources += PeleC_sources.cpp
 CEXE_sources += PeleC_setup.cpp
 CEXE_sources += Prob.cpp
@@ -37,6 +36,12 @@ endif
 
 ifeq ($(USE_PARTICLES), TRUE)
   CEXE_sources += PeleCParticles.cpp
+endif
+
+ifeq ($(USE_ACC_FILES), TRUE)
+  CEXE_sources += PeleC_MOL_acc.cpp
+else
+  CEXE_sources += PeleC_MOL.cpp
 endif
 
 ifeq ($(USE_MASA), TRUE)

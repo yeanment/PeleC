@@ -6,9 +6,7 @@ using namespace amrex;
 
 #include <Transport_F.H>
 #include <Filter.H>
-#ifdef PELEC_USE_ACC
-#include <AMReX_Gpu.H>
-#endif
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -93,7 +91,7 @@ PeleC::getLESTerm (amrex::Real time, amrex::Real dt, amrex::MultiFab& LESTerm, a
 #endif
     for (MFIter mfi(LESTerm, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 #ifdef PELEC_USE_ACC
-      const int gpuStream = (mfi.index() % Gpu::numGpuStreams()) + 1;
+      const int gpuStream = (mfi.index() % 16) + 1;
 #endif
       BL_PROFILE("PeleC::diffextrap calls");
 
@@ -161,7 +159,7 @@ PeleC::getSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::MultiFab&
 
     for (MFIter mfi(S, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 #ifdef PELEC_USE_ACC
-      const int gpuStream = (mfi.index() % Gpu::numGpuStreams()) + 1;
+      const int gpuStream = (mfi.index() % 16) + 1;
 #endif
       const Box  vbox = mfi.tilebox();
       const Box  gbox = amrex::grow(vbox,ngrow);
@@ -331,7 +329,7 @@ PeleC::getDynamicSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::Mu
     IArrayBox bcMask;
     for (MFIter mfi(S, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 #ifdef PELEC_USE_ACC
-      const int gpuStream = (mfi.index() % Gpu::numGpuStreams()) + 1;
+      const int gpuStream = (mfi.index() % 16) + 1;
 #endif
       const Box  vbox = mfi.tilebox();
       const Box  g0box = amrex::grow(vbox,nGrowD+nGrowC+nGrowT+1);
