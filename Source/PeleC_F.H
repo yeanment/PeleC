@@ -82,11 +82,11 @@ extern "C"
 
   void get_tagging_params(const int* name, const int* namlen);
 
+  void ctoprim(
 #ifdef PELEC_USE_ACC
-   void ctoprim(const int* gpustream, const int* lo, const int* hi,
-#else
-   void ctoprim(const int* lo, const int* hi,
+               const int* gpustream, 
 #endif
+               const int* lo, const int* hi,
 	       const amrex::Real* u, const int* u_lo, const int* u_hi,
 	       const amrex::Real* q, const int* q_lo, const int* q_hi,
                const amrex::Real* qaux, const int* qa_lo, const int* qa_hi);
@@ -98,11 +98,11 @@ extern "C"
 		 const amrex::Real* srQ, const int* srQ_lo, const int* srQ_hi);
 
 #if (BL_SPACEDIM > 1)
+  void pc_compute_tangential_vel_derivs(
 #ifdef PELEC_USE_ACC
-  void pc_compute_tangential_vel_derivs(const int* gpustream, const int* lo, const int* hi,
-#else
-  void pc_compute_tangential_vel_derivs(const int* lo, const int* hi,
+                                        const int* gpustream, 
 #endif
+                                        const int* lo, const int* hi,
                                         const int* dlo, const int* dhi,
                                         const amrex::Real* Q, const int* Qlo, const int* Qhi,
                                         amrex::Real* td, const int* tdlo, const int* tdhi,
@@ -128,11 +128,11 @@ extern "C"
 #endif
 
 
+  void pc_diffterm(
 #ifdef PELEC_USE_ACC
-  void pc_diffterm(const int* gpustream, const int* lo,  const int* hi,
-#else
-  void pc_diffterm(const int* lo,  const int* hi,
+                   const int* gpustream,
 #endif
+                   const int* lo,  const int* hi,
 		   const int* dmnlo,  const int* dmnhi,
 		   const BL_FORT_FAB_ARG_3D(Q),
 		   const BL_FORT_FAB_ARG_3D(Dx),
@@ -524,12 +524,11 @@ extern "C"
     (const int* lo, const int* hi,
      BL_FORT_FAB_ARG_3D(TempDiffTerm));
 
-  void pc_move_transport_coeffs_to_ec
+  void pc_move_transport_coeffs_to_ec(
 #ifdef PELEC_USE_ACC
-    (const int* gpustream, const int* lo, const int* hi,
-#else
-    (const int* lo, const int* hi,
+     const int* gpustream,
 #endif
+     const int* lo, const int* hi,
      const int* dlo, const int* dhi,
      const BL_FORT_FAB_ARG_3D(cdata),
      const BL_FORT_FAB_ARG_3D(edata),

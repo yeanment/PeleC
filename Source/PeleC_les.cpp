@@ -89,8 +89,10 @@ PeleC::getLESTerm (amrex::Real time, amrex::Real dt, amrex::MultiFab& LESTerm, a
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-    for (MFIter mfi(LESTerm,hydro_tile_size); mfi.isValid(); ++mfi)
-    {
+    for (MFIter mfi(LESTerm, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+#ifdef PELEC_USE_ACC
+      const int gpuStream = (mfi.index() % 16) + 1;
+#endif
       BL_PROFILE("PeleC::diffextrap calls");
 
       const Box& vbx = mfi.validbox();
@@ -155,9 +157,10 @@ PeleC::getSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::MultiFab&
     FArrayBox flux_ec[BL_SPACEDIM], tander_ec[BL_SPACEDIM];
     IArrayBox bcMask;
 
-
-    for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true)); mfi.isValid(); ++mfi)
-    {
+    for (MFIter mfi(S, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+#ifdef PELEC_USE_ACC
+      const int gpuStream = (mfi.index() % 16) + 1;
+#endif
       const Box  vbox = mfi.tilebox();
       const Box  gbox = amrex::grow(vbox,ngrow);
       const Box  cbox = amrex::grow(vbox,ngrow-1);
@@ -181,7 +184,11 @@ PeleC::getSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::MultiFab&
 
       { // Get primitives, Q, including (Y, T, p, rho) from conserved state, required for L term
         BL_PROFILE("PeleC::ctoprim call");
-        ctoprim(ARLIM_3D(gbox.loVect()), ARLIM_3D(gbox.hiVect()),
+        ctoprim(
+#ifdef PELEC_USE_ACC
+                &gpuStream,
+#endif
+                ARLIM_3D(gbox.loVect()), ARLIM_3D(gbox.hiVect()),
                 Sfab.dataPtr(), ARLIM_3D(Sfab.loVect()), ARLIM_3D(Sfab.hiVect()),
                 Qfab.dataPtr(), ARLIM_3D(Qfab.loVect()), ARLIM_3D(Qfab.hiVect()),
                 Qaux.dataPtr(), ARLIM_3D(Qaux.loVect()), ARLIM_3D(Qaux.hiVect()));
@@ -201,7 +208,11 @@ PeleC::getSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::MultiFab&
         tander_ec[d].resize(ebox,nCompTan); tander_ec[d].setVal(0);
         {
           BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs call");
-          pc_compute_tangential_vel_derivs(cbox.loVect(), cbox.hiVect(),
+          pc_compute_tangential_vel_derivs(
+#ifdef PELEC_USE_ACC
+                                           &gpuStream,
+#endif
+                                           cbox.loVect(), cbox.hiVect(),
                                            dbox.loVect(), dbox.hiVect(),
                                            BL_TO_FORTRAN_ANYD(Qfab),
                                            BL_TO_FORTRAN_ANYD(tander_ec[d]),
@@ -316,9 +327,10 @@ PeleC::getDynamicSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::Mu
     FArrayBox Qfab, Qaux, Lterm;
     FArrayBox coeff_ec[BL_SPACEDIM], flux_ec[BL_SPACEDIM], tander_ec[BL_SPACEDIM];
     IArrayBox bcMask;
-    for (MFIter mfi(S, MFItInfo().EnableTiling(hydro_tile_size).SetDynamic(true)); mfi.isValid(); ++mfi)
-    {
-
+    for (MFIter mfi(S, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+#ifdef PELEC_USE_ACC
+      const int gpuStream = (mfi.index() % 16) + 1;
+#endif
       const Box  vbox = mfi.tilebox();
       const Box  g0box = amrex::grow(vbox,nGrowD+nGrowC+nGrowT+1);
       const Box  g1box = amrex::grow(vbox,nGrowC+nGrowT+1);
@@ -345,7 +357,11 @@ PeleC::getDynamicSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::Mu
 
       { // Get primitives, Q, including (Y, T, p, rho) from conserved state, required for L term
         BL_PROFILE("PeleC::ctoprim call");
-        ctoprim(ARLIM_3D(g0box.loVect()), ARLIM_3D(g0box.hiVect()),
+        ctoprim(
+#ifdef PELEC_USE_ACC
+                &gpuStream,
+#endif
+                ARLIM_3D(g0box.loVect()), ARLIM_3D(g0box.hiVect()),
                 Sfab.dataPtr(), ARLIM_3D(Sfab.loVect()), ARLIM_3D(Sfab.hiVect()),
                 Qfab.dataPtr(), ARLIM_3D(Qfab.loVect()), ARLIM_3D(Qfab.hiVect()),
                 Qaux.dataPtr(), ARLIM_3D(Qaux.loVect()), ARLIM_3D(Qaux.hiVect()));
@@ -364,7 +380,11 @@ PeleC::getDynamicSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::Mu
         tander_ec[d].resize(ebox,nCompTan); tander_ec[d].setVal(0);
         {
           BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs call");
-          pc_compute_tangential_vel_derivs(cbox.loVect(), cbox.hiVect(),
+          pc_compute_tangential_vel_derivs(
+#ifdef PELEC_USE_ACC
+                                           &gpuStream,
+#endif
+                                           cbox.loVect(), cbox.hiVect(),
                                            dbox.loVect(), dbox.hiVect(),
                                            BL_TO_FORTRAN_ANYD(Qfab),
                                            BL_TO_FORTRAN_ANYD(tander_ec[d]),
@@ -421,7 +441,11 @@ PeleC::getDynamicSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::Mu
       filtered_flux_T.resize(g3box,BL_SPACEDIM);
 
       test_filter.apply_filter(g2box, Sfab, filtered_S);
-      ctoprim(ARLIM_3D(g2box.loVect()), ARLIM_3D(g2box.hiVect()),
+      ctoprim(
+#ifdef PELEC_USE_ACC
+              &gpuStream,
+#endif
+              ARLIM_3D(g2box.loVect()), ARLIM_3D(g2box.hiVect()),
               filtered_S.dataPtr(), ARLIM_3D(filtered_S.loVect()), ARLIM_3D(filtered_S.hiVect()),
               filtered_Q.dataPtr(), ARLIM_3D(filtered_Q.loVect()), ARLIM_3D(filtered_Q.hiVect()),
               filtered_Qaux.dataPtr(), ARLIM_3D(filtered_Qaux.loVect()), ARLIM_3D(filtered_Qaux.hiVect()));
@@ -473,7 +497,11 @@ PeleC::getDynamicSmagorinskyLESTerm (amrex::Real time, amrex::Real dt, amrex::Mu
         Box ebox = amrex::surroundingNodes(cbox,d);
         coeff_ec[d].resize(ebox,nCompC);
         flux_ec[d].resize(ebox,NUM_STATE); flux_ec[d].setVal(0);
-        pc_move_transport_coeffs_to_ec(ARLIM_3D(cbox.loVect()), ARLIM_3D(cbox.hiVect()),
+        pc_move_transport_coeffs_to_ec(
+#ifdef PELEC_USE_ACC
+                                       &gpuStream,
+#endif
+                                       ARLIM_3D(cbox.loVect()), ARLIM_3D(cbox.hiVect()),
                                        ARLIM_3D(dbox.loVect()), ARLIM_3D(dbox.hiVect()),
                                        BL_TO_FORTRAN_ANYD(LES_Coeffs[mfi]),
                                        BL_TO_FORTRAN_ANYD(coeff_ec[d]),
