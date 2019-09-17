@@ -101,7 +101,7 @@ function(get_pelec_sources pelec_exe_name)
   set(PELEC_SOURCE_DIR "${CMAKE_SOURCE_DIR}/Source/Src_nd")
   add_sources(GlobalSourceList
      ${PELEC_SOURCE_DIR}/Derive_nd.F90
-     ${PELEC_SOURCE_DIR}/Diffusion_nd.f90
+     ${PELEC_SOURCE_DIR}/Diffusion_nd.F90
      ${PELEC_SOURCE_DIR}/Make.package
      ${PELEC_SOURCE_DIR}/PeleC_nd.F90
      ${PELEC_SOURCE_DIR}/PeleC_util.F90

@@ -16,6 +16,7 @@ f90EXE_sources += weno.f90
 #Preprocessed Fortran files
 F90EXE_sources += bc_fill_nd.F90
 F90EXE_sources += Derive_nd.F90
+F90EXE_sources += Diffusion_nd.F90
 F90EXE_sources += flatten_nd.F90
 F90EXE_sources += filcc_nd.F90
 F90EXE_sources += forcing_src_nd.F90
@@ -34,11 +35,9 @@ CEXE_sources += parmparse_fi.cpp
 ifeq ($(USE_ACC_FILES), TRUE)
   F90EXE_sources += advection_util_nd_acc.F90
   f90EXE_sources += riemann_util_acc.f90
-  f90EXE_sources += Diffusion_nd_acc.f90
 else
   F90EXE_sources += advection_util_nd.F90
   f90EXE_sources += riemann_util.f90
-  f90EXE_sources += Diffusion_nd.f90
 endif
 
 ifeq ($(USE_MASA), TRUE)
