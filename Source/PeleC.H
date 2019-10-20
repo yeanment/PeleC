@@ -132,6 +132,10 @@ public:
     //
     virtual void initData () override;
 
+#ifdef USE_ASCENT
+    virtual void writeAscentPlotFile (int step, int lastplot);
+#endif
+
 #ifdef AMREX_PARTICLES
     //
     // Read particle-related inputs

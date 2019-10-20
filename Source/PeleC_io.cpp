@@ -857,6 +857,9 @@ PeleC::writePlotFile (const std::string& dir,
 		      ostream&       os,
 		      VisMF::How     how)
 {
+#ifdef USE_ASCENT
+    writeAscentPlotFile( parent->levelSteps(0),parent->stepOfLastPlotFile());
+#endif
     int i, n;
     //
     // The list of indices of State to write to plotfile.
