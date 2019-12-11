@@ -1,0 +1,76 @@
+&fortin
+
+!   A complete list of physical input variables is:
+!   u0, v0, w0, p0, T0, molec_wt_0, bulk_visc_0, visc_0, diff_0, cond_0,,u_jet,press_jet,temp_jet,r_jet,x_jet,z_jet,XCO2_jet
+!
+!   Note that the specific heat ratio and molec_wt are tacked on at the end.
+!   Values underneath are from other file in case we ever want to switch to that for comparison
+!
+!  u0           = initial velocity magnitude in cm/s
+!  p0           = inlet pressure in cgs units of Bayre
+!                 1 Bayre = 1 g/(cm-s^2) = 0.1 Pa.  1 bar = 1.0d6 Bayre
+!  T0           = inlet temperature in degrees K
+!  u_jet        = jett velocity magnitude in cm/s
+!  press_jet    = jet pressure in cgs units of Bayre
+!  temp_jet     = jet temperature in degrees K
+!  XO2_jet     = Mole fractions of O2 of the jet
+!  XN2_jet     = Mole fractions of N2 of the jet
+
+   u0 = 0.0
+   v0 = 0.0
+   w0 = 0.0
+     
+   p0 = 1000000.0
+   T0 = 300.0
+   u_jet = 6957.1d0
+   press_jet = 1001000.0
+   temp_jet = 300.3
+   XO2_jet = 0.2095d0
+   XN2_jet = 0.7905d0
+   diff_direction = 1
+
+/
+
+&tagging
+
+  denerr = 1e20
+  dengrad = 1e20
+  max_denerr_lev = 3
+  max_dengrad_lev = 3
+
+  presserr = 1e20
+  pressgrad = 1e20
+  max_presserr_lev = 3
+  max_pressgrad_lev = 3
+
+  velerr = 1e20
+  velgrad = 1e20
+  max_velerr_lev = 3
+  max_velgrad_lev = 3
+
+  temperr  = 1e20
+  tempgrad = 1e20
+  max_velerr_lev = 5
+  max_velgrad_lev = 5
+
+!  vorterr = 100
+  vorterr = 1e20
+  max_vorterr_lev = 5
+
+  vfracerr = 1e20
+  max_vfracerr_lev = 5
+
+/
+
+&extern
+
+  numaux = 1
+  auxnamesin = "ZMIX"
+
+!  air at 400K
+  eos_gamma = 1.4
+  const_conductivity = 5.015e3
+  const_viscosity = 0.0003261
+
+/
+

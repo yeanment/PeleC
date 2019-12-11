@@ -1,0 +1,4 @@
+f90EXE_sources += probdata.f90
+CEXE_headers += Problem_Derives.H
+FEXE_headers += Problem_Derive_F.H
+BOXLIB_BASE=EXE
