@@ -864,10 +864,10 @@ contains
                 enddo
              enddo
 
-             sum_kappa = sum(nbr(-1:1,-1:1,-1:1) * vf(i-1:i+1,j-1:j+1,k-1:k+1) * W(i-1:i+1,j-1:j+1,k-1:k+1))
+             sum_kappa = sum(nbr(-1:1,-1:1,-1:1) * vf(i-1:i+1,j-1:j+1,k-1:k+1) * dble(floor(W(i-1:i+1,j-1:j+1,k-1:k+1))))
              sum_kappa_inv = 1.d0 / sum_kappa
              DC(i-1:i+1,j-1:j+1,k-1:k+1,n) = DC(i-1:i+1,j-1:j+1,k-1:k+1,n) &
-                  + dM(L) * nbr(-1:1,-1:1,-1:1) * W(i-1:i+1,j-1:j+1,k-1:k+1) * sum_kappa_inv
+                  + dM(L) * nbr(-1:1,-1:1,-1:1) * dble(floor(W(i-1:i+1,j-1:j+1,k-1:k+1))) * sum_kappa_inv
         
           !re redistribution book keeping
           as_crse_crse_cell = .false.
