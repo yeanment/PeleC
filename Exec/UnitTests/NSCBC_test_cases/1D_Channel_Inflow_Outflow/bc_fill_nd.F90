@@ -200,19 +200,20 @@ contains
     if (dir == 1) then
       if (sgn == 1) then
       
-        relax_U = 10.0d0
+        relax_U = 1.0d0
         relax_V = 5.0d0
-        relax_T = - relax_V
+        relax_T = -1.0d0
         beta = 0.6d0  
            
         which_bc_type = Inflow
            
-        u(1) = u_ref*2.0d0
+        u(1) = u_ref
         u(2) = 0.0d0
         u(3) = 0.0d0
         eos_state % massfrac(1) = 1.d0
         eos_state % p = p_ref
-        eos_state % T = T_ref
+        eos_state % T = T_ref + 2.0d0*  sin(2.0d0*M_PI*100.0d0*time)
+write(*,*) 'NEW INPUT TEMPERATURE NSCBC = ',eos_state % T
         call eos_tp(eos_state)
     
       end if
