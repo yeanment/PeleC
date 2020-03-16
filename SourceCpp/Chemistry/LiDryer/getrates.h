@@ -1,14 +1,14 @@
 #ifndef __BASELINE_CPU_GET_RATES__
 #define __BASELINE_CPU_GET_RATES__
 
-#ifndef __SINGE_MOLE_MASSES__
+/*#ifndef __SINGE_MOLE_MASSES__
 #define __SINGE_MOLE_MASSES__
 const double molecular_masses[9] = {2.01594, 31.9988, 18.01534, 1.00797, 
   15.9994, 17.00737, 33.00677, 34.01474, 28.0134}; 
 #endif
 
 
-/*#ifndef __SINGE_RECIP_MOLE_MASSES__
+#ifndef __SINGE_RECIP_MOLE_MASSES__
 #define __SINGE_RECIP_MOLE_MASSES__
 const double recip_molecular_masses[9] = {0.4960465093207139, 
   0.03125117191894696, 0.05550825019122593, 0.9920930186414277, 

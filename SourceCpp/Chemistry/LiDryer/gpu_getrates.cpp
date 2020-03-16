@@ -217,7 +217,7 @@ gpu_getrates(const double * temperature_array, const double * pressure_array,
   double mole_frac[9];
   // Compute mole fractions
   {
-    double sumyow = temperature * avmolwt * 8.314510e+04;
+    double sumyow = temperature * avmolwt * R0;
     sumyow = pressure/sumyow;
     mole_frac[0] = mass_frac[0] * recip_molecular_masses[0];
     mole_frac[0] = (mole_frac[0] > 1e-200) ? mole_frac[0] : 1e-200;

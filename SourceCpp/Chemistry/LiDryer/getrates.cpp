@@ -11,20 +11,20 @@
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
-/*#ifndef __SINGE_MOLE_MASSES__
+#ifndef __SINGE_MOLE_MASSES__
 #define __SINGE_MOLE_MASSES__
-const double molecular_masses[9] = {2.01594, 31.9988, 18.01534, 1.00797, 
+static AMREX_GPU_DEVICE_MANAGED double molecular_masses[9] = {2.01594, 31.9988, 18.01534, 1.00797, 
   15.9994, 17.00737, 33.00677, 34.01474, 28.0134}; 
-#endif*/
+#endif
 
 
-/*#ifndef __SINGE_RECIP_MOLE_MASSES__
-#define __SINGE_RECIP_MOLE_MASSES__*/
+#ifndef __SINGE_RECIP_MOLE_MASSES__
+#define __SINGE_RECIP_MOLE_MASSES__
 static AMREX_GPU_DEVICE_MANAGED double recip_molecular_masses[9] = {0.4960465093207139, 
   0.03125117191894696, 0.05550825019122593, 0.9920930186414277, 
   0.06250234383789392, 0.05879803873262004, 0.03029681486555637, 
   0.02939901936631002, 0.03569720205330306}; 
-//#endif*/
+#endif
 
 AMREX_GPU_HOST_DEVICE
 void getrates(const double pressure, const double temperature, const double 
@@ -189,8 +189,7 @@ void getrates(const double pressure, const double temperature, const double
   double mole_frac[9];
   // Compute mole fractions
   {
-    //double sumyow = temperature * avmolwt * 8.314510e+04;
-    double sumyow = temperature / avmolwt * R0;
+    double sumyow = temperature * avmolwt * R0;
     sumyow = pressure/sumyow;
     mole_frac[0] = mass_frac[0] * recip_molecular_masses[0];
     mole_frac[0] = (mole_frac[0] > 1e-200) ? mole_frac[0] : 1e-200;

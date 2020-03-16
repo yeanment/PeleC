@@ -215,6 +215,7 @@ mpr2wdot(
   CKPY(&dens, &T, mass, &P);
   amrex::Real wbar;
   get_wb(mass, wbar);
+  wbar = 1.0/wbar;
   //run_gpu_getrates(&T, &P, &wbar, mass, NX, wdot);
   run_getrates(T, P, wbar, mass, wdot);
   

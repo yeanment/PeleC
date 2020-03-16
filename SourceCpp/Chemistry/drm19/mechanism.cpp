@@ -3393,6 +3393,17 @@ void CKWXP(double *  P, double *  T, double *  x,  double *  wdot)
     }
 }
 
+AMREX_GPU_DEVICE void run_gpu_getrates(double *T, double *P, double *mw, double y[], int NXNYNZ, double wdot[])
+{
+    /*call singe kernel*/ 
+    gpu_getrates<<<1,1>>>(T, P, mw, y, 1, wdot); 
+}
+
+AMREX_GPU_HOST_DEVICE void run_getrates(double T, double P, double wbar, double y[], double wdot[])
+{
+    /*call singe kernel*/ 
+    getrates(P, T, wbar, y, wdot); 
+}
 
 /*Returns the molar production rate of species */
 /*Given rho, T, and mass fractions */
