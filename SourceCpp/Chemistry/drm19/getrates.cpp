@@ -32,7 +32,7 @@ static AMREX_GPU_DEVICE_MANAGED double recip_molecular_masses[21] = {0.496046509
   0.03569720205330306, 0.02503254230499649}; 
 #endif
 
-
+AMREX_GPU_HOST_DEVICE
 void getrates(const double pressure, const double temperature, const double 
   avmolwt, const double *mass_frac, double *wdot) 
 {

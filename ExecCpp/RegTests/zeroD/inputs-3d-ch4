@@ -1,5 +1,5 @@
 # ------------------  INPUTS TO MAIN PROGRAM  -------------------
-stop_time = 0.00015
+stop_time = 0.00012
 max_step = 30000000 
 
 # PROBLEM SIZE & GEOMETRY
@@ -61,11 +61,11 @@ pelec.plot_rhoy = 0
 pelec.plot_massfrac = 1
 
 # PROBLEM PARAMETERS
-prob.p_init    = 1013250.0
-prob.Y_init_CH4 = 0.06
-prob.Y_init_O2 = 0.5
-prob.Y_init_N2 = 0.44
-prob.T_init    = 1000.0
+prob.p_init    = 10132500 #Pa * 10.0, this is in CGS, 1 atm = 1013250.0
+prob.Y_init_Fuel = 0.055 #Non-dimensional
+prob.Y_init_O2 = 0.220 #Non-dimensional
+prob.Y_init_N2 = 0.725 #Non-dimensional
+prob.T_init    = 1600.0 #K
 
 # TAGGING
 tagging.max_ftracerr_lev = 4

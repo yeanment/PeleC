@@ -25,12 +25,9 @@ __constant__ double recip_molecular_masses[21] = {0.4960465093207139,
 
 
 __global__ void
-gpu_getrates(const double *temperature_array, const double *pressure_array, 
-  const double *avmolwt_array, const double *mass_frac_array, const int 
-  slice_stride/*NX*NY in number of doubles*/, const int row_stride/*NX in number 
-  of doubles*/, const int total_steps/*NZ in number of doubles*/, const int 
-  spec_stride/*NX*NY*NZ in number of doubles*/, const int step_stride/*always 
-  zero*/, double *wdot_array) 
+gpu_getrates(const double * temperature_array, const double * pressure_array, 
+  const double * avmolwt_array, const double *mass_frac_array, const int 
+  spec_stride/*NX*NY*NZ in number of doubles*/, double *wdot_array) 
 {
   
   const double PA = 1.013250e+06;

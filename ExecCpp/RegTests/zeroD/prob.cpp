@@ -2,9 +2,9 @@
 
 namespace ProbParm {
 AMREX_GPU_DEVICE_MANAGED amrex::Real p_init = 1013250.0; // 1 atm
-AMREX_GPU_DEVICE_MANAGED amrex::Real Y_init_H2 = 0.06;
-AMREX_GPU_DEVICE_MANAGED amrex::Real Y_init_O2 = 0.5;
-AMREX_GPU_DEVICE_MANAGED amrex::Real Y_init_N2 = 0.44;
+AMREX_GPU_DEVICE_MANAGED amrex::Real Y_init_Fuel = 0.055;
+AMREX_GPU_DEVICE_MANAGED amrex::Real Y_init_O2 = 0.22;
+AMREX_GPU_DEVICE_MANAGED amrex::Real Y_init_N2 = 0.725;
 AMREX_GPU_DEVICE_MANAGED amrex::Real T_init = 940.0;
 AMREX_GPU_DEVICE_MANAGED amrex::Real rho_init = 0.0;
 AMREX_GPU_DEVICE_MANAGED amrex::Real e_init = 0.0;
@@ -30,13 +30,14 @@ amrex_probinit(
   // Parse params
   amrex::ParmParse pp("prob");
   pp.query("p_init", ProbParm::p_init);
-  pp.query("Y_init_H2", ProbParm::Y_init_H2);
+  pp.query("Y_init_Fuel", ProbParm::Y_init_Fuel);
   pp.query("Y_init_O2", ProbParm::Y_init_O2);
   pp.query("Y_init_N2", ProbParm::Y_init_N2);
   pp.query("T_init", ProbParm::T_init);
 
   // Initial values
-  ProbParm::massfrac[H2_ID] = ProbParm::Y_init_H2;
+  //ProbParm::massfrac[H2_ID] = ProbParm::Y_init_Fuel;
+  ProbParm::massfrac[CH4_ID] = ProbParm::Y_init_Fuel;
   ProbParm::massfrac[O2_ID] = ProbParm::Y_init_O2;
   ProbParm::massfrac[N2_ID] = ProbParm::Y_init_N2;
   EOS::tp(

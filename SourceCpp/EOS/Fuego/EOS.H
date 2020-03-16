@@ -208,8 +208,6 @@ mpr2wdot(
   amrex::Real dens, amrex::Real T, amrex::Real mass[], amrex::Real wdot[], int NX)
 {
   //CKWYR(&dens, &T, mass, wdot);
-  amrex::Real mw[NUM_SPECIES];
-  get_mw(mw);
   
   amrex::Real P; 
   CKPY(&dens, &T, mass, &P);
@@ -219,6 +217,8 @@ mpr2wdot(
   //run_gpu_getrates(&T, &P, &wbar, mass, NX, wdot);
   run_getrates(T, P, wbar, mass, wdot);
   
+  amrex::Real mw[NUM_SPECIES];
+  get_mw(mw);
   for (int n = 0; n < NUM_SPECIES; n++)
     wdot[n] *= mw[n];
 }

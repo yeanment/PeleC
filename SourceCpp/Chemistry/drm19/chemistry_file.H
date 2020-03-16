@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <vector>
 #include <AMReX_Gpu.H>
+#include "gpu_getrates.h"
+#include "getrates.h"
 
 extern "C"
 {
