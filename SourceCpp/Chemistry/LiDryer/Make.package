@@ -1,4 +1,4 @@
-CEXE_headers += chemistry_file.H mechanism.h
-CEXE_sources += mechanism.cpp
+CEXE_headers += chemistry_file.H mechanism.h getrates.h gpu_getrates.h
+CEXE_sources += mechanism.cpp getrates.cpp gpu_getrates.cpp
 
 INCLUDE_LOCATIONS += $(CHEM_DIR)

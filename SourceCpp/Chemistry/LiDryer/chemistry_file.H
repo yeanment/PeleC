@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <vector>
 #include <AMReX_Gpu.H>
-
 extern "C"
 {
+AMREX_GPU_DEVICE void run_gpu_getrates(double * T, double * P, double * mw, double y[], int NXNYNZ, double wdot[]);
+AMREX_GPU_HOST_DEVICE void run_getrates(double T, double P, double mw, double y[], double wdot[]);
 AMREX_GPU_HOST_DEVICE void get_imw(double imw_new[]);
 AMREX_GPU_HOST_DEVICE void get_mw(double mw_new[]);
 void egtransetEPS(double *  EPS);

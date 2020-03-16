@@ -13,9 +13,10 @@
 #include "IndexDefines.H"
 #include "Constants.H"
 
+
 extern "C" {
 AMREX_GPU_HOST_DEVICE void get_imw(amrex::Real imw[]);
-AMREX_GPU_HOST_DEVICE void get_mn(amrex::Real mw[]);
+AMREX_GPU_HOST_DEVICE void get_mw(amrex::Real mw[]);
 AMREX_GPU_HOST_DEVICE void
 CKPY(amrex::Real* rho, amrex::Real* T, amrex::Real* y, amrex::Real* P);
 AMREX_GPU_HOST_DEVICE void CKCVMS(amrex::Real* T, amrex::Real* cvms);
@@ -34,6 +35,8 @@ AMREX_GPU_HOST_DEVICE void
 CKXTY(amrex::Real molefrac[], amrex::Real massfrac[]);
 AMREX_GPU_HOST_DEVICE void CKRHOY(
   amrex::Real* pres, amrex::Real* T, amrex::Real massfrac[], amrex::Real* rho);
+AMREX_GPU_DEVICE void run_gpu_getrates(amrex::Real* T, amrex::Real* P, amrex::Real* mw, amrex::Real massfrac[], int NXNYNZ, amrex::Real wdot[]);
+AMREX_GPU_HOST_DEVICE void run_getrates(amrex::Real T, amrex::Real P, amrex::Real mw, amrex::Real massfrac[], amrex::Real wdot[]);
 }
 
 namespace EOS {
@@ -51,7 +54,7 @@ void bottom()
     for(int i = 0; i < NUM_SPECIES; ++i){
          cv+=massfrac[i]*cvi[i];
          cp+=massfrac[i]*cpi[i];
-         h +=massfrac[i]* hi[i];
+         hi +=massfrac[i]* hi[i];
     }
     amrex::Real Cvx = wbar*cv;
     gam1 = (Cvx + RU)/Cvx;
@@ -85,7 +88,7 @@ get_wb(amrex::Real mass[], amrex::Real& wbar)
   amrex::Real summ = 0.0;
   for (int i = 0; i < NUM_SPECIES; ++i)
     summ += mass[i] * imw[i];
-  wbar = 1.0 / summ;
+  wbar = 1.0 / summ ;
 }
 
 AMREX_GPU_HOST_DEVICE
@@ -198,15 +201,23 @@ TrhoY2p(amrex::Real dens, amrex::Real T, amrex::Real mass[], amrex::Real& pres)
   CKPY(&dens, &T, mass, &pres);
 }
 
-AMREX_GPU_HOST_DEVICE
+AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
 void
 mpr2wdot(
-  amrex::Real dens, amrex::Real T, amrex::Real mass[], amrex::Real wdot[])
+  amrex::Real dens, amrex::Real T, amrex::Real mass[], amrex::Real wdot[], int NX)
 {
-  CKWYR(&dens, &T, mass, wdot);
+  //CKWYR(&dens, &T, mass, wdot);
   amrex::Real mw[NUM_SPECIES];
   get_mw(mw);
+  
+  amrex::Real P; 
+  CKPY(&dens, &T, mass, &P);
+  amrex::Real wbar;
+  get_wb(mass, wbar);
+  //run_gpu_getrates(&T, &P, &wbar, mass, NX, wdot);
+  run_getrates(T, P, wbar, mass, wdot);
+  
   for (int n = 0; n < NUM_SPECIES; n++)
     wdot[n] *= mw[n];
 }

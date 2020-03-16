@@ -125,7 +125,7 @@ PeleC::react_state_explicit(
             bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
               pc_expl_reactions(
                 i, j, k, uold, unew, a, I_R, dt, nsubsteps_min, nsubsteps_max,
-                nsubsteps_guess, errtol, do_update);
+                nsubsteps_guess, errtol, do_update, bx.numPts());
             });
         }
 

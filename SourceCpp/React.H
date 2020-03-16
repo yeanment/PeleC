@@ -81,7 +81,8 @@ pc_expl_reactions(
   const int nsteps_max,
   const int nsteps_guess,
   const amrex::Real errtol,
-  const int do_update)
+  const int do_update,
+  int PTS)
 {
 #ifdef AMREX_USE_GPU
   // having a global __constant__ variable is slower than having this in local
@@ -169,7 +170,7 @@ pc_expl_reactions(
       for (int n = 0; n < NUM_SPECIES; ++n)
         massfrac[n] = urk[UFS + n] * rhoInv;
       EOS::mpr2wdot(
-        urk[URHO], urk[UTEMP], massfrac, wdot); // this is wdot*molecularweights
+        urk[URHO], urk[UTEMP], massfrac, wdot, PTS); // this is wdot*molecularweights
       for (int n = 0; n < NUM_SPECIES; ++n)
         wdot[n] += rhoydot_ext[n];
       EOS::get_ei(urk[UTEMP], ei);

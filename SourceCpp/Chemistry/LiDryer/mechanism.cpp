@@ -1,4 +1,10 @@
 #include "chemistry_file.H"
+#include "cuda.h"
+#include "cuda_runtime.h"
+#include "gpu_getrates.h"
+#include "getrates.h"
+#include <stdio.h>
+#include <assert.h>
 
 #ifndef AMREX_USE_CUDA
 namespace thermo
@@ -768,11 +774,9 @@ void CKPY(double *  rho, double *  T, double *  y,  double *  P)
     YOW += y[6]*imw[6]; /*HO2 */
     YOW += y[7]*imw[7]; /*H2O2 */
     YOW += y[8]*imw[8]; /*N2 */
-    *P = *rho * 8.31451e+07 * (*T) * YOW; /*P = rho*R*T/W */
-
+    *P = *rho * 8.31451e+07 * (*T) * YOW ; /*P = rho*R*T/W */
     return;
 }
-
 
 #ifndef AMREX_USE_CUDA
 /*Compute P = rhoRT/W(y) */
@@ -1969,6 +1973,17 @@ void CKWXP(double *  P, double *  T, double *  x,  double *  wdot)
     }
 }
 
+AMREX_GPU_DEVICE void run_gpu_getrates(double *T, double *P, double *mw, double y[], int NXNYNZ, double wdot[])
+{
+    /*call singe kernel*/ 
+    gpu_getrates<<<1,1>>>(T, P, mw, y, 1, wdot); 
+}
+
+AMREX_GPU_HOST_DEVICE void run_getrates(double T, double P, double wbar, double y[], double wdot[])
+{
+    /*call singe kernel*/ 
+    getrates(P, T, wbar, y, wdot); 
+}
 
 /*Returns the molar production rate of species */
 /*Given rho, T, and mass fractions */
@@ -1987,7 +2002,7 @@ void CKWYR(double *  rho, double *  T, double *  y,  double *  wdot)
     c[6] = 1e6 * (*rho) * y[6]*imw[6]; 
     c[7] = 1e6 * (*rho) * y[7]*imw[7]; 
     c[8] = 1e6 * (*rho) * y[8]*imw[8]; 
-
+    
     /*call productionRate */
     productionRate(wdot, c, *T);
 
@@ -3080,7 +3095,6 @@ inline void  productionRate(double * wdot, double * sc, double T)
     wdot[5] -= qdot;
     wdot[6] += qdot;
     wdot[7] -= qdot;
-
     return;
 }
 
