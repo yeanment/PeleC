@@ -6,10 +6,9 @@ max_step = 1
 # PROBLEM SIZE & GEOMETRY
 geometry.is_periodic = 1 0
 geometry.coord_sys   = 0  # 0 => cart, 1 => RZ  2=>spherical
-geometry.prob_hi     =   .09375        3.0
-geometry.prob_lo     =   0.0        0.7
-geometry.prob_hi     =   .009375        1.0
-amr.n_cell           =   16	    512
+geometry.prob_lo     =   0.0        0
+geometry.prob_hi     =   0.0032        0.0512
+amr.n_cell           =   16	    256
 
 #pelec.Riemann    = 0     # 0: HLL,  1: JBB,  2: HLLC
 # >>>>>>>>>>>>>  BC KEYWORDS <<<<<<<<<<<<<<<<<<<<<<

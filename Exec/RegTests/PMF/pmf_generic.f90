@@ -13,13 +13,15 @@ contains
     character (len=1) :: ctmp
     integer index, found, ist, reason, i, j, lsize, pos1, pos2, n
 
-    integer, parameter :: maxlinelen = 256
+    integer, parameter :: maxlinelen = 2048
     character(len=maxlinelen) :: line
     character(len=maxlinelen) :: tline, name
 
     integer :: idbg
 
     !     Read 2 header lines, first looks like VARIABLES = NAME1 NAME2 NAME3..., we dont care about second
+    print *, 'Reading PMF'
+    
     open(unit=32,file=pmf_filename,status='old')
 
     reason = 0
