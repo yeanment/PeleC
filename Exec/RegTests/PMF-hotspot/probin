@@ -1,0 +1,38 @@
+&fortin
+
+ iname = 'hit_ic_4_32.dat'
+ urms0 = 60
+ inres = 32
+ velocity_profile = 'hit'
+  pamb = 1013250.d0
+  tamb = 400.0
+  thot = 2400.0
+  dhot = 2
+  ltrans = 1
+  phi_in = 1.0d0
+  strain = 2000d0
+  fuelname = 'CH4'
+ 
+/
+
+&tagging
+
+  !denerr = 1.d20
+  !dengrad = 0.01
+  !max_denerr_lev = 5
+  !max_dengrad_lev = 5
+
+  !presserr = 1.d20
+  !pressgrad = 1.d20
+  !max_presserr_lev = 5
+  !max_pressgrad_lev = 5
+  
+  max_tempgrad_lev = 4
+  tempgrad = 50.0d+0
+
+/
+
+&extern
+  react_T_min = 90
+/
+
