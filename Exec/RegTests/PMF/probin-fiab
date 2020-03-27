@@ -1,5 +1,5 @@
 &fortin
-  pamb = 101325000.d0  
+  pamb = 1013250.d0  
   phi_in = -0.5d0
   pertmag = 0.00d0
   pmf_datafile = "skeletal_flame_phi1.00_p101325_tu0300.dat"
