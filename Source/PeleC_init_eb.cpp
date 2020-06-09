@@ -670,7 +670,18 @@ initialize_EB2 (const Geometry& geom, const int required_level, const int max_le
       //auto gshop = EB2::makeShop(pf);
       //EB2::Build(gshop, geom, max_level, max_level);
 
-
+  }
+  else if (geom_type == "PinPin")
+  {
+    Real radius = 0.5; 
+    RealArray centerlo, centerhi;
+    centerlo[0] = centerlo[2] = centerhi[0] = centerhi[2] = 2.0;
+    centerlo[1] = 0.0;
+    centerhi[1] = 4.0;
+    auto twoPins = EB2::makeUnion(EB2::SphereIF(radius, centerlo, false),
+                                  EB2::SphereIF(radius, centerhi, false));
+    auto gshop = EB2::makeShop(twoPins);
+    EB2::Build(gshop, geom, max_coarsening_level, max_coarsening_level);
   } else {
       EB2::Build(geom, max_level, max_level);
       // Need to somehow set no_eb_in_domain for this level?
