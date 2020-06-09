@@ -25,6 +25,7 @@ CEXE_sources += Filter.cpp
 CEXE_sources += External.cpp
 CEXE_sources += Forcing.cpp
 CEXE_sources += LES.cpp
+CEXE_sources += SolveEfield.cpp
 
 #C++ headers
 CEXE_headers += PeleC.H

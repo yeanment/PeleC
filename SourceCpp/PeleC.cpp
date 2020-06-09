@@ -84,6 +84,7 @@ int PeleC::pstateDia = -1;
 int PeleC::pstateRho = -1;
 int PeleC::pstateY = -1;
 int PeleC::pstateNum = 0;
+int PeleC::PhiV = -1;
 
 #include "pelec_defaults.H"
 

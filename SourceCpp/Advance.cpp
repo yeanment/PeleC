@@ -87,6 +87,9 @@ PeleC::do_mol_advance(
   set_body_state(U_new);
 #endif
 
+  // Compute PhiV
+  solveEF( time, dt );
+
   // Compute S^{n} = MOLRhs(U^{n})
   if (verbose) {
     amrex::Print() << "... Computing MOL source term at t^{n} " << std::endl;
