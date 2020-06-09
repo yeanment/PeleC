@@ -2051,6 +2051,7 @@ pc_artif_visc(
     }
   }
   flx(i, j, k, UTEMP) = 0.0;
+  flx(i, j, k, UPHIV) = 0.0;
 }
 
 // Host Functions
