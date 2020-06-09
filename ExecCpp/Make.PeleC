@@ -98,7 +98,7 @@ Blocs             += $(TRANSPORT_HOME)
 
 Bdirs := SourceCpp SourceCpp/Params/param_includes
 
-Pdirs := Base Amr Boundary AmrCore
+Pdirs := Base Amr Boundary AmrCore LinearSolvers/MLMG
 ifeq ($(USE_EB), TRUE)
   Pdirs += EB
 endif
