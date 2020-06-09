@@ -36,7 +36,7 @@ PeleC::solveEF ( Real time,
        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
        {   
            if (i == 32 && k == 32) {
-               chrg_ar(i,j,k) = 1.0e4;
+               chrg_ar(i,j,k) = 0.0e0;
            } else {
                chrg_ar(i,j,k) = 0.0;
            }   
@@ -60,11 +60,22 @@ PeleC::solveEF ( Real time,
    MLABecLap poissonOP({geom}, {grids}, {dmap}, info);
 #endif
 
+   poissonOP.setMaxOrder(2);
+
 // Boundary conditions for the linear operator.
    std::array<LinOpBCType,AMREX_SPACEDIM> bc_lo;
    std::array<LinOpBCType,AMREX_SPACEDIM> bc_hi;
    setBCPhiV(bc_lo,bc_hi);
    poissonOP.setDomainBC(bc_lo,bc_hi);   
+
+// Get the coarse level data
+   std::unique_ptr<MultiFab> phiV_crse;
+   if (level > 0) {
+      auto& crselev = getLevel(level-1);
+      phiV_crse.reset(new MultiFab(crselev.boxArray(), crselev.DistributionMap(), 1, 1));
+      MultiFab::Copy(*phiV_crse,crselev.get_old_data(State_Type),PhiV,0,1,0);
+      poissonOP.setCoarseFineBC(phiV_crse.get(), crse_ratio[0]);
+   }
 
 // Assume all physical BC homogeneous Neumann for now
    poissonOP.setLevelBC(0, nullptr);
@@ -88,7 +99,7 @@ PeleC::solveEF ( Real time,
 	// TODO : for now set upper y-dir half to 10 and lower y-dir to 0
 	//        will have to find a better way to specify EB dirich values 
    MultiFab beta(grids, dmap, 1, 0, MFInfo(), Factory());
-   beta.setVal(0.1);
+   beta.setVal(10.0);
    MultiFab phiV_BC(grids, dmap, 1, 0, MFInfo(), Factory());
 #ifdef _OPENMP
 #pragma omp parallel
@@ -101,7 +112,7 @@ PeleC::solveEF ( Real time,
        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
        {   
            if (j >= 32) {
-               phiV_ar(i,j,k) = 10.0;
+               phiV_ar(i,j,k) = 1.0;
            } else {
                phiV_ar(i,j,k) = 0.0;
            }   
@@ -109,6 +120,7 @@ PeleC::solveEF ( Real time,
    }
 
    poissonOP.setEBDirichlet(0,phiV_BC,beta);
+   VisMF::Write(phiV_BC,"EBDirichPhiV");
     
 /////////////////////////////////////   
 // Setup a linear operator
@@ -117,12 +129,12 @@ PeleC::solveEF ( Real time,
 
    // relative and absolute tolerances for linear solve
    const Real tol_rel = 1.e-10;
-   const Real tol_abs = 0.0;
+   const Real tol_abs = 1.e-10;
 
    mlmg.setVerbose(2);
        
    // Solve linear system
-   phiV_mf.setVal(0.0); // initial guess for phi
+//   phiV_mf.setVal(0.0); // initial guess for phi
    mlmg.solve({&phiV_mf}, {&chargeDistib}, tol_rel, tol_abs);
 
 }
