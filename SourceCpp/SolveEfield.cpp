@@ -25,23 +25,32 @@ PeleC::solveEF ( Real time,
 
 // Setup a dummy charge distribution MF
    MultiFab chargeDistib(grids,dmap,1,0,MFInfo(),Factory());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
    for (MFIter mfi(chargeDistib,true); mfi.isValid(); ++mfi)
    {   
-       const Box& bx = mfi.growntilebox();
-       const Array4<Real>& chrg_ar = chargeDistib.array(mfi);
+       const Box& bx = mfi.tilebox();
+       const auto& chrg_ar = chargeDistib.array(mfi);
+       const Real* dx      = geom.CellSize();
+       const Real* problo  = geom.ProbLo();
        amrex::ParallelFor(bx,
        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
        {   
-           if (i == 32 && k == 32) {
-               chrg_ar(i,j,k) = 0.0e0;
+           Real x_rel = problo[0] + (i + 0.5)*dx[0] - 2.0; 
+           Real y_rel = problo[1] + (j + 0.5)*dx[1] - 2.0; 
+           Real z_rel = problo[2] + (k + 0.5)*dx[2] - 2.0; 
+           Real r = std::sqrt(x_rel*x_rel+2.0*y_rel*y_rel+z_rel*z_rel);
+           if (r < 0.5) {
+               chrg_ar(i,j,k) = 1.0e4*(0.5 - r)/0.5;
            } else {
                chrg_ar(i,j,k) = 0.0;
            }   
        }); 
    }
+// If need be, visualize the charge distribution.    
+//   VisMF::Write(chargeDistib,"chargeDistibPhiV_"+std::to_string(level));
 
 /////////////////////////////////////   
 // Setup a linear operator
@@ -52,7 +61,7 @@ PeleC::solveEF ( Real time,
    info.setConsolidation(1);
    info.setMetricTerm(false);
 
-// Linear operator (EB aware if need be)   
+// Linear operator (EB aware if need be)
 #ifdef AMREX_USE_EB
    const auto& ebf = &dynamic_cast<EBFArrayBoxFactory const&>((parent->getLevel(level)).Factory());
    MLEBABecLap poissonOP({geom}, {grids}, {dmap}, info, {ebf});
@@ -68,12 +77,13 @@ PeleC::solveEF ( Real time,
    setBCPhiV(bc_lo,bc_hi);
    poissonOP.setDomainBC(bc_lo,bc_hi);   
 
-// Get the coarse level data
+// Get the coarse level data for AMR cases.
    std::unique_ptr<MultiFab> phiV_crse;
    if (level > 0) {
       auto& crselev = getLevel(level-1);
-      phiV_crse.reset(new MultiFab(crselev.boxArray(), crselev.DistributionMap(), 1, 1));
-      MultiFab::Copy(*phiV_crse,crselev.get_old_data(State_Type),PhiV,0,1,0);
+      phiV_crse.reset(new MultiFab(crselev.boxArray(), crselev.DistributionMap(), 1, 0));
+      MultiFab& Coarse_State = (time == prev_time) ? crselev.get_old_data(State_Type) : crselev.get_new_data(State_Type);   
+      MultiFab::Copy(*phiV_crse, Coarse_State,PhiV,0,1,0);
       poissonOP.setCoarseFineBC(phiV_crse.get(), crse_ratio[0]);
    }
 
@@ -96,10 +106,10 @@ PeleC::solveEF ( Real time,
    poissonOP.setScalars(ascal, bscal);
 
    // set Dirichlet BC for EB
-	// TODO : for now set upper y-dir half to 10 and lower y-dir to 0
+	// TODO : for now set upper y-dir half to X and lower y-dir to 0
 	//        will have to find a better way to specify EB dirich values 
    MultiFab beta(grids, dmap, 1, 0, MFInfo(), Factory());
-   beta.setVal(10.0);
+   beta.setVal(1.0);
    MultiFab phiV_BC(grids, dmap, 1, 0, MFInfo(), Factory());
 #ifdef _OPENMP
 #pragma omp parallel
@@ -107,12 +117,15 @@ PeleC::solveEF ( Real time,
    for (MFIter mfi(beta,true); mfi.isValid(); ++mfi)
    {   
        const Box& bx = mfi.growntilebox();
-       const Array4<Real>& phiV_ar = phiV_BC.array(mfi);
+       const auto& phiV_ar = phiV_BC.array(mfi);
+       const Real* dx      = geom.CellSize();
+       const Real* problo  = geom.ProbLo();
        amrex::ParallelFor(bx,
        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
        {   
-           if (j >= 32) {
-               phiV_ar(i,j,k) = 1.0;
+           Real y = problo[1] + (j + 0.5)*dx[1]; 
+           if (y >= 2.0) {
+               phiV_ar(i,j,k) = 500.0;
            } else {
                phiV_ar(i,j,k) = 0.0;
            }   
@@ -120,10 +133,12 @@ PeleC::solveEF ( Real time,
    }
 
    poissonOP.setEBDirichlet(0,phiV_BC,beta);
-   VisMF::Write(phiV_BC,"EBDirichPhiV");
+
+// If need be, visualize the charge distribution.    
+//   VisMF::Write(phiV_BC,"EBDirichPhiV_"+std::to_string(level));
     
 /////////////////////////////////////   
-// Setup a linear operator
+// Setup a MG solver
 /////////////////////////////////////   
    MLMG mlmg(poissonOP);
 
@@ -134,7 +149,7 @@ PeleC::solveEF ( Real time,
    mlmg.setVerbose(2);
        
    // Solve linear system
-//   phiV_mf.setVal(0.0); // initial guess for phi
+   phiV_mf.setVal(0.0); // initial guess for phi
    mlmg.solve({&phiV_mf}, {&chargeDistib}, tol_rel, tol_abs);
 
 }

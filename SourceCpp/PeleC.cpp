@@ -705,6 +705,9 @@ PeleC::initData()
 
   enforce_consistent_e(S_new);
 
+  // Compute PhiV
+  solveEF( cur_time, 0.0 );
+
   // computeTemp(S_new,0);
 
 #ifdef AMREX_USE_EB
