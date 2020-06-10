@@ -146,7 +146,7 @@ PeleC::solveEF ( Real time,
    const Real tol_rel = 1.e-10;
    const Real tol_abs = 1.e-10;
 
-   mlmg.setVerbose(2);
+   mlmg.setVerbose(1);
        
    // Solve linear system
    phiV_mf.setVal(0.0); // initial guess for phi
