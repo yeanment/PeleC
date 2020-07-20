@@ -29,6 +29,9 @@ static int norm_vel_bc[] = {INT_DIR,     EXT_DIR,     FOEXTRAP, REFLECT_ODD,
 static int tang_vel_bc[] = {INT_DIR,      EXT_DIR,     FOEXTRAP, REFLECT_EVEN,
                             REFLECT_EVEN, REFLECT_ODD, EXT_DIR};
 
+static int phiV_bc[] = {INT_DIR,      EXT_DIR,      FOEXTRAP, REFLECT_EVEN,
+                        REFLECT_EVEN, REFLECT_EVEN, EXT_DIR};
+
 static int react_src_bc[] = {INT_DIR,      REFLECT_EVEN, REFLECT_EVEN,
                              REFLECT_EVEN, REFLECT_EVEN, REFLECT_EVEN,
                              REFLECT_EVEN};
@@ -41,6 +44,17 @@ set_scalar_bc(amrex::BCRec& bc, const amrex::BCRec& phys_bc)
   for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
     bc.setLo(dir, scalar_bc[lo_bc[dir]]);
     bc.setHi(dir, scalar_bc[hi_bc[dir]]);
+  }
+}
+
+static void
+set_phiV_bc(amrex::BCRec& bc, const amrex::BCRec& phys_bc)
+{
+  const int* lo_bc = phys_bc.lo();
+  const int* hi_bc = phys_bc.hi();
+  for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+    bc.setLo(dir, phiV_bc[lo_bc[dir]]);
+    bc.setHi(dir, phiV_bc[hi_bc[dir]]);
   }
 }
 
@@ -166,6 +180,8 @@ PeleC::variableSetUp()
   Eden = cnt++;
   Eint = cnt++;
   Temp = cnt++;
+
+  PhiV = cnt++;
 
 #ifdef NUM_ADV
   NumAdv = NUM_ADV;
@@ -308,6 +324,10 @@ PeleC::variableSetUp()
   set_scalar_bc(bc, phys_bc);
   bcs[cnt] = bc;
   name[cnt] = "Temp";
+  cnt++;
+  set_phiV_bc(bc, phys_bc);
+  bcs[cnt] = bc;
+  name[cnt] = "PhiV";
 
   for (int i = 0; i < NumAdv; ++i) {
     char buf[64];

@@ -67,6 +67,7 @@ int PeleC::Density = -1;
 int PeleC::Eden = -1;
 int PeleC::Eint = -1;
 int PeleC::Temp = -1;
+int PeleC::PhiV = -1;
 int PeleC::Xmom = -1;
 int PeleC::Ymom = -1;
 int PeleC::Zmom = -1;
@@ -693,6 +694,9 @@ PeleC::initData()
   }
 
   enforce_consistent_e(S_new);
+
+  // Compute PhiV
+  solveEF( cur_time, 0.0 );
 
   // computeTemp(S_new,0);
 

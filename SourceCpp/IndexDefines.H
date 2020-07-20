@@ -12,7 +12,8 @@
 #define UEDEN 4
 #define UEINT 5
 #define UTEMP 6
-#define UFA 7
+#define UPHIV 7
+#define UFA 8
 
 #define QRHO 0
 #define QU 1
@@ -22,7 +23,8 @@
 #define QPRES 5
 #define QREINT 6
 #define QTEMP 7
-#define QFA 8
+#define QPHIV 8
+#define QFA 9
 
 #define QGAMC 0
 #define QC 1
@@ -62,11 +64,11 @@
 
 #define UFS UFA + NUM_ADV
 #define UFX UFS + NUM_SPECIES
-#define NVAR NTHERM + NUM_ADV + NUM_SPECIES + NUM_AUX
+#define NVAR NTHERM + 1 + NUM_ADV + NUM_SPECIES + NUM_AUX
 
 #define QFS QFA + NUM_ADV
 #define QFX QFS + NUM_SPECIES
-#define QVAR QTHERM + NUM_ADV + NUM_SPECIES + NUM_AUX
+#define QVAR QTHERM + 1 + NUM_ADV + NUM_SPECIES + NUM_AUX
 #define NQ QVAR
 #define NQAUX 6
 #define NGDNV 6

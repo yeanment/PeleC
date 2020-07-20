@@ -168,6 +168,7 @@ pc_compute_hyp_mol_flux(
         }
 
         flux_tmp[UTEMP] = 0.0;
+        flux_tmp[UPHIV] = 0.0;
         for (int n = UFX; n < UFX + NUM_AUX; n++) {
           flux_tmp[n] = (NUM_AUX > 0) ? 0.0 : flux_tmp[n];
         }

@@ -6,6 +6,7 @@
 #include <AMReX_BC_TYPES.H>
 #include <AMReX_AmrLevel.H>
 #include <AMReX_iMultiFab.H>
+#include <AMReX_MLMG.H>
 
 #ifdef PELEC_USE_EB
 #include <AMReX_EBFArrayBox.H>
@@ -306,6 +307,12 @@ public:
   void finalize_sdc_advance(
     amrex::Real time, amrex::Real dt, int amr_iteration, int amr_ncycle);
 
+  void solveEF (amrex::Real time,
+                amrex::Real dt );
+
+  void setBCPhiV ( std::array<amrex::LinOpBCType,AMREX_SPACEDIM> &linOp_lobc,
+                   std::array<amrex::LinOpBCType,AMREX_SPACEDIM> &linOp_hibc); 
+
   amrex::Real do_sdc_iteration(
     amrex::Real time,
     amrex::Real dt,
@@ -558,6 +565,7 @@ public:
 
   // static int NVAR;
   static int Density, Xmom, Ymom, Zmom, Eden, Eint, Temp;
+  static int PhiV;
 
   static int FirstAdv, NumAdv;
   static int FirstSpec;
