@@ -16,6 +16,8 @@ AMREX_GPU_DEVICE_MANAGED amrex::Real vx_in = 9000.0;
 AMREX_GPU_DEVICE_MANAGED amrex::Real vy_in = 0.0;
 AMREX_GPU_DEVICE_MANAGED amrex::Real Re_L = 2500.0;
 AMREX_GPU_DEVICE_MANAGED amrex::Real Pr = 0.7;
+AMREX_GPU_DEVICE_MANAGED amrex::Real PhiV_top = 0.0;
+AMREX_GPU_DEVICE_MANAGED amrex::Real PhiV_bottom = 0.0;
 AMREX_GPU_DEVICE_MANAGED amrex::GpuArray<amrex::Real, NUM_SPECIES> massfrac = {
   1.0};
 } // namespace ProbParm
@@ -42,6 +44,8 @@ amrex_probinit(
   pp.query("vy_in", ProbParm::vy_in);
   pp.query("Re_L", ProbParm::Re_L);
   pp.query("Pr", ProbParm::Pr);
+  pp.query("phiV_top", ProbParm::PhiV_top);
+  pp.query("phiV_bottom", ProbParm::PhiV_bottom);
 
   amrex::Real L = (probhi[0] - problo[0]) * 0.2;
 

@@ -69,6 +69,16 @@ bcnormal(
   s_ext[UTEMP] = ProbParm::T;
   for (int n = 0; n < NUM_SPECIES; n++)
     s_ext[UFS + n] = ProbParm::rho * ProbParm::massfrac[n];
+
+  // Handle phiV bc in y-direction
+  const amrex::Real* prob_lo = geomdata.ProbLo();
+  const amrex::Real* prob_hi = geomdata.ProbHi();
+  amrex::Real halfy = (prob_hi[1] + prob_lo[1]) * 0.5;
+  if (x[1] >= halfy) {
+      s_ext[UPHIV] = ProbParm::PhiV_top;
+  } else if (x[1] < halfy) {
+      s_ext[UPHIV] = ProbParm::PhiV_bottom;
+  }
 }
 
 void pc_prob_close();
