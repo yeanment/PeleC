@@ -26,11 +26,12 @@ static AMREX_GPU_DEVICE_MANAGED double recip_molecular_masses[9] = {0.4960465093
   0.02939901936631002, 0.03569720205330306}; 
 #endif
 
-AMREX_GPU_HOST_DEVICE
+AMREX_GPU_GLOBAL
+//AMREX_GPU_HOST_DEVICE
 void getrates(const double pressure, const double temperature, const double 
-  avmolwt, const double *mass_frac, double *wdot) 
+  avmolwt, double *mass_frac, double *wdot) 
 {
-  
+
   const double PA = 1.013250e+06; //dynes/cm2
   const double R0 = 8.314510e+07; //ergs/mol-K
   const double R0c = 1.9872155832; //cal/mol-K
@@ -41,7 +42,12 @@ void getrates(const double pressure, const double temperature, const double
   const double vlntemp = log(temperature);
   const double prt     = PA / (R0 * temperature);
   const double oprt    = 1.0 / prt;
- 
+  
+  //printf("After\n");
+  //for (int i=0; i<9; i++) {
+  //  printf("%.3lf\n", mass_frac[i]);
+  // }
+
   double cgspl[9];
   // Gibbs computation
   {

@@ -9,6 +9,8 @@
 
 #include "mechanism.h"
 #include "chemistry_file.H"
+#include "gpu_getrates.h"
+#include "getrates.h"
 
 #include "IndexDefines.H"
 #include "Constants.H"
@@ -17,26 +19,17 @@
 extern "C" {
 AMREX_GPU_HOST_DEVICE void get_imw(amrex::Real imw[]);
 AMREX_GPU_HOST_DEVICE void get_mw(amrex::Real mw[]);
-AMREX_GPU_HOST_DEVICE void
-CKPY(amrex::Real* rho, amrex::Real* T, amrex::Real* y, amrex::Real* P);
+AMREX_GPU_HOST_DEVICE void CKPY(amrex::Real* rho, amrex::Real* T, amrex::Real* y, amrex::Real* P);
 AMREX_GPU_HOST_DEVICE void CKCVMS(amrex::Real* T, amrex::Real* cvms);
-AMREX_GPU_HOST_DEVICE void
-CKCVBS(amrex::Real* T, amrex::Real* massfrac, amrex::Real* cv);
+AMREX_GPU_HOST_DEVICE void CKCVBS(amrex::Real* T, amrex::Real* massfrac, amrex::Real* cv);
 AMREX_GPU_HOST_DEVICE void CKCPMS(amrex::Real* T, amrex::Real* cvms);
 AMREX_GPU_HOST_DEVICE void CKUMS(amrex::Real* T, amrex::Real* ums);
 AMREX_GPU_HOST_DEVICE void CKHMS(amrex::Real* T, amrex::Real* ums);
-AMREX_GPU_HOST_DEVICE void
-CKWYR(amrex::Real* rho, amrex::Real* T, amrex::Real* y, amrex::Real* wdot);
-AMREX_GPU_HOST_DEVICE void
-GET_T_GIVEN_EY(amrex::Real* e, amrex::Real* y, amrex::Real* t, int* ierr);
-AMREX_GPU_HOST_DEVICE void
-CKYTX(amrex::Real massfrac[], amrex::Real molefrac[]);
-AMREX_GPU_HOST_DEVICE void
-CKXTY(amrex::Real molefrac[], amrex::Real massfrac[]);
-AMREX_GPU_HOST_DEVICE void CKRHOY(
-  amrex::Real* pres, amrex::Real* T, amrex::Real massfrac[], amrex::Real* rho);
-AMREX_GPU_DEVICE void run_gpu_getrates(amrex::Real* T, amrex::Real* P, amrex::Real* mw, amrex::Real massfrac[], int NXNYNZ, amrex::Real wdot[]);
-AMREX_GPU_HOST_DEVICE void run_getrates(amrex::Real T, amrex::Real P, amrex::Real mw, amrex::Real massfrac[], amrex::Real wdot[]);
+AMREX_GPU_HOST_DEVICE void CKWYR(amrex::Real* rho, amrex::Real* T, amrex::Real* y, amrex::Real* wdot);
+AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(amrex::Real* e, amrex::Real* y, amrex::Real* t, int* ierr);
+AMREX_GPU_HOST_DEVICE void CKYTX(amrex::Real massfrac[], amrex::Real molefrac[]);
+AMREX_GPU_HOST_DEVICE void CKXTY(amrex::Real molefrac[], amrex::Real massfrac[]);
+AMREX_GPU_HOST_DEVICE void CKRHOY(amrex::Real* pres, amrex::Real* T, amrex::Real massfrac[], amrex::Real* rho);
 }
 
 namespace EOS {
@@ -201,11 +194,11 @@ TrhoY2p(amrex::Real dens, amrex::Real T, amrex::Real mass[], amrex::Real& pres)
   CKPY(&dens, &T, mass, &pres);
 }
 
-AMREX_GPU_DEVICE
+AMREX_GPU_HOST_DEVICE
 AMREX_FORCE_INLINE
 void
 mpr2wdot(
-  amrex::Real dens, amrex::Real T, amrex::Real mass[], amrex::Real wdot[], int NX)
+  amrex::Real dens, amrex::Real T, double *mass, double *wdot, int NX)
 {
   //CKWYR(&dens, &T, mass, wdot);
   
@@ -213,14 +206,39 @@ mpr2wdot(
   CKPY(&dens, &T, mass, &P);
   amrex::Real wbar;
   get_wb(mass, wbar);
-  wbar = 1.0/wbar;
-  //run_gpu_getrates(&T, &P, &wbar, mass, NX, wdot);
-  run_getrates(T, P, wbar, mass, wdot);
+  wbar = 1.0/wbar; 
+  
+  double *Yf_d, *wdot_d, *Yf_h;
+
+  int nBytes = NUM_SPECIES*sizeof(double);
+  Yf_h = (double*)malloc(nBytes);
+  cudaMalloc((void**) &Yf_d, nBytes);
+  cudaMalloc((void **) &wdot_d, nBytes);
+ 
+  for (int i=0; i<NUM_SPECIES; i++) {
+   Yf_h[i] = mass[i]; 
+  }
+
+  cudaError_t err = cudaGetLastError();
+  if(err!=cudaSuccess) {
+    printf("Cuda Error = %s\n", cudaGetErrorString(err));
+  }
+
+  cudaMemcpyAsync(Yf_d, Yf_h, nBytes, cudaMemcpyDeviceToDevice);
+  cudaDeviceSynchronize();
+ 
+  getrates <<<1, 256>>> (P, T, wbar, Yf_d, wdot_d);
+  //gpu_getrates <<<1, 512>>> (P_d, T_d, w_d, Yf_d, NX, wdot_d);
+  //getrates (P, T, wbar, mass, wdot);
+  cudaDeviceSynchronize();
+  free(Yf_h); cudaFree(Yf_d); //cudaFree(P_d); cudaFree(T_d); cudaFree(w_d); 
   
   amrex::Real mw[NUM_SPECIES];
   get_mw(mw);
-  for (int n = 0; n < NUM_SPECIES; n++)
-    wdot[n] *= mw[n];
+  for (int n = 0; n < NUM_SPECIES; n++)  wdot[n] = wdot_d[n]*mw[n];
+  
+  cudaFree(wdot_d); //cudaFree(P_d); cudaFree(T_d); cudaFree(w_d); 
+
 }
 
 AMREX_GPU_HOST_DEVICE

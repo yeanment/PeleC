@@ -8,16 +8,17 @@
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
-__constant__ double molecular_masses[9] = {2.01594, 31.9988, 18.01534, 1.00797, 
+static AMREX_GPU_DEVICE_MANAGED double molecular_masses[9] = {2.01594, 31.9988, 18.01534, 1.00797, 
   15.9994, 17.00737, 33.00677, 34.01474, 28.0134}; 
 
-__constant__ double recip_molecular_masses[9] = {0.4960465093207139, 
+static AMREX_GPU_DEVICE_MANAGED double recip_molecular_masses[9] = {0.4960465093207139, 
   0.03125117191894696, 0.05550825019122593, 0.9920930186414277, 
   0.06250234383789392, 0.05879803873262004, 0.03029681486555637, 
   0.02939901936631002, 0.03569720205330306}; 
 
 
-__global__ void
+AMREX_GPU_GLOBAL
+void
 gpu_getrates(const double * temperature_array, const double * pressure_array, 
   const double * avmolwt_array, const double *mass_frac_array, const int 
   spec_stride/*NX*NY*NZ in number of doubles*/, double *wdot_array) 
