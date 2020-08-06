@@ -31,8 +31,9 @@ contains
   use amrex_constants_module
   use prob_params_module, only : physbc_lo, physbc_hi, problo, probhi, UserBC
     
-  use meth_params_module, only : NVAR, NQAUX,QVAR
+  use meth_params_module, only : NVAR,NQAUX,QVAR,turbinflow_active,turbinflow_file
   use bc_fill_module, only: bcnormal
+  use turbinflow_module
  
   implicit none
     
@@ -73,6 +74,8 @@ contains
   double precision :: U_dummy(NVAR)
   double precision :: U_ext(NVAR)
   double precision, parameter :: small = 1.d-8
+  double precision, save :: turb_z_cur = 0.d0
+  double precision :: avg_uz
   
   integer          :: q_lo(3), q_hi(3)
   integer          :: uin_lo(3),  uin_hi(3)
@@ -82,6 +85,7 @@ contains
   integer          :: test_keyword_x, test_keyword_y, test_keyword_z
   double precision :: bc_params(6), x_bc_params(6), y_bc_params(6), z_bc_params(6)
   double precision :: bc_target(5), x_bc_target(5), y_bc_target(5), z_bc_target(5)
+  double precision, allocatable :: turbplane(:,:,:), xarr(:), yarr(:)
   
   type (eos_t) :: eos_state
   call build(eos_state)
@@ -108,6 +112,11 @@ contains
   y_bc_target(:) = 0
   z_bc_params(:) = 0
   z_bc_target(:) = 0
+
+  
+  if (turbinflow_active .eq. 1 .and. .not. turbinflow_initialized) then
+     call init_turbinflow(turbinflow_file,.false.) ! is_cgs = false (somehow inverse logic there?)
+  end if
 
   if ( flag_nscbc_isAnyPerio == 0) then
 
@@ -607,7 +616,20 @@ end if
  
    k = domlo(3)
    z   = (dble(k)+HALF)*dz
-      
+
+   if (turbinflow_active .eq. 1) then
+     allocate(xarr(q_lo(1)+1:q_hi(1)-1))
+     allocate(yarr(q_lo(2)+1:q_hi(2)-1))
+     do i = q_lo(1)+1,q_hi(1)-1
+          xarr   = (dble(i)+HALF)*dx
+     end do
+     do j = q_lo(2)+1,q_hi(2)-1
+          yarr   = (dble(j)+HALF)*dy
+     end do
+     allocate(turbplane(q_lo(1)+1:q_hi(1)-1,q_lo(2)+1:q_hi(2)-1,3))
+     call get_turbvelocity(q_lo(1)+1,q_lo(2)-1,q_hi(1)+1,q_hi(2)-1,xarr,yarr,turb_z_cur,turbplane)
+     avg_uz = 0.0   
+   endif
    do i = q_lo(1)+1,q_hi(1)-1
    
      x   = (dble(i)+HALF)*dx
@@ -655,6 +677,15 @@ end if
        else
          z_bcMask(i,j,k) = bc_type
        endif
+
+       if (turbinflow_active .eq. 1) then
+         ! Add the turbulent fluctuations to the velocity coming from the user
+         ! defined BC type
+         bc_target(1) = bc_target(1) + turbplane(i,j,1)
+         bc_target(2) = bc_target(2) + turbplane(i,j,2)
+         bc_target(3) = bc_target(3) + turbplane(i,j,3)
+         avg_uz = avg_uz + bc_target(3)
+       endif
      
        ! Computing the LODI system waves
        call compute_waves(i, j, k, 3, 1, &
@@ -675,7 +706,14 @@ end if
 
      enddo
    enddo
- end if
+   if (turbinflow_active .eq. 1) then
+     avg_uz = avg_uz / dble((q_hi(1) - q_lo(1) - 2)*(q_hi(2) - q_lo(2) - 2))
+     turb_z_cur = turb_z_cur + dt*avg_uz
+     deallocate(xarr)
+     deallocate(yarr)
+     deallocate(turbplane)
+   endif
+ endif
      
 !--------------------------------------------------------------------------   
 ! upper Z

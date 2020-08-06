@@ -63,6 +63,8 @@ pp.query("yl_ext_bc_type", yl_ext_bc_type);
 pp.query("yr_ext_bc_type", yr_ext_bc_type);
 pp.query("zl_ext_bc_type", zl_ext_bc_type);
 pp.query("zr_ext_bc_type", zr_ext_bc_type);
+pp.query("turbinflow_active", turbinflow_active);
+pp.query("turbinflow_file", turbinflow_file);
 pp.query("do_les", do_les);
 pp.query("use_explicit_filter", use_explicit_filter);
 pp.query("Cs", Cs);

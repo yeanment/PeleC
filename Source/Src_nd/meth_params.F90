@@ -133,6 +133,8 @@ module meth_params_module
   character (len=128), save :: yr_ext_bc_type
   character (len=128), save :: zl_ext_bc_type
   character (len=128), save :: zr_ext_bc_type
+  integer         , save :: turbinflow_active
+  character (len=128), save :: turbinflow_file
   integer         , save :: do_les
   integer         , save :: use_explicit_filter
   double precision, save :: Cs
@@ -169,13 +171,14 @@ module meth_params_module
   !$acc create(dual_energy_eta2, dual_energy_eta3, use_pslope) &
   !$acc create(fix_mass_flux, limit_fluxes_on_small_dens, density_reset_method) &
   !$acc create(allow_negative_energy, allow_small_energy, first_order_hydro) &
-  !$acc create(do_les, use_explicit_filter, Cs) &
-  !$acc create(CI, PrT, eb_small_vfrac) &
-  !$acc create(do_mms, cfl, dtnuc_e) &
-  !$acc create(dtnuc_X, dtnuc_mode, dxnuc) &
-  !$acc create(do_react, react_T_min, react_T_max) &
-  !$acc create(react_rho_min, react_rho_max, disable_shock_burning) &
-  !$acc create(do_acc, track_grid_losses)
+  !$acc create(turbinflow_active, do_les) &
+  !$acc create(use_explicit_filter, Cs, CI) &
+  !$acc create(PrT, eb_small_vfrac, do_mms) &
+  !$acc create(cfl, dtnuc_e, dtnuc_X) &
+  !$acc create(dtnuc_mode, dxnuc, do_react) &
+  !$acc create(react_T_min, react_T_max, react_rho_min) &
+  !$acc create(react_rho_max, disable_shock_burning, do_acc) &
+  !$acc create(track_grid_losses)
 
   ! End the declarations of the ParmParse parameters
 
@@ -241,6 +244,8 @@ contains
     yr_ext_bc_type = "";
     zl_ext_bc_type = "";
     zr_ext_bc_type = "";
+    turbinflow_active = 0;
+    turbinflow_file = "";
     do_les = 0;
     use_explicit_filter = 0;
     Cs = 0.0d0;
@@ -310,6 +315,8 @@ contains
     call pp%query("yr_ext_bc_type", yr_ext_bc_type)
     call pp%query("zl_ext_bc_type", zl_ext_bc_type)
     call pp%query("zr_ext_bc_type", zr_ext_bc_type)
+    call pp%query("turbinflow_active", turbinflow_active)
+    call pp%query("turbinflow_file", turbinflow_file)
     call pp%query("do_les", do_les)
     call pp%query("use_explicit_filter", use_explicit_filter)
     call pp%query("Cs", Cs)
@@ -346,13 +353,14 @@ contains
     !$acc device(dual_energy_eta2, dual_energy_eta3, use_pslope) &
     !$acc device(fix_mass_flux, limit_fluxes_on_small_dens, density_reset_method) &
     !$acc device(allow_negative_energy, allow_small_energy, first_order_hydro) &
-    !$acc device(do_les, use_explicit_filter, Cs) &
-    !$acc device(CI, PrT, eb_small_vfrac) &
-    !$acc device(do_mms, cfl, dtnuc_e) &
-    !$acc device(dtnuc_X, dtnuc_mode, dxnuc) &
-    !$acc device(do_react, react_T_min, react_T_max) &
-    !$acc device(react_rho_min, react_rho_max, disable_shock_burning) &
-    !$acc device(do_acc, track_grid_losses)
+    !$acc device(turbinflow_active, do_les) &
+    !$acc device(use_explicit_filter, Cs, CI) &
+    !$acc device(PrT, eb_small_vfrac, do_mms) &
+    !$acc device(cfl, dtnuc_e, dtnuc_X) &
+    !$acc device(dtnuc_mode, dxnuc, do_react) &
+    !$acc device(react_T_min, react_T_max, react_rho_min) &
+    !$acc device(react_rho_max, disable_shock_burning, do_acc) &
+    !$acc device(track_grid_losses)
 
 
     ! now set the external BC flags

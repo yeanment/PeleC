@@ -236,6 +236,12 @@ zl_ext_bc_type               string        ""                 y
 # if we are doing an external +z boundary condition, who do we interpret it?
 zr_ext_bc_type               string        ""                 y
 
+# should we feed a turbulence file at the inlet?
+turbinflow_active 	     int           0                  y
+
+# what is the name of the turbulence file?
+turbinflow_file               string       ""                 y
+
 #-----------------------------------------------------------------------------
 # category: large eddy simulation
 #-----------------------------------------------------------------------------

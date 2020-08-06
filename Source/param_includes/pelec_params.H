@@ -63,6 +63,8 @@ static std::string yl_ext_bc_type;
 static std::string yr_ext_bc_type;
 static std::string zl_ext_bc_type;
 static std::string zr_ext_bc_type;
+static int turbinflow_active;
+static std::string turbinflow_file;
 static int do_les;
 static int use_explicit_filter;
 static amrex::Real Cs;
