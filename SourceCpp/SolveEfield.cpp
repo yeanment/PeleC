@@ -2,12 +2,46 @@
 #include <AMReX_MLABecLaplacian.H>
 #include <AMReX_MLEBABecLap.H>
 #include <AMReX_MLMG.H>
+#include "prob.H"
 
 #include <cmath>
 
 using namespace amrex;
 
 using std::string;
+
+struct PhiVFill
+{
+    AMREX_GPU_DEVICE
+    void operator() (const IntVect& iv, Array4<Real> const& dest,
+                     const int dcomp, const int numcomp,
+                     GeometryData const& geom, const Real time,
+                     const BCRec* bcr, const int bcomp,
+                     const int orig_comp) const
+    {
+       const int* domlo = geom.Domain().loVect();
+       const int* domhi = geom.Domain().hiVect();
+       const amrex::Real* dx = geom.CellSize();
+       const amrex::Real x[AMREX_SPACEDIM] = {AMREX_D_DECL(
+         domlo[0] + (iv[0] + 0.5) * dx[0], domlo[1] + (iv[1] + 0.5) * dx[1],
+         domlo[2] + (iv[2] + 0.5) * dx[2])};
+       const int* bc = bcr->data();
+
+       amrex::Real s_int[NVAR] = {0.0};
+       amrex::Real s_ext[NVAR] = {0.0};
+
+       for (int idir = 0; idir < AMREX_SPACEDIM; idir++) {
+          if ((bc[idir] == amrex::BCType::ext_dir) and (iv[idir] < domlo[idir])) {
+             bcnormal(x, s_int, s_ext, idir, +1, time, geom);
+             dest(iv, dcomp) = s_ext[UPHIV];
+          }
+          if ((bc[idir + AMREX_SPACEDIM] == amrex::BCType::ext_dir) and (iv[idir] > domhi[idir])) {
+             bcnormal(x, s_int, s_ext, idir, -1, time, geom);
+             dest(iv, dcomp) = s_ext[UPHIV];
+          }
+       }
+    }
+};
 
 void
 PeleC::solveEF ( Real time,
@@ -21,7 +55,21 @@ PeleC::solveEF ( Real time,
 
 // Get current PhiV
    MultiFab& Ucurr = (time == prev_time) ? get_old_data(State_Type) : get_new_data(State_Type);
-   MultiFab phiV_mf(Ucurr,amrex::make_alias,PhiV,1); 
+
+// Build a PhiV with 1 GC properly filled. FillPatch not working in this case.
+   MultiFab Sborder(grids, dmap, 1, 1, amrex::MFInfo(), Factory());
+   Sborder.copy(Ucurr,PhiV,0,1,0,0);
+   Sborder.FillBoundary(geom.periodicity());
+   const BCRec& bcphiV = get_desc_lst()[State_Type].getBC(PhiV);
+   const Vector<BCRec>& bc = {bcphiV};
+   if (not geom.isAllPeriodic()) {
+      GpuBndryFuncFab<PhiVFill> bf(PhiVFill{});
+      PhysBCFunct<GpuBndryFuncFab<PhiVFill> > phiVf(geom, bc, bf);
+      phiVf(Sborder, 0, 1, Sborder.nGrowVect(), time, 0);
+   }
+
+   MultiFab phiV_alias(Ucurr, amrex::make_alias, PhiV, 1);
+   MultiFab phiV_borders(Sborder, amrex::make_alias, 0, 1);
 
 // Setup a dummy charge distribution MF
    MultiFab chargeDistib(grids,dmap,1,0,MFInfo(),Factory());
@@ -37,19 +85,20 @@ PeleC::solveEF ( Real time,
        const Real* problo  = geom.ProbLo();
        amrex::ParallelFor(bx,
        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-       {   
-           Real x_rel = problo[0] + (i + 0.5)*dx[0] - 2.0; 
-           Real y_rel = problo[1] + (j + 0.5)*dx[1] - 2.0; 
-           Real z_rel = problo[2] + (k + 0.5)*dx[2] - 2.0; 
+       {
+           Real x_rel = problo[0] + (i + 0.5)*dx[0] - 2.0;
+           Real y_rel = problo[1] + (j + 0.5)*dx[1] - 2.0;
+           Real z_rel = problo[2] + (k + 0.5)*dx[2] - 2.0;
            Real r = std::sqrt(x_rel*x_rel+2.0*y_rel*y_rel+z_rel*z_rel);
            if (r < 0.5) {
-               chrg_ar(i,j,k) = 1.0e4*(0.5 - r)/0.5;
+               //chrg_ar(i,j,k) = 1.0e4*(0.5 - r)/0.5;
+               chrg_ar(i,j,k) = 0.0;
            } else {
                chrg_ar(i,j,k) = 0.0;
            }   
        }); 
    }
-// If need be, visualize the charge distribution.    
+// If need be, visualize the charge distribution.
 //   VisMF::Write(chargeDistib,"chargeDistibPhiV_"+std::to_string(level));
 
 /////////////////////////////////////   
@@ -87,8 +136,8 @@ PeleC::solveEF ( Real time,
       poissonOP.setCoarseFineBC(phiV_crse.get(), crse_ratio[0]);
    }
 
-// Assume all physical BC homogeneous Neumann for now
-   poissonOP.setLevelBC(0, nullptr);
+// Pass the phiV with physical BC filled.
+   poissonOP.setLevelBC(0, &phiV_borders);
 
 // Setup solver coefficient: general form is (ascal * acoef - bscal * div bcoef grad ) phi = rhs   
 // For simple Poisson solve: ascal, acoef = 0 and bscal, bcoef = 1
@@ -125,7 +174,7 @@ PeleC::solveEF ( Real time,
        {   
            Real y = problo[1] + (j + 0.5)*dx[1]; 
            if (y >= 2.0) {
-               phiV_ar(i,j,k) = 500.0;
+               phiV_ar(i,j,k) = 2.0;
            } else {
                phiV_ar(i,j,k) = 0.0;
            }   
@@ -143,14 +192,14 @@ PeleC::solveEF ( Real time,
    MLMG mlmg(poissonOP);
 
    // relative and absolute tolerances for linear solve
-   const Real tol_rel = 1.e-10;
+   const Real tol_rel = 1.e-12;
    const Real tol_abs = 1.e-10;
 
    mlmg.setVerbose(1);
        
    // Solve linear system
-   phiV_mf.setVal(0.0); // initial guess for phi
-   mlmg.solve({&phiV_mf}, {&chargeDistib}, tol_rel, tol_abs);
+   //phiV_alias.setVal(0.0); // initial guess for phi
+   mlmg.solve({&phiV_alias}, {&chargeDistib}, tol_rel, tol_abs);
 
 }
 
