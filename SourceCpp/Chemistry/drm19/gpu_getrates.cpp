@@ -1,4 +1,4 @@
-
+#include "chemistry_file.H"
 #include "gpu_getrates.h"
 
 #ifndef MAX
@@ -8,13 +8,13 @@
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
-__constant__ double molecular_masses[21] = {2.01594, 1.00797, 15.9994, 31.9988, 
+static AMREX_GPU_DEVICE_MANAGED double molecular_masses[21] = {2.01594, 1.00797, 15.9994, 31.9988, 
   17.00737, 18.01534, 33.00677, 14.02709, 14.02709, 15.03506, 16.04303, 
   28.01055, 44.00995, 29.01852, 30.02649, 31.03446, 28.05418, 29.06215, 
   30.07012, 28.0134, 39.948}; 
 
 
-__constant__ double recip_molecular_masses[21] = {0.4960465093207139, 
+static AMREX_GPU_DEVICE_MANAGED double recip_molecular_masses[21] = {0.4960465093207139, 
   0.9920930186414277, 0.06250234383789392, 0.03125117191894696, 
   0.05879803873262004, 0.05550825019122593, 0.03029681486555637, 
   0.07129062407099405, 0.07129062407099405, 0.06651120780362699, 
@@ -24,7 +24,8 @@ __constant__ double recip_molecular_masses[21] = {0.4960465093207139,
   0.03569720205330306, 0.02503254230499649}; 
 
 
-__global__ void
+AMREX_GPU_GLOBAL
+void
 gpu_getrates(const double * temperature_array, const double * pressure_array, 
   const double * avmolwt_array, const double *mass_frac_array, const int 
   spec_stride/*NX*NY*NZ in number of doubles*/, double *wdot_array) 

@@ -1,8 +1,6 @@
 #include "chemistry_file.H"
 #include "cuda.h"
 #include "cuda_runtime.h"
-#include "gpu_getrates.h"
-#include "getrates.h"
 #include <stdio.h>
 #include <assert.h>
 

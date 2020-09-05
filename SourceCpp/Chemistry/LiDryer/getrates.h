@@ -9,7 +9,7 @@ extern "C" {
 AMREX_GPU_GLOBAL
 //AMREX_GPU_HOST_DEVICE
 void getrates(const double pressure, const double temperature, const double 
-  avmolwt, double *mass_frac, double *wdot); 
+  avmolwt, const double *mass_frac, double *wdot); 
 #ifdef __cplusplus
 }
 #endif

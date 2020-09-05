@@ -1,0 +1,12 @@
+CEXE_headers+=chemistry_file.H
+
+
+CEXE_sources+=mechanism.cpp
+fEXE_sources+=getrates.f
+
+
+LIBRARIES += 
+
+INCLUDE_LOCATIONS += $(CHEM_DIR)
+
+

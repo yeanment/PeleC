@@ -11,10 +11,10 @@
 #include "chemistry_file.H"
 #include "gpu_getrates.h"
 #include "getrates.h"
-
+#include "base_getrates.h"
+#include <iostream>
 #include "IndexDefines.H"
 #include "Constants.H"
-
 
 extern "C" {
 AMREX_GPU_HOST_DEVICE void get_imw(amrex::Real imw[]);
@@ -198,7 +198,7 @@ AMREX_GPU_HOST_DEVICE
 AMREX_FORCE_INLINE
 void
 mpr2wdot(
-  amrex::Real dens, amrex::Real T, double *mass, double *wdot, int NX)
+  amrex::Real dens, amrex::Real T, amrex::Real mass[], amrex::Real wdot[], int NX)
 {
   //CKWYR(&dens, &T, mass, wdot);
   
@@ -207,37 +207,56 @@ mpr2wdot(
   amrex::Real wbar;
   get_wb(mass, wbar);
   wbar = 1.0/wbar; 
-  
-  double *Yf_d, *wdot_d, *Yf_h;
-
-  int nBytes = NUM_SPECIES*sizeof(double);
-  Yf_h = (double*)malloc(nBytes);
-  cudaMalloc((void**) &Yf_d, nBytes);
-  cudaMalloc((void **) &wdot_d, nBytes);
- 
-  for (int i=0; i<NUM_SPECIES; i++) {
-   Yf_h[i] = mass[i]; 
-  }
-
-  cudaError_t err = cudaGetLastError();
-  if(err!=cudaSuccess) {
-    printf("Cuda Error = %s\n", cudaGetErrorString(err));
-  }
-
-  cudaMemcpyAsync(Yf_d, Yf_h, nBytes, cudaMemcpyDeviceToDevice);
-  cudaDeviceSynchronize();
- 
-  getrates <<<1, 256>>> (P, T, wbar, Yf_d, wdot_d);
-  //gpu_getrates <<<1, 512>>> (P_d, T_d, w_d, Yf_d, NX, wdot_d);
-  //getrates (P, T, wbar, mass, wdot);
-  cudaDeviceSynchronize();
-  free(Yf_h); cudaFree(Yf_d); //cudaFree(P_d); cudaFree(T_d); cudaFree(w_d); 
-  
   amrex::Real mw[NUM_SPECIES];
   get_mw(mw);
-  for (int n = 0; n < NUM_SPECIES; n++)  wdot[n] = wdot_d[n]*mw[n];
+  base_getrates (P, T, wbar, mass, wdot);
+  for (int n = 0; n < NUM_SPECIES; n++)  wdot[n] *= mw[n];
   
-  cudaFree(wdot_d); //cudaFree(P_d); cudaFree(T_d); cudaFree(w_d); 
+  /*amrex::Real *Yd, *Yh, *wdotd, *Pd, *Ph, *Td, *Th, *wd, *wh;
+
+  Yh = (amrex::Real*)malloc(NUM_SPECIES*sizeof(amrex::Real));
+  Ph = (amrex::Real*)malloc(sizeof(amrex::Real));
+  Th = (amrex::Real*)malloc(sizeof(amrex::Real));
+  wh = (amrex::Real*)malloc(sizeof(amrex::Real));
+  
+  for (int i=0; i<NUM_SPECIES; i++) {
+    Yh[i] = mass[i]; 
+  }
+    
+  *Ph = P; *Th = T; *wh = wbar;
+  cudaMalloc((void **) &Yd, NUM_SPECIES*sizeof(amrex::Real));
+  cudaMalloc((void **) &wdotd, NUM_SPECIES*sizeof(amrex::Real));
+  cudaMalloc((void **) &Pd, sizeof(amrex::Real));
+  cudaMalloc((void **) &Td, sizeof(amrex::Real));
+  cudaMalloc((void **) &wd, sizeof(amrex::Real));
+  
+
+  cudaMemcpyAsync(Yd, Yh, NUM_SPECIES*sizeof(amrex::Real), cudaMemcpyDeviceToDevice);
+  cudaDeviceSynchronize();
+    
+  cudaMemcpyAsync(Pd, Ph, sizeof(amrex::Real), cudaMemcpyDeviceToDevice);
+  cudaDeviceSynchronize();
+  
+  cudaMemcpyAsync(Td, Th, sizeof(amrex::Real), cudaMemcpyDeviceToDevice);
+  cudaDeviceSynchronize();
+  
+  cudaMemcpyAsync(wd, wh, sizeof(amrex::Real), cudaMemcpyDeviceToDevice);
+  cudaDeviceSynchronize();
+  
+  //cudaError_t err = cudaGetLastError();
+  //if(err!=cudaSuccess)  {
+  //  printf("Cuda Error: %s\n", cudaGetErrorString(err));
+  //}
+  
+  //dim3 grid(NUM_SPECIES,1);
+  //getrates <<<1, 1>>> (*Pd, *Td, *wd, Yd, wdotd);
+  //gpu_getrates <<<1, 1>>> (Td, Pd, wd, Yd, 1, wdotd);
+  cudaDeviceSynchronize();
+  cudaFree(Yd); cudaFree(Pd); cudaFree(Td); cudaFree(wd); free(Yh); free(Ph); free(Th); free(wh);
+  
+  for (int n = 0; n < NUM_SPECIES; n++)  wdot[n] = wdotd[n]*mw[n];
+  
+  cudaFree(wdotd);*/  
 
 }
 
