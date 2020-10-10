@@ -7,7 +7,6 @@
 
 #include "IndexDefines.H"
 #include "EOS.H"
-#include "base_getrates.h"
 
 #ifndef AMREX_USE_GPU
 const amrex::Real alpha_rk64[6] = {
@@ -169,21 +168,7 @@ pc_expl_reactions(
       for (int n = 0; n < NUM_SPECIES; ++n) {
         massfrac[n] = urk[UFS + n] * rhoInv;
       }
-    
-      amrex::Real P;
-      EOS::RTY2P(urk[URHO], urk[UTEMP], massfrac, P);
-      amrex::Real wbar;
-      CKMMWY(&massfrac[0], &wbar);
-      wbar = 1.0/wbar; 
-      amrex::Real diffusion[NUM_SPECIES];
-      for (int n = 0; n < NUM_SPECIES; n++)  diffusion[n] = 0.0;
-      base_getrates (P, urk[UTEMP], wbar, massfrac, diffusion, dt_rk, wdot);
-  
-      amrex::Real mw[NUM_SPECIES];
-      get_mw(mw);
-      for (int n = 0; n < NUM_SPECIES; n++)  wdot[n] *= mw[n];
-      
-     //EOS::RTY2WDOT(urk[URHO], urk[UTEMP], massfrac, wdot); // this is wdot*molecularweights
+      EOS::RTY2WDOT(urk[URHO], urk[UTEMP], massfrac, wdot); // this is wdot*molecularweights
 
       amrex::Real Temp_rk;
       EOS::EY2T(rhoe_rk / urk[URHO], massfrac, urk[UTEMP]);

@@ -11,15 +11,10 @@
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
-#ifndef __SINGE_MOLE_MASSES__
-#define __SINGE_MOLE_MASSES__
 static AMREX_GPU_DEVICE_MANAGED double molecular_masses[9] = {2.01594, 31.9988, 18.01534, 1.00797, 
   15.9994, 17.00737, 33.00677, 34.01474, 28.0134}; 
 #endif
 
-
-#ifndef __SINGE_RECIP_MOLE_MASSES__
-#define __SINGE_RECIP_MOLE_MASSES__
 static AMREX_GPU_DEVICE_MANAGED double recip_molecular_masses[9] = {0.4960465093207139, 
   0.03125117191894696, 0.05550825019122593, 0.9920930186414277, 
   0.06250234383789392, 0.05879803873262004, 0.03029681486555637, 
@@ -41,11 +36,6 @@ void base_getrates(const double pressure, const double temperature, const double
   const double vlntemp = log(temperature);
   const double prt     = PA / (R0 * temperature);
   const double oprt    = 1.0 / prt;
-  
-  //printf("After\n");
-  //for (int i=0; i<9; i++) {
-  //  printf("%.3lf\n", mass_frac[i]);
-  // }
 
   double cgspl[9];
   // Gibbs computation

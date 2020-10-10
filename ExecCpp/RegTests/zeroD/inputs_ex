@@ -1,5 +1,5 @@
 # ------------------  INPUTS TO MAIN PROGRAM  -------------------
-stop_time = 0.00045 #0.0002 for H2, 0.0006 for CH4, 0.00045 for C12H26
+stop_time = 0.00068 #0.0002 for H2, 0.0006 for CH4, 0.00045 for C12H26, 0.00068 for NC7H16
 max_step = 30000000 
 
 # PROBLEM SIZE & GEOMETRY
@@ -61,11 +61,11 @@ pelec.plot_rhoy = 0
 pelec.plot_massfrac = 1
 
 # PROBLEM PARAMETERS
-prob.p_init    = 20265000.0 #1013250 for H2, 10132500 for CH4, 20265000 for C12H26
-prob.Y_init_fuel = 0.06 #0.06 for H2, 0.055 for CH4, 0.06 for C12H26
-prob.Y_init_O2 = 0.22 #0.5 for H2, 0.22 for CH4, 0.218 for C12H26
-prob.Y_init_N2 = 0.72 #0.44 for H2, 0.725 for CH4, 0.72 for C12H26
-prob.T_init    = 800.0 #1000 for H2, 1600 for CH4, 800 for C12H26
+prob.p_init    = 40530000.0 #1013250 for H2, 10132500 for CH4, 20265000 for C12H26, 40530000 for NC7H16
+prob.Y_init_fuel = 0.06 #0.06 for H2, 0.055 for CH4, 0.06 for C12H26, 0.06 for NC7H16
+prob.Y_init_O2 = 0.22 #0.5 for H2, 0.22 for CH4, 0.218 for C12H26, 0.22 for NC7H16
+prob.Y_init_N2 = 0.72 #0.44 for H2, 0.725 for CH4, 0.72 for C12H26, 0.72 for NC7H16
+prob.T_init    = 800.0 #1000 for H2, 1600 for CH4, 800 for C12H26, 800 for NC7H16
 
 # TAGGING
 tagging.max_ftracerr_lev = 4
