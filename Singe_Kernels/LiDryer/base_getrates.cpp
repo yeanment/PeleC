@@ -1,4 +1,3 @@
-#include "chemistry_file.H"
 #include "base_getrates.h"
 #include <cmath>
 #include <cassert>
@@ -13,13 +12,11 @@
 
 static AMREX_GPU_DEVICE_MANAGED double molecular_masses[9] = {2.01594, 31.9988, 18.01534, 1.00797, 
   15.9994, 17.00737, 33.00677, 34.01474, 28.0134}; 
-#endif
 
 static AMREX_GPU_DEVICE_MANAGED double recip_molecular_masses[9] = {0.4960465093207139, 
   0.03125117191894696, 0.05550825019122593, 0.9920930186414277, 
   0.06250234383789392, 0.05879803873262004, 0.03029681486555637, 
   0.02939901936631002, 0.03569720205330306}; 
-#endif
 
 AMREX_GPU_HOST_DEVICE
 void base_getrates(const double pressure, const double temperature, const double 

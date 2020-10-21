@@ -1,4 +1,4 @@
-#include "base_getrates_rd.h"
+#include "base_getrates.h"
 #include <cmath>
 #include <cassert>
 #include <cstdlib>
@@ -10,19 +10,13 @@
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
-#ifndef __SINGE_MOLE_MASSES__
-#define __SINGE_MOLE_MASSES__
 static AMREX_GPU_DEVICE_MANAGED double molecular_masses[35] = {170.34102, 1.00797, 15.9994, 17.00737, 
   33.00677, 2.01594, 18.01534, 34.01474, 31.9988, 15.03506, 16.04303, 30.02649, 
   28.01055, 44.00995, 26.03824, 28.05418, 30.07012, 43.04561, 41.0733, 42.08127, 
   56.06473, 55.10039, 56.10836, 69.12748000000001, 70.13545000000001, 
   84.16254000000001, 98.18963000000001, 112.21672, 126.24381, 127.25178, 
   140.2709, 168.32508, 201.33185, 216.32328, 28.0134}; 
-#endif
 
-
-#ifndef __SINGE_RECIP_MOLE_MASSES__
-#define __SINGE_RECIP_MOLE_MASSES__
 static AMREX_GPU_DEVICE_MANAGED double recip_molecular_masses[35] = {5.870576564587907e-03, 
   0.9920930186414277, 0.06250234383789392, 0.05879803873262004, 
   0.03029681486555637, 0.4960465093207139, 0.05550825019122593, 
@@ -36,10 +30,10 @@ static AMREX_GPU_DEVICE_MANAGED double recip_molecular_masses[35] = {5.870576564
   7.921180452332673e-03, 7.858436243485159e-03, 7.129062407099405e-03, 
   5.940885339249504e-03, 4.966924011277897e-03, 4.622710972207892e-03, 
   0.03569720205330306}; 
-#endif
 
 
-void base_getrates_rd(const double pressure, const double temperature, const double 
+AMREX_GPU_HOST_DEVICE
+void base_getrates(const double pressure, const double temperature, const double 
   avmolwt, const double *mass_frac, const double *diffusion, const double dt, 
   double *wdot) 
 {

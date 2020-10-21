@@ -13,7 +13,7 @@ const unsigned int stif_species_indexes[22] = {0, 1, 2, 3, 4, 5, 7, 9, 10, 11,
 extern "C" {
 #endif
 AMREX_GPU_HOST_DEVICE
-void base_getrates_rd(const double pressure, const double temperature, const double avmolwt, 
+void base_getrates(const double pressure, const double temperature, const double avmolwt, 
 const double *mass_frac, const double *diffusion, const double dt, double *wdot); 
 #ifdef __cplusplus
 }

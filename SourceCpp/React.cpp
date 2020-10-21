@@ -122,7 +122,7 @@ PeleC::react_state(
                 i, j, k, uold, unew, a, w_arr, I_R, dt, nsubsteps_min,
                 nsubsteps_max, nsubsteps_guess, errtol, do_update);
             });
-	  printf("\nncells = %d (%d, %d, %d)\n", ncells, uo.x, uo.y, uo.z);
+	  //printf("\nncells = %d (%d, %d, %d)\n", ncells, uo.x, uo.y, uo.z);
  
         } else if (chem_integrator == 2) {
 #ifdef USE_SUNDIALS_PP

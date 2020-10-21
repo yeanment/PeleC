@@ -1,4 +1,4 @@
-#include "gpu_getrates_rd.h"
+#include "gpu_getrates.h"
 
 #ifndef MAX
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
