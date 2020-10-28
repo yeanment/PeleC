@@ -120,9 +120,9 @@ PeleC::react_state(
           
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
           
-          amrex::Real dt_rk = dt_react / nsubsteps_guess;
-          const amrex::Real dt_min = dt_react / nsubsteps_min;
-          const amrex::Real dt_max = dt_react / nsubsteps_max;
+          amrex::Real dt_rk = dt / nsubsteps_guess;
+          const amrex::Real dt_min = dt / nsubsteps_min;
+          const amrex::Real dt_max = dt / nsubsteps_max;
           amrex::Real updt_time = 0.0;
           
           amrex::Real* rhoedot_ext;
@@ -166,15 +166,17 @@ PeleC::react_state(
           
           cuda_status = cudaStreamSynchronize(amrex::Gpu::gpuStream());
           
-          amrex::Array4<const amrex::Real> const& urk = uold;          
+          amrex::Array4<amrex::Real> urk = unew;          
           amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
             for (int n = 0; n < NVAR; n++) {
               urk(i,j,k,n) = uold(i,j,k,n);
             }
           });
           
-          amrex::Array4<amrex::Real> const& urk_carryover = uold;
-          amrex::Array4<amrex::Real> const& urk_err = uold;
+          cuda_status = cudaStreamSynchronize(amrex::Gpu::gpuStream());
+          
+	  amrex::Array4<amrex::Real> urk_carryover = unew;
+          amrex::Array4<amrex::Real> urk_err = unew;
           
           amrex::Real* massfrac;
           amrex::Real* pressure;
@@ -183,7 +185,6 @@ PeleC::react_state(
           amrex::Real* diffusion;
           amrex::Real* wdot;
           
-          cudaError_t cuda_status = cudaSuccess;
           cudaMallocManaged(&massfrac, NUM_SPECIES  * ncells * sizeof(amrex::Real));
           cudaMallocManaged(&wdot, NUM_SPECIES  * ncells * sizeof(amrex::Real));
           cudaMallocManaged(&diffusion, NUM_SPECIES  * ncells * sizeof(amrex::Real));
@@ -193,7 +194,7 @@ PeleC::react_state(
             
           // Do the RK!
           int steps = 0;
-          while (updt_time < dt_react) {
+          while (updt_time < dt) {
             
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
               for (int n = 0; n < NVAR; n++) {
@@ -215,7 +216,9 @@ PeleC::react_state(
                   Y[n] = urk(i,j,k,UFS + n) / urk(i,j,k,URHO);
                 } 
                 amrex::Real P;
-                EOS::RTY2P(urk(i,j,k,URHO), urk(,i,j,k,UTEMP), Y, P);
+                amrex::Real R = urk(i,j,k,URHO);
+                amrex::Real T = urk(i,j,k,UTEMP);
+                EOS::RTY2P(R, T, Y, P);
                 pressure[offset] = P;
                 temperature[offset] = urk(i,j,k,UTEMP);
                 
@@ -227,14 +230,14 @@ PeleC::react_state(
               });
               
               cuda_status = cudaStreamSynchronize(amrex::Gpu::gpuStream());
-              base_getrates (pressure, temperature, mixMW, massfrac, diffusion, dt_rk, wdot);
+              //base_getrates (pressure, temperature, mixMW, massfrac, diffusion, dt_rk, wdot);
               
               
             /*================ Adapt Time step! ======================== */
             } // end rk stages
             updt_time += dt_rk;
             steps += 1;
-            adapt_timestep(urk_err, dt_max, dt_rk, dt_min, errtol);
+            //adapt_timestep(urk_err, dt_max, dt_rk, dt_min, errtol);
           } // end timestep loop
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!// 
