@@ -117,8 +117,6 @@ pc_expl_reactions(
 
   // compute rhoe_ext/rhoy_ext
   
-  //amrex::Array3D<amrex::Real, 0, 3, 0, 3, 0, 3> rhoua;
-
   amrex::Real rhou = uold(i, j, k, UMX), rhov = uold(i, j, k, UMY), rhow = uold(i, j, k, UMZ);
   amrex::Real rho_old = uold(i, j, k, URHO);
   amrex::Real rhoInv = 1.0 / rho_old;

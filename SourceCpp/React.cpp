@@ -2,6 +2,8 @@
 
 #include "PeleC.H"
 #include "React.H"
+#include "EOS.H"
+#include "base_getrates.h"
 #ifdef USE_SUNDIALS_PP
 #include <reactor.h>
 #endif
@@ -115,14 +117,135 @@ PeleC::react_state(
           const auto lo = amrex::lbound(bx);
           const auto uo = amrex::ubound(bx);
           const int ncells = len.x * len.y * len.z; //bx.numPts()
-         
-          amrex::ParallelFor(
+          
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
+          
+          amrex::Real dt_rk = dt_react / nsubsteps_guess;
+          const amrex::Real dt_min = dt_react / nsubsteps_min;
+          const amrex::Real dt_max = dt_react / nsubsteps_max;
+          amrex::Real updt_time = 0.0;
+          
+          amrex::Real* rhoedot_ext;
+          amrex::Real* rhoe_carryover;
+          amrex::Real* rhoe_rk;
+          
+          cudaError_t cuda_status = cudaSuccess;
+          cudaMallocManaged(&rhoedot_ext, ncells * sizeof(amrex::Real));
+          cudaMallocManaged(&rhoe_carryover, ncells * sizeof(amrex::Real));
+          cudaMallocManaged(&rhoe_rk, ncells * sizeof(amrex::Real));
+          
+          
+          amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+            amrex::Real rhou = uold(i, j, k, UMX);
+            amrex::Real rhov = uold(i, j, k, UMY);
+            amrex::Real rhow = uold(i, j, k, UMZ);
+            amrex::Real rho_old = uold(i, j, k, URHO);
+            amrex::Real rhoInv = 1.0 / rho_old;
+            amrex::Real rho = 0.;
+
+            for (int nsp = UFS; nsp < (UFS + NUM_SPECIES); nsp++) {
+              rho += uold(i, j, k, nsp);
+            }
+
+            amrex::Real nrg = (uold(i, j, k, UEDEN) - (0.5 * (rhou * rhou + rhov * rhov + rhow * rhow) * rhoInv)) * rhoInv;
+
+            rhou = unew(i, j, k, UMX);
+            rhov = unew(i, j, k, UMY);
+            rhow = unew(i, j, k, UMZ);
+            rhoInv = 1.0 / unew(i, j, k, URHO);
+            
+            int offset = (k - lo.z) * len.x * len.y + (j - lo.y) * len.x + (i - lo.x);
+            
+            rhoedot_ext[offset] = ((unew(i, j, k, UEDEN) -
+                                  (0.5 * (rhou * rhou + rhov * rhov + rhow * rhow) * rhoInv)) - rho * nrg) /  dt;
+            
+            rhoe_carryover[offset] = rho * nrg;
+            rhoe_rk[offset] = rho * nrg;
+            
+          });
+          
+          cuda_status = cudaStreamSynchronize(amrex::Gpu::gpuStream());
+          
+          amrex::Array4<const amrex::Real> const& urk = uold;          
+          amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+            for (int n = 0; n < NVAR; n++) {
+              urk(i,j,k,n) = uold(i,j,k,n);
+            }
+          });
+          
+          amrex::Array4<amrex::Real> const& urk_carryover = uold;
+          amrex::Array4<amrex::Real> const& urk_err = uold;
+          
+          amrex::Real* massfrac;
+          amrex::Real* pressure;
+          amrex::Real* temperature;
+          amrex::Real* mixMW;
+          amrex::Real* diffusion;
+          amrex::Real* wdot;
+          
+          cudaError_t cuda_status = cudaSuccess;
+          cudaMallocManaged(&massfrac, NUM_SPECIES  * ncells * sizeof(amrex::Real));
+          cudaMallocManaged(&wdot, NUM_SPECIES  * ncells * sizeof(amrex::Real));
+          cudaMallocManaged(&diffusion, NUM_SPECIES  * ncells * sizeof(amrex::Real));
+          cudaMallocManaged(&pressure, ncells * sizeof(amrex::Real));
+          cudaMallocManaged(&temperature, ncells * sizeof(amrex::Real));
+          cudaMallocManaged(&mixMW, ncells * sizeof(amrex::Real));
+            
+          // Do the RK!
+          int steps = 0;
+          while (updt_time < dt_react) {
+            
+            amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+              for (int n = 0; n < NVAR; n++) {
+                urk_carryover(i,j,k,n) = urk(i,j,k,n);
+                urk_err(i,j,k,n) = 0.0;
+              }
+              
+              int offset = (k - lo.z) * len.x * len.y + (j - lo.y) * len.x + (i - lo.x);
+              rhoe_carryover[offset] = rhoe_rk[offset];
+            });
+                      
+            for (int stage = 0; stage < 6; stage++) {
+              
+              amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+                amrex::Real Y[NUM_SPECIES] = {};
+                int offset = (k - lo.z) * len.x * len.y + (j - lo.y) * len.x + (i - lo.x);
+                for (int n = 0; n < NUM_SPECIES; ++n) {
+                  massfrac[offset * NUM_SPECIES + n] = urk(i,j,k,UFS + n) / urk(i,j,k,URHO);
+                  Y[n] = urk(i,j,k,UFS + n) / urk(i,j,k,URHO);
+                } 
+                amrex::Real P;
+                EOS::RTY2P(urk(i,j,k,URHO), urk(,i,j,k,UTEMP), Y, P);
+                pressure[offset] = P;
+                temperature[offset] = urk(i,j,k,UTEMP);
+                
+                amrex::Real wbar;
+                CKMMWY(&Y[0], &wbar); 
+                mixMW[offset] = 1.0/wbar;
+                for (int n = 0; n < NUM_SPECIES; n++)  diffusion[offset * NUM_SPECIES + n] = 0.0;
+                
+              });
+              
+              cuda_status = cudaStreamSynchronize(amrex::Gpu::gpuStream());
+              base_getrates (pressure, temperature, mixMW, massfrac, diffusion, dt_rk, wdot);
+              
+              
+            /*================ Adapt Time step! ======================== */
+            } // end rk stages
+            updt_time += dt_rk;
+            steps += 1;
+            adapt_timestep(urk_err, dt_max, dt_rk, dt_min, errtol);
+          } // end timestep loop
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!// 
+
+          /*amrex::ParallelFor(
             bx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept {
               pc_expl_reactions(
                 i, j, k, uold, unew, a, w_arr, I_R, dt, nsubsteps_min,
                 nsubsteps_max, nsubsteps_guess, errtol, do_update);
             });
-	  //printf("\nncells = %d (%d, %d, %d)\n", ncells, uo.x, uo.y, uo.z);
+          //printf("\nncells = %d (%d, %d, %d)\n", ncells, uo.x, uo.y, uo.z);*/
  
         } else if (chem_integrator == 2) {
 #ifdef USE_SUNDIALS_PP
