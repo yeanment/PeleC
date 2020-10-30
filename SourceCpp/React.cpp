@@ -3,7 +3,7 @@
 #include "PeleC.H"
 #include "React.H"
 #include "EOS.H"
-#include "base_getrates.h"
+#include "gpu_getrates.h"
 #ifdef USE_SUNDIALS_PP
 #include <reactor.h>
 #endif
@@ -159,7 +159,6 @@ PeleC::react_state(
             rhoedot_ext[offset] = ((unew(i, j, k, UEDEN) -
                                   (0.5 * (rhou * rhou + rhov * rhov + rhow * rhow) * rhoInv)) - rho * nrg) /  dt;
             
-            rhoe_carryover[offset] = rho * nrg;
             rhoe_rk[offset] = rho * nrg;
             
           });
@@ -192,7 +191,8 @@ PeleC::react_state(
           cudaMallocManaged(&temperature, ncells * sizeof(amrex::Real));
           cudaMallocManaged(&mixMW, ncells * sizeof(amrex::Real));
             
-          // Do the RK!
+          
+	  // Do the RK!
           int steps = 0;
           while (updt_time < dt) {
             
@@ -230,15 +230,137 @@ PeleC::react_state(
               });
               
               cuda_status = cudaStreamSynchronize(amrex::Gpu::gpuStream());
-              //base_getrates (pressure, temperature, mixMW, massfrac, diffusion, dt_rk, wdot);
+              dim3 grid(ncells,1,1);
+              dim3 block(32,1,1);
+  	      gpu_getrates <<<grid, block>>> (temperature, pressure, mixMW, massfrac, ncells, wdot);
+              cuda_status = cudaStreamSynchronize(amrex::Gpu::gpuStream());
               
+              amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept { 
+  		// having a global __constant__ variable is slower than having this in local memory.
+  		const amrex::Real alpha_rk64[6] = {
+    		0.218150805229859,  //            3296351145737.0/15110423921029.0,
+    		0.256702469801519,  //            1879360555526.0/ 7321162733569.0,
+    		0.527402592007520,  //            10797097731880.0/20472212111779.0,
+    		0.0484864267224467, //            754636544611.0/15563872110659.0,
+    		1.24517071533530,   //            3260218886217.0/ 2618290685819.0,
+    		0.412366034843237,  //            5069185909380.0/12292927838509.0
+  	        };
+
+  		const amrex::Real beta_rk64[6] = {
+    		-0.113554138044166,  //-1204558336989.0/10607789004752.0,
+    		-0.215118587818400,  //-3028468927040.0/14078136890693.0,
+    		-0.0510152146250577, //-455570672869.0/ 8930094212428.0,
+    		-1.07992686223881,   //-17275898420483.0/15997285579755.0,
+    		-0.248664241213447,  //-2453906524165.0/ 9868353053862.0,
+    		0.0};
+
+  		const amrex::Real err_rk64[6] = {
+    		-0.0554699315064507, //-530312978447.0/ 9560368366154.0,
+   		 0.158481845574980,   // 473021958881.0/ 2984707536468.0,
+    		-0.0905918835751907, //-947229622805.0/10456009803779.0,
+    		-0.219084567203338,  //-2921473878215.0/13334914072261.0,
+    		0.164022338959433,   // 1519535112975.0/ 9264196100452.0,
+    		0.0426421977505659   // 167623581683.0/ 3930932046784.0
+  		};
+
+	        
+		amrex::Real mw[NUM_SPECIES];
+                get_mw(mw);
+                amrex::Real Y[NUM_SPECIES] = {};
+                amrex::Real ei[NUM_SPECIES] = {};
+                int offset = (k - lo.z) * len.x * len.y + (j - lo.y) * len.x + (i - lo.x);
+                for (int n = 0; n < NUM_SPECIES; n++) {
+	          wdot[offset*NUM_SPECIES + n] = wdot[offset*NUM_SPECIES + n] * mw[n] + a(i,j,k,UFS+n);
+                  Y[n] = urk(i,j,k,UFS + n) / urk(i,j,k,URHO);
+		}
+		amrex::Real Temp_rk = rhoe_rk[offset]/urk(i,j,k,URHO);
+                amrex::Real T = urk(i,j,k,UTEMP);
+                EOS::EY2T(Temp_rk, Y, T);
+                
+		EOS::T2Ei(T, Y);
+                amrex::Real tempsrc = rhoedot_ext[offset];
+                for (int n = 0; n < NUM_SPECIES; ++n) tempsrc -= wdot[offset] * ei[n];
+                amrex::Real cv;
+                EOS::TY2Cv(T, Y, cv);
+      		tempsrc /= (urk(i,j,k,URHO) * cv);
+             
+	        /*================== Update urk_err =================== */
+             	// Species
+             	for (int n = 0; n < NUM_SPECIES; ++n) urk_err(i,j,k,UFS + n) += err_rk64[stage] * dt_rk * wdot[offset];
+             	// Temperature
+      	     	urk_err(i,j,k,UTEMP) += err_rk64[stage] * dt_rk * tempsrc;
+      
+		/*================== Update Stage solution =================== */
+      		// Species
+      		for (int n = 0; n < NUM_SPECIES; ++n) {
+        	  urk(i,j,k,UFS + n) = urk_carryover(i,j,k,UFS + n) + alpha_rk64[stage] * dt_rk * wdot[offset];
+      		}
+      		// Temperature
+      		urk(i,j,k,UTEMP) = urk_carryover(i,j,k,UTEMP) + alpha_rk64[stage] * dt_rk * tempsrc;
+      		// update energy
+      		rhoe_rk[offset] = rhoe_carryover[offset] + alpha_rk64[stage] * dt_rk * rhoedot_ext[offset];
+      
+		/*================== Update urk_carryover =========================== */
+      	       // Species
+      	       for (int n = 0; n < NUM_SPECIES; ++n) {
+	         urk_carryover(i,j,k,UFS + n) = urk(i,j,k,UFS + n) + beta_rk64[stage] * dt_rk * wdot[offset];
+               }
+               // Temperature
+               urk_carryover(i,j,k,UTEMP) = urk(i,j,k,UTEMP) + beta_rk64[stage] * dt_rk * tempsrc;
+               // update energy
+               rhoe_carryover[offset] = rhoe_rk[offset] + beta_rk64[stage] * dt_rk * rhoedot_ext[offset];
+      
+	       /*================= Update urk[rho] ========================= */
+               urk(i,j,k,URHO) = 0.0;
+               for (int n = 0; n < NUM_SPECIES; ++n) urk(i,j,k,URHO) += urk(i,j,k,UFS + n);
+              
+	      });
               
             /*================ Adapt Time step! ======================== */
             } // end rk stages
             updt_time += dt_rk;
             steps += 1;
-            //adapt_timestep(urk_err, dt_max, dt_rk, dt_min, errtol);
+            amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept { 
+              amrex::Real uerr[NVAR] = {};
+              for (int n = 0; n < NVAR; n++) {
+	        uerr[n] = urk_err(i,j,k,n);
+	      }
+              //adapt_timestep(uerr, dt_max, dt_rk, dt_min, errtol);
+	    });
           } // end timestep loop
+          
+          amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept { 
+	    w_arr(i, j, k) = steps;
+
+            // Add drhoY/dt to reactions MultiFab and update unew if needed
+            amrex::Real umnew = uold(i, j, k, UMX) + dt * a(i, j, k, UMX);
+            amrex::Real vmnew = uold(i, j, k, UMY) + dt * a(i, j, k, UMY);
+            amrex::Real wmnew = uold(i, j, k, UMZ) + dt * a(i, j, k, UMZ);
+
+            if (do_update) {
+              unew(i, j, k, URHO) = urk(i,j,k,URHO);
+    	      unew(i, j, k, UMX) = umnew;
+    	      unew(i, j, k, UMY) = vmnew;
+    	      unew(i, j, k, UMZ) = wmnew;
+    	      unew(i, j, k, UTEMP) = urk(i,j,k,UTEMP);
+    	      for (int n = 0; n < NUM_SPECIES; ++n) {
+      	        unew(i, j, k, UFS + n) = urk(i,j,k,UFS + n);
+    	      }
+            }
+
+           int offset = (k - lo.z) * len.x * len.y + (j - lo.y) * len.x + (i - lo.x);
+           amrex::Real rhou = uold(i, j, k, UMX);
+           amrex::Real rhov = uold(i, j, k, UMY);
+           amrex::Real rhow = uold(i, j, k, UMZ);
+           amrex::Real rho_old = uold(i, j, k, URHO);
+           amrex::Real rhoInv = 1.0 / rho_old;
+           amrex::Real nrg = (uold(i, j, k, UEDEN) - (0.5 * (rhou * rhou + rhov * rhov + rhow * rhow) * rhoInv)) * rhoInv;
+           for (int n = 0; n < NUM_SPECIES; ++n) {
+             I_R(i, j, k, n) = (urk(i,j,k,UFS + n) - uold(i, j, k, UFS + n)) / dt - a(i,j,k,n);
+           }
+           I_R(i, j, k, NUM_SPECIES) = ((nrg * rho_old) + dt * rhoedot_ext[offset] + 0.5 * (umnew * umnew + vmnew * vmnew + wmnew * wmnew) / urk(i,j,k,URHO) -
+                                      uold(i, j, k, UEDEN)) / dt - a(i, j, k, UEDEN);
+	  });
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!// 
 
