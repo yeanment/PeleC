@@ -1,7 +1,9 @@
 #include "MOL.H"
+#include "prob.H"
 
 void
 pc_compute_hyp_mol_flux(
+  amrex::Geometry const& geom,
   const amrex::Box& cbox,
   const amrex::Array4<const amrex::Real>& q,
   const amrex::Array4<const amrex::Real>& qaux,
@@ -203,8 +205,10 @@ pc_compute_hyp_mol_flux(
   const amrex::Real full_area = std::pow(del[0], AMREX_SPACEDIM - 1);
   const auto lo = amrex::lbound(cbox);
   const auto hi = amrex::ubound(cbox);
+  const auto geomdata = geom.data();
 
   const amrex::Real captured_eb_small_vfrac = eb_small_vfrac;
+  ProbParmDevice const* prob_parm = PeleC::d_prob_parm_device;
   amrex::ParallelFor(nebflux, [=] AMREX_GPU_DEVICE(int L) {
     AMREX_D_TERM(const int i = ebg[L].iv[0];, const int j = ebg[L].iv[1];
                  , const int k = ebg[L].iv[2];)
@@ -321,6 +325,26 @@ pc_compute_hyp_mol_flux(
       eos.RTY2G(eos_state_rho, eos_state_T, spl, gamc_l);
     }
 
+    // Copy left state to right (default), except normal velocity which has
+    // already been flipped
+    qtempr[R_RHO] = qtempl[R_RHO];
+    qtempr[R_UT1] = qtempl[R_UT1];
+    qtempr[R_UT2] = qtempl[R_UT2];
+    qtempr[R_P] = qtempl[R_P];
+    amrex::Real spr[NUM_SPECIES] = {0.0};
+    for (int n = 0; n < NUM_SPECIES; n++) {
+      spr[n] = spl[n];
+    }
+    amrex::Real rhoe_r = rhoe_l;
+    amrex::Real gamc_r = gamc_l;
+
+    // call ebfill function to modify the right state
+    ebfill(
+      geomdata, vfrac(iv), iv,
+      AMREX_D_DECL(
+        ebg[L].eb_normal[0], ebg[L].eb_normal[1], ebg[L].eb_normal[2]),
+      qtempl, spl, rhoe_l, gamc_l, qtempr, spr, rhoe_r, gamc_r, prob_parm);
+
     if (is_inside(iv, lo, hi, nextra - 1)) {
       amrex::Real tmp0 = 0.0;
       amrex::Real tmp1 = 0.0;
@@ -330,8 +354,8 @@ pc_compute_hyp_mol_flux(
       amrex::Real ustar = 0.0;
       riemann(
         qtempl[R_RHO], qtempl[R_UN], qtempl[R_UT1], qtempl[R_UT2], qtempl[R_P],
-        rhoe_l, spl, gamc_l, qtempl[R_RHO], qtempr[R_UN], qtempl[R_UT1],
-        qtempl[R_UT2], qtempl[R_P], rhoe_l, spl, gamc_l, bc_test_val, csmall,
+        rhoe_l, spl, gamc_l, qtempr[R_RHO], qtempr[R_UN], qtempr[R_UT1],
+        qtempr[R_UT2], qtempr[R_P], rhoe_r, spr, gamc_r, bc_test_val, csmall,
         cavg, ustar, flux_tmp[URHO], flux_tmp[UMX], flux_tmp[UMY],
         flux_tmp[UMZ], flux_tmp[UEDEN], flux_tmp[UEINT], tmp0, tmp1, tmp2, tmp3,
         tmp4);
@@ -343,7 +367,11 @@ pc_compute_hyp_mol_flux(
 
       // Compute species flux like passive scalar from intermediate state
       for (int n = 0; n < NUM_SPECIES; n++) {
-        flux_tmp[UFS + n] = flux_tmp[URHO] * qtempl[R_Y + n];
+        flux_tmp[UFS + n] =
+          (ustar > 0.0) ? flux_tmp[URHO] * spl[n] : flux_tmp[URHO] * spr[n];
+        flux_tmp[UFS + n] = (ustar == 0.0)
+                              ? flux_tmp[URHO] * 0.5 * (spl[n] + spr[n])
+                              : flux_tmp[UFS + n];
       }
 
       // Copy result into ebflux vector. Being a bit chicken here and only

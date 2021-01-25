@@ -104,6 +104,7 @@ mol_slope(
 }
 
 void pc_compute_hyp_mol_flux(
+  amrex::Geometry const& geom,
   const amrex::Box& cbox,
   const amrex::Array4<const amrex::Real>& q,
   const amrex::Array4<const amrex::Real>& qaux,
