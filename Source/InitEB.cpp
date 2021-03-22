@@ -418,11 +418,13 @@ PeleC::set_body_state(amrex::MultiFab& S)
 {
   BL_PROFILE("PeleC::set_body_state()");
 
-  if (!eb_in_domain) {
+  if (!eb_in_domain) 
+  {
     return;
   }
 
-  if (!body_state_set) {
+  if (!body_state_set) 
+  {
     define_body_state();
   }
 
@@ -431,16 +433,18 @@ PeleC::set_body_state(amrex::MultiFab& S)
 #ifdef _OPENMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-  for (amrex::MFIter mfi(S, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+  for (amrex::MFIter mfi(S, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) 
+  {
     const amrex::Box& vbox = mfi.tilebox();
     auto const& Sar = S.array(mfi);
     auto const& mask = ebmask.array(mfi);
     auto const captured_body_state = body_state;
     amrex::ParallelFor(
-      vbox, NVAR, [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept {
-        pc_set_body_state(
-          i, j, k, n, mask, captured_body_state, covered_val, Sar);
-      });
+    vbox, NVAR, [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept 
+    {
+       pc_set_body_state(
+       i, j, k, n, mask, captured_body_state, covered_val, Sar);
+    });
   }
 }
 

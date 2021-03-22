@@ -60,7 +60,8 @@ PeleC::do_mol_advance(
 #endif
   }
 
-  if (do_mol_load_balance || do_react_load_balance) {
+  if (do_mol_load_balance || do_react_load_balance) 
+  {
     get_new_data(Work_Estimate_Type).setVal(0.0);
   }
 
@@ -74,13 +75,15 @@ PeleC::do_mol_advance(
 
   amrex::MultiFab molSrc_old;
   amrex::MultiFab molSrc_new;
-  if (mol_iters > 1) {
+  if (mol_iters > 1) 
+  {
     molSrc_old.define(grids, dmap, NVAR, 0, amrex::MFInfo(), Factory());
     molSrc_new.define(grids, dmap, NVAR, 0, amrex::MFInfo(), Factory());
   }
 
 #ifdef PELEC_USE_REACTIONS
-  if (do_react == 0) {
+  if (do_react == 0) 
+  {
     get_new_data(Reactions_Type).setVal(0.0);
   }
   const amrex::MultiFab& I_R = get_new_data(Reactions_Type);
@@ -92,7 +95,8 @@ PeleC::do_mol_advance(
 #endif
 
   // Compute S^{n} = MOLRhs(U^{n})
-  if (verbose) {
+  if (verbose) 
+  {
     amrex::Print() << "... Computing MOL source term at t^{n} " << std::endl;
   }
   FillPatch(*this, Sborder, NUM_GROW + nGrowF, time, State_Type, 0, NVAR);
@@ -100,13 +104,15 @@ PeleC::do_mol_advance(
   getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
 
   // Build other (neither spray nor diffusion) sources at t_old
-  for (int n = 0; n < src_list.size(); ++n) {
+  for (int n = 0; n < src_list.size(); ++n) 
+  {
     if (
       src_list[n] != diff_src
 #ifdef AMREX_PARTICLES
       && src_list[n] != spray_src
 #endif
-    ) {
+    ) 
+    {
       construct_old_source(
         src_list[n], time, dt, amr_iteration, amr_ncycle, 0, 0);
 
@@ -116,7 +122,8 @@ PeleC::do_mol_advance(
     }
   }
 
-  if (mol_iters > 1) {
+  if (mol_iters > 1) 
+  {
     amrex::MultiFab::Copy(molSrc_old, molSrc, 0, 0, NVAR, 0);
   }
 
@@ -125,7 +132,8 @@ PeleC::do_mol_advance(
 
 #ifdef PELEC_USE_REACTIONS
   // U^{n+1,*} = U^n + dt*S^n + dt*I_R
-  if (do_react == 1) {
+  if (do_react == 1) 
+  {
     amrex::MultiFab::Saxpy(S_new, dt, I_R, 0, FirstSpec, NUM_SPECIES, 0);
     amrex::MultiFab::Saxpy(S_new, dt, I_R, NUM_SPECIES, Eden, 1, 0);
   }
@@ -134,7 +142,8 @@ PeleC::do_mol_advance(
   computeTemp(S_new, 0);
 
   // Compute S^{n+1} = MOLRhs(U^{n+1,*})
-  if (verbose) {
+  if (verbose) 
+  {
     amrex::Print() << "... Computing MOL source term at t^{n+1} " << std::endl;
   }
   FillPatch(*this, Sborder, NUM_GROW + nGrowF, time + dt, State_Type, 0, NVAR);
@@ -142,13 +151,15 @@ PeleC::do_mol_advance(
   getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
 
   // Build other (neither spray nor diffusion) sources at t_new
-  for (int n = 0; n < src_list.size(); ++n) {
+  for (int n = 0; n < src_list.size(); ++n) 
+  {
     if (
       src_list[n] != diff_src
 #ifdef AMREX_PARTICLES
       && src_list[n] != spray_src
 #endif
-    ) {
+    ) 
+    {
       construct_new_source(
         src_list[n], time + dt, dt, amr_iteration, amr_ncycle, 0, 0);
 
@@ -166,7 +177,8 @@ PeleC::do_mol_advance(
     0); //  NOTE: If I_R=0, we are done and U_new is the final new-time state
 
 #ifdef PELEC_USE_REACTIONS
-  if (do_react == 1) {
+  if (do_react == 1) 
+  {
     amrex::MultiFab::Saxpy(S_new, 0.5 * dt, I_R, 0, FirstSpec, NUM_SPECIES, 0);
     amrex::MultiFab::Saxpy(S_new, 0.5 * dt, I_R, NUM_SPECIES, Eden, 1, 0);
 
@@ -185,9 +197,12 @@ PeleC::do_mol_advance(
   computeTemp(S_new, 0);
 
 #ifdef PELEC_USE_REACTIONS
-  if (do_react == 1) {
-    for (int mol_iter = 2; mol_iter <= mol_iters; ++mol_iter) {
-      if (verbose) {
+  if (do_react == 1) 
+  {
+    for (int mol_iter = 2; mol_iter <= mol_iters; ++mol_iter) 
+    {
+      if (verbose) 
+      {
         amrex::Print() << "... Re-computing MOL source term at t^{n+1} (iter = "
                        << mol_iter << " of " << mol_iters << ")" << std::endl;
       }
