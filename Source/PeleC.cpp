@@ -514,6 +514,10 @@ PeleC::buildMetrics()
 #ifdef PELEC_USE_EB
   vfrac.clear();
   vfrac.define(grids, dmap, 1, NUM_GROW, amrex::MFInfo(), Factory());
+
+  vfrac_SS.clear();
+  vfrac_SS.define(grids, dmap, 1, NUM_GROW, amrex::MFInfo(), Factory());
+
   const auto& ebfactory =
     dynamic_cast<amrex::EBFArrayBoxFactory const&>(Factory());
   amrex::MultiFab::Copy(vfrac, ebfactory.getVolFrac(), 0, 0, 1, NUM_GROW);
@@ -1313,12 +1317,19 @@ PeleC::reflux()
 
 #ifdef PELEC_USE_EB
 
-  amrex::MultiFab& S_fine = fine_level.get_new_data(State_Type);
+  if(!pc_use_ss)
+  {
+      amrex::MultiFab& S_fine = fine_level.get_new_data(State_Type);
 
-  fine_level.flux_reg.Reflux(S_crse, vfrac, S_fine, fine_level.vfrac);
+      fine_level.flux_reg.Reflux(S_crse, vfrac, S_fine, fine_level.vfrac);
 
-  if (!amrex::DefaultGeometry().IsCartesian()) {
-    amrex::Abort("rz not yet compatible with EB");
+      if (!amrex::DefaultGeometry().IsCartesian()) {
+          amrex::Abort("rz not yet compatible with EB");
+      }
+  }
+  else
+  {
+      fine_level.flux_reg.Reflux(S_crse);
   }
 
 #else
@@ -1326,86 +1337,86 @@ PeleC::reflux()
   fine_level.flux_reg.Reflux(S_crse);
 
   if (!amrex::DefaultGeometry().IsCartesian()) {
-    amrex::MultiFab dr(
-      volume.boxArray(), volume.DistributionMap(), 1, volume.nGrow(),
-      amrex::MFInfo(), amrex::FArrayBoxFactory());
-    dr.setVal(geom.CellSize(0));
-    amrex::Abort("PeleC reflux not yet ready for r-z");
-    // fine_level.pres_reg.Reflux(S_crse,dr,1.0,0,Xmom,1,geom);
+      amrex::MultiFab dr(
+              volume.boxArray(), volume.DistributionMap(), 1, volume.nGrow(),
+              amrex::MFInfo(), amrex::FArrayBoxFactory());
+      dr.setVal(geom.CellSize(0));
+      amrex::Abort("PeleC reflux not yet ready for r-z");
+      // fine_level.pres_reg.Reflux(S_crse,dr,1.0,0,Xmom,1,geom);
   }
 #endif
 
   if (verbose) {
-    const int IOProc = amrex::ParallelDescriptor::IOProcessorNumber();
-    amrex::Real end = amrex::ParallelDescriptor::second() - strt;
+      const int IOProc = amrex::ParallelDescriptor::IOProcessorNumber();
+      amrex::Real end = amrex::ParallelDescriptor::second() - strt;
 
 #ifdef AMREX_LAZY
-    Lazy::QueueReduction([=]() mutable {
+      Lazy::QueueReduction([=]() mutable {
 #endif
-      amrex::ParallelDescriptor::ReduceRealMax(end, IOProc);
+              amrex::ParallelDescriptor::ReduceRealMax(end, IOProc);
 
-      amrex::Print() << "PeleC::reflux() at level " << level
-                     << " : time = " << end << std::endl;
+              amrex::Print() << "PeleC::reflux() at level " << level
+              << " : time = " << end << std::endl;
 #ifdef AMREX_LAZY
-    });
+              });
 #endif
   }
 }
 
-void
+    void
 PeleC::avgDown()
 {
-  BL_PROFILE("PeleC::avgDown()");
+    BL_PROFILE("PeleC::avgDown()");
 
-  if (level == parent->finestLevel()) {
-    return;
-  }
+    if (level == parent->finestLevel()) {
+        return;
+    }
 
-  avgDown(State_Type);
+    avgDown(State_Type);
 
 #ifdef PELEC_USE_REACTIONS
-  avgDown(Reactions_Type);
+    avgDown(Reactions_Type);
 #endif
 }
 
-void
+    void
 PeleC::normalize_species(amrex::MultiFab& /*S*/)
 {
-  amrex::Abort("We don't normalize species!");
+    amrex::Abort("We don't normalize species!");
 }
 
-void
+    void
 PeleC::enforce_consistent_e(amrex::MultiFab& S)
 {
 #ifdef _OPENMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-  for (amrex::MFIter mfi(S, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) {
-    const amrex::Box& tbox = mfi.tilebox();
-    const auto Sfab = S.array(mfi);
-    amrex::ParallelFor(
-      tbox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-        const amrex::Real rhoInv = 1.0 / Sfab(i, j, k, URHO);
-        const amrex::Real u = Sfab(i, j, k, UMX) * rhoInv;
-        const amrex::Real v = Sfab(i, j, k, UMY) * rhoInv;
-        const amrex::Real w = Sfab(i, j, k, UMZ) * rhoInv;
-        Sfab(i, j, k, UEDEN) = Sfab(i, j, k, UEINT) + 0.5 *
-                                                        Sfab(i, j, k, URHO) *
-                                                        (u * u + v * v + w * w);
-      });
-  }
+    for (amrex::MFIter mfi(S, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+        const amrex::Box& tbox = mfi.tilebox();
+        const auto Sfab = S.array(mfi);
+        amrex::ParallelFor(
+                tbox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+                const amrex::Real rhoInv = 1.0 / Sfab(i, j, k, URHO);
+                const amrex::Real u = Sfab(i, j, k, UMX) * rhoInv;
+                const amrex::Real v = Sfab(i, j, k, UMY) * rhoInv;
+                const amrex::Real w = Sfab(i, j, k, UMZ) * rhoInv;
+                Sfab(i, j, k, UEDEN) = Sfab(i, j, k, UEINT) + 0.5 *
+                Sfab(i, j, k, URHO) *
+                (u * u + v * v + w * w);
+                });
+    }
 }
 
-amrex::Real
+    amrex::Real
 PeleC::enforce_min_density(
-  amrex::MultiFab& /*S_old*/, const amrex::MultiFab& S_new)
+        amrex::MultiFab& /*S_old*/, const amrex::MultiFab& S_new)
 {
-  // This routine sets the density in S_new to be larger than the density
-  // floor. Note that it will operate everywhere on S_new, including ghost
-  // zones. S_old is present so that, after the hydro call, we know what the old
-  // density was so that we have a reference for comparison. If you are calling
-  // it elsewhere and there's no meaningful reference state, just pass in the
-  // same amrex::MultiFab twice.
+    // This routine sets the density in S_new to be larger than the density
+    // floor. Note that it will operate everywhere on S_new, including ghost
+    // zones. S_old is present so that, after the hydro call, we know what the old
+    // density was so that we have a reference for comparison. If you are calling
+    // it elsewhere and there's no meaningful reference state, just pass in the
+    // same amrex::MultiFab twice.
   //  @return  The return value is the the negative fractional change in the
   // state that has the largest magnitude. If there is no reference state, this
   // is meaningless.
@@ -1808,14 +1819,27 @@ PeleC::derive(const std::string& name, amrex::Real time, int ngrow)
   }
 
 #ifdef PELEC_USE_EB
-  if (name == "vfrac") {
+  if (name == "vfrac") 
+  {
     std::unique_ptr<amrex::MultiFab> mf(
       new amrex::MultiFab(grids, dmap, 1, ngrow, amrex::MFInfo()));
-    if (ngrow > 0) {
+    if (ngrow > 0) 
+    {
       mf->setBndry(0);
     }
     amrex::MultiFab::Copy(*mf, vfrac, 0, 0, 1, 0);
     return mf;
+  }
+  if (name == "vfracSS") 
+  {
+      std::unique_ptr<amrex::MultiFab> mf(
+              new amrex::MultiFab(grids, dmap, 1, ngrow, amrex::MFInfo()));
+      if (ngrow > 0) 
+      {
+          mf->setBndry(0);
+      }
+      amrex::MultiFab::Copy(*mf, vfrac_SS, 0, 0, 1, 0);
+      return mf;
   }
 #endif
 
@@ -1826,83 +1850,90 @@ PeleC::derive(const std::string& name, amrex::Real time, int ngrow)
 #endif
 }
 
-void
+    void
 PeleC::derive(
-  const std::string& name, amrex::Real time, amrex::MultiFab& mf, int dcomp)
+        const std::string& name, amrex::Real time, amrex::MultiFab& mf, int dcomp)
 {
 #ifdef PELEC_USE_EB
-  if (name == "vfrac") {
-    amrex::MultiFab::Copy(mf, vfrac, 0, dcomp, 1, 0);
-  } else
+    if (name == "vfrac") 
+    {
+        amrex::MultiFab::Copy(mf, vfrac, 0, dcomp, 1, 0);
+    }
+    if(name=="vfracSS")
+    {
+        amrex::MultiFab::Copy(mf, vfrac_SS, 0, dcomp, 1, 0);
+    }
+
+    else
 #endif
-  {
-    AmrLevel::derive(name, time, mf, dcomp);
-  }
+    {
+        AmrLevel::derive(name, time, mf, dcomp);
+    }
 }
 
-void
+    void
 PeleC::clear_prob()
 {
-  pc_prob_close();
+    pc_prob_close();
 }
 
 #ifdef PELEC_USE_REACTIONS
-void
+    void
 PeleC::init_reactor()
 {
 #ifdef USE_SUNDIALS_PP
 #ifdef AMREX_USE_GPU
-  reactor_info(1, 1);
+    reactor_info(1, 1);
 #else
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-  {
-    reactor_init(1, 1);
-  }
+    {
+        reactor_init(1, 1);
+    }
 #endif
 #endif
 }
 
-void
+    void
 PeleC::close_reactor()
 {
 }
 #endif
 
-void
+    void
 PeleC::init_les()
 {
-  // Fill with default coefficient values
-  LES_Coeffs.define(grids, dmap, nCompC, 1);
-  LES_Coeffs.setVal(0.0);
-  LES_Coeffs.setVal(Cs * Cs, comp_Cs2, 1, LES_Coeffs.nGrow());
-  LES_Coeffs.setVal(CI, comp_CI, 1, LES_Coeffs.nGrow());
-  if (les_model == 1) {
-    LES_Coeffs.setVal(Cs * Cs * PrT, comp_Cs2ovPrT, 1, LES_Coeffs.nGrow());
-  } else {
-    LES_Coeffs.setVal(PrT, comp_PrT, 1, LES_Coeffs.nGrow());
-  }
+    // Fill with default coefficient values
+    LES_Coeffs.define(grids, dmap, nCompC, 1);
+    LES_Coeffs.setVal(0.0);
+    LES_Coeffs.setVal(Cs * Cs, comp_Cs2, 1, LES_Coeffs.nGrow());
+    LES_Coeffs.setVal(CI, comp_CI, 1, LES_Coeffs.nGrow());
+    if (les_model == 1) {
+        LES_Coeffs.setVal(Cs * Cs * PrT, comp_Cs2ovPrT, 1, LES_Coeffs.nGrow());
+    } else {
+        LES_Coeffs.setVal(PrT, comp_PrT, 1, LES_Coeffs.nGrow());
+    }
 
-  amrex::Print() << "WARNING: LES with Fuego assumes Cp is a weak function of T"
-                 << std::endl;
-  if (NUM_SPECIES > 2) {
-    amrex::Abort("LES is not supported for multi-component systems");
-  } else if (NUM_SPECIES == 2) {
-    amrex::Print()
-      << "WARNING: LES is not supported for multi-component systems"
-      << std::endl;
-  }
+    amrex::Print() << "WARNING: LES with Fuego assumes Cp is a weak function of T"
+        << std::endl;
+    if (NUM_SPECIES > 2) {
+        amrex::Abort("LES is not supported for multi-component systems");
+    } else if (NUM_SPECIES == 2) {
+        amrex::Print()
+            << "WARNING: LES is not supported for multi-component systems"
+            << std::endl;
+    }
 #ifdef PELEC_USE_SRK
-  amrex::Abort("LES is not supported for non-ideal equations of state");
+    amrex::Abort("LES is not supported for non-ideal equations of state");
 #endif
 }
 
-void
+    void
 PeleC::init_filters()
 {
-  if (level > 0) {
-    amrex::IntVect ref_ratio = parent->refRatio(level - 1);
+    if (level > 0) {
+        amrex::IntVect ref_ratio = parent->refRatio(level - 1);
     les_filter = Filter(
       les_filter_type,
       static_cast<int>(les_filter_fgr * std::pow(ref_ratio[0], level)));

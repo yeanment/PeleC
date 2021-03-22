@@ -696,6 +696,7 @@ protected:
   static bool eb_initialized;
 
   amrex::MultiFab vfrac;
+  amrex::MultiFab vfrac_SS;
 
   amrex::Vector<amrex::Gpu::DeviceVector<EBBndryGeom>> sv_eb_bndry_geom;
   amrex::Vector<amrex::Gpu::DeviceVector<EBBndrySten>> sv_eb_bndry_grad_stencil;

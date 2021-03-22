@@ -561,6 +561,8 @@ PeleC::variableSetUp()
   // A dummy
   derive_lst.add(
     "vfrac", amrex::IndexType::TheCellType(), 1, pc_dermagvel, the_same_box);
+  derive_lst.add(
+    "vfracSS", amrex::IndexType::TheCellType(), 1, pc_dermagvel, the_same_box);
 #endif
 
 #ifdef AMREX_PARTICLES

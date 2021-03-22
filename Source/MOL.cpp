@@ -6,8 +6,8 @@ pc_compute_hyp_mol_flux(
   const amrex::Array4<const amrex::Real>& q,
   const amrex::Array4<const amrex::Real>& qaux,
   const amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM> flx,
-  const amrex::GpuArray<const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM>
-    a,
+  const amrex::GpuArray<const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM> 
+  area,
   const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>
 #ifdef PELEC_USE_EB
     del
@@ -34,7 +34,8 @@ pc_compute_hyp_mol_flux(
   const int R_Y = 5;
   const int bc_test_val = 1;
 
-  for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+  for (int dir = 0; dir < AMREX_SPACEDIM; dir++) 
+  {
     amrex::FArrayBox dq_fab(cbox, QVAR);
     amrex::Elixir dq_fab_eli = dq_fab.elixir();
     auto const& dq = dq_fab.array();
@@ -51,9 +52,11 @@ pc_compute_hyp_mol_flux(
        bdim[0] * UMY + bdim[1] * UMX + bdim[2] * UMX,
        bdim[0] * UMZ + bdim[1] * UMZ + bdim[2] * UMY}};
 
-    if (plm_iorder != 1) {
+    if (plm_iorder != 1) 
+    {
       amrex::ParallelFor(
-        cbox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+        cbox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept 
+        {
           mol_slope(
             i, j, k, bdim, q_idx, q, qaux, dq
 #ifdef PELEC_USE_EB
@@ -66,7 +69,8 @@ pc_compute_hyp_mol_flux(
     const amrex::Box tbox = amrex::grow(cbox, dir, -1);
     const amrex::Box ebox = amrex::surroundingNodes(tbox, dir);
     amrex::ParallelFor(
-      ebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+      ebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept 
+    {
         const int ii = i - bdim[0];
         const int jj = j - bdim[1];
         const int kk = k - bdim[2];
@@ -81,7 +85,8 @@ pc_compute_hyp_mol_flux(
         qtempl[R_UT1] = q(ii, jj, kk, q_idx[1]) + 0.5 * dq(ii, jj, kk, 2);
         qtempl[R_UT2] = q(ii, jj, kk, q_idx[2]) + 0.5 * dq(ii, jj, kk, 3);
         qtempl[R_RHO] = 0.0;
-        for (int n = 0; n < NUM_SPECIES; n++) {
+        for (int n = 0; n < NUM_SPECIES; n++) 
+        {
           qtempl[R_Y + n] = q(ii, jj, kk, QFS + n) * q(ii, jj, kk, QRHO) +
                             0.5 * (dq(ii, jj, kk, 4 + n) +
                                    q(ii, jj, kk, QFS + n) *
@@ -90,7 +95,8 @@ pc_compute_hyp_mol_flux(
           qtempl[R_RHO] += qtempl[R_Y + n];
         }
 
-        for (int n = 0; n < NUM_SPECIES; n++) {
+        for (int n = 0; n < NUM_SPECIES; n++) 
+        {
           qtempl[R_Y + n] = qtempl[R_Y + n] / qtempl[R_RHO];
         }
 
@@ -104,7 +110,8 @@ pc_compute_hyp_mol_flux(
         qtempr[R_UT1] = q(i, j, k, q_idx[1]) - 0.5 * dq(i, j, k, 2);
         qtempr[R_UT2] = q(i, j, k, q_idx[2]) - 0.5 * dq(i, j, k, 3);
         qtempr[R_RHO] = 0.0;
-        for (int n = 0; n < NUM_SPECIES; n++) {
+        for (int n = 0; n < NUM_SPECIES; n++) 
+        {
           qtempr[R_Y + n] =
             q(i, j, k, QFS + n) * q(i, j, k, QRHO) -
             0.5 * (dq(i, j, k, 4 + n) + q(i, j, k, QFS + n) *
@@ -112,7 +119,8 @@ pc_compute_hyp_mol_flux(
                                           qaux(i, j, k, QC));
           qtempr[R_RHO] += qtempr[R_Y + n];
         }
-        for (int n = 0; n < NUM_SPECIES; n++) {
+        for (int n = 0; n < NUM_SPECIES; n++) 
+        {
           qtempr[R_Y + n] = qtempr[R_Y + n] / qtempr[R_RHO];
         }
 
@@ -131,7 +139,8 @@ pc_compute_hyp_mol_flux(
         eos_state_rho = qtempl[R_RHO];
         eos_state_p = qtempl[R_P];
         amrex::Real spl[NUM_SPECIES];
-        for (int n = 0; n < NUM_SPECIES; n++) {
+        for (int n = 0; n < NUM_SPECIES; n++) 
+        {
           spl[n] = qtempl[R_Y + n];
         }
         auto eos = pele::physics::PhysicsType::eos();
@@ -146,7 +155,8 @@ pc_compute_hyp_mol_flux(
         eos_state_rho = qtempr[R_RHO];
         eos_state_p = qtempr[R_P];
         amrex::Real spr[NUM_SPECIES];
-        for (int n = 0; n < NUM_SPECIES; n++) {
+        for (int n = 0; n < NUM_SPECIES; n++) 
+        {
           spr[n] = qtempr[R_Y + n];
         }
         eos.RYP2T(eos_state_rho, spr, eos_state_p, eos_state_T);
@@ -173,7 +183,8 @@ pc_compute_hyp_mol_flux(
           flux_tmp[f_idx[1]], flux_tmp[f_idx[2]], flux_tmp[UEDEN],
           flux_tmp[UEINT], tmp0, tmp1, tmp2, tmp3, tmp4);
 
-        for (int n = 0; n < NUM_SPECIES; n++) {
+        for (int n = 0; n < NUM_SPECIES; n++) 
+        {
           flux_tmp[UFS + n] = (ustar > 0.0) ? flux_tmp[URHO] * qtempl[R_Y + n]
                                             : flux_tmp[URHO] * qtempr[R_Y + n];
           flux_tmp[UFS + n] =
@@ -183,15 +194,18 @@ pc_compute_hyp_mol_flux(
         }
 
         flux_tmp[UTEMP] = 0.0;
-        for (int n = UFX; n < UFX + NUM_AUX; n++) {
+        for (int n = UFX; n < UFX + NUM_AUX; n++) 
+        {
           flux_tmp[n] = (NUM_AUX > 0) ? 0.0 : flux_tmp[n];
         }
-        for (int n = UFA; n < UFA + NUM_ADV; n++) {
+        for (int n = UFA; n < UFA + NUM_ADV; n++) 
+        {
           flux_tmp[n] = (NUM_ADV > 0) ? 0.0 : flux_tmp[n];
         }
 
-        for (int ivar = 0; ivar < NVAR; ivar++) {
-          flx[dir](i, j, k, ivar) += flux_tmp[ivar] * a[dir](i, j, k);
+        for (int ivar = 0; ivar < NVAR; ivar++) 
+        {
+          flx[dir](i, j, k, ivar) += flux_tmp[ivar] * area[dir](i, j, k);
         }
       });
   }
@@ -206,7 +220,8 @@ pc_compute_hyp_mol_flux(
   const auto hi = amrex::ubound(cbox);
 
   const amrex::Real captured_eb_small_vfrac = eb_small_vfrac;
-  amrex::ParallelFor(nebflux, [=] AMREX_GPU_DEVICE(int L) {
+  amrex::ParallelFor(nebflux, [=] AMREX_GPU_DEVICE(int L) 
+  {
     const int i = ebg[L].iv[0];
     const int j = ebg[L].iv[1];
     const int k = ebg[L].iv[2];
@@ -222,12 +237,15 @@ pc_compute_hyp_mol_flux(
       ebg[L].eb_normal[0], ebg[L].eb_normal[1], ebg[L].eb_normal[2])};
     const amrex::Real ebnorm_mag = std::sqrt(
       ebnorm[0] * ebnorm[0] + ebnorm[1] * ebnorm[1] + ebnorm[2] * ebnorm[2]);
-    for (amrex::Real& dir : ebnorm) {
+    for (amrex::Real& dir : ebnorm) 
+    {
       dir /= ebnorm_mag;
     }
     auto eos = pele::physics::PhysicsType::eos();
-    if (is_inside(i, j, k, lo, hi, nextra)) {
-      if (vfrac(i, j, k) < captured_eb_small_vfrac) {
+    if (is_inside(i, j, k, lo, hi, nextra)) 
+    {
+      if (vfrac(i, j, k) < captured_eb_small_vfrac) 
+      {
         amrex::Real sum_kappa = 0.0;
         amrex::Real sum_nbrs_qc = 0.0;
         amrex::Real sum_nbrs_qcsmall = 0.0;
@@ -237,15 +255,19 @@ pc_compute_hyp_mol_flux(
         amrex::Real sum_nbrs_qp = 0.0;
         amrex::Real sum_nbrs_qr = 0.0;
         amrex::Real sum_nbrs_sp[NUM_SPECIES] = {0.0};
-        for (int ii = -1; ii <= 1; ii++) {
+        for (int ii = -1; ii <= 1; ii++) 
+        {
 #if AMREX_SPACEDIM > 1
-          for (int jj = -1; jj <= 1; jj++) {
+          for (int jj = -1; jj <= 1; jj++) 
+          {
 #if AMREX_SPACEDIM == 3
-            for (int kk = -1; kk <= 1; kk++) {
+            for (int kk = -1; kk <= 1; kk++) 
+            {
 #endif
 #endif
               int nbr = flags(i, j, k).isConnected(ii, jj, kk);
-              if ((ii == 0) && (jj == 0) && (kk == 0)) {
+              if ((ii == 0) && (jj == 0) && (kk == 0)) 
+              {
                 nbr = 0;
               }
               sum_kappa += nbr * vfrac(i + ii, j + jj, k + kk);
@@ -263,7 +285,8 @@ pc_compute_hyp_mol_flux(
                              q(i + ii, j + jj, k + kk, QPRES);
               sum_nbrs_qr += nbr * vfrac(i + ii, j + jj, k + kk) *
                              q(i + ii, j + jj, k + kk, QRHO);
-              for (int n = 0; n < NUM_SPECIES; n++) {
+              for (int n = 0; n < NUM_SPECIES; n++) 
+              {
                 sum_nbrs_sp[n] += nbr * vfrac(i + ii, j + jj, k + kk) *
                                   q(i + ii, j + jj, k + kk, QFS + n);
               }
@@ -282,7 +305,8 @@ pc_compute_hyp_mol_flux(
         qtempl[R_UT2] = 0.0;
         qtempl[R_P] = sum_nbrs_qp / sum_kappa;
         qtempl[R_RHO] = sum_nbrs_qr / sum_kappa;
-        for (int n = 0; n < NUM_SPECIES; n++) {
+        for (int n = 0; n < NUM_SPECIES; n++) 
+        {
           qtempl[R_Y + n] = sum_nbrs_sp[n] / sum_kappa;
         }
         cavg = sum_nbrs_qc / sum_kappa;
@@ -293,7 +317,9 @@ pc_compute_hyp_mol_flux(
         // left state for remainder of right state
         qtempr[R_UN] = -1.0 * qtempl[R_UN];
 
-      } else {
+      } 
+      else 
+      {
         // Assume left state is the cell centered state - normal velocity
         qtempl[R_UN] =
           -(q(i, j, k, QU) * ebnorm[0] + q(i, j, k, QV) * ebnorm[1] +
@@ -316,7 +342,8 @@ pc_compute_hyp_mol_flux(
 
       amrex::Real eos_state_rho = qtempl[R_RHO];
       amrex::Real eos_state_p = qtempl[R_P];
-      for (int n = 0; n < NUM_SPECIES; n++) {
+      for (int n = 0; n < NUM_SPECIES; n++) 
+      {
         spl[n] = qtempl[R_Y + n];
       }
       amrex::Real eos_state_T;
@@ -327,7 +354,8 @@ pc_compute_hyp_mol_flux(
       eos.RTY2G(eos_state_rho, eos_state_T, spl, gamc_l);
     }
 
-    if (is_inside(i, j, k, lo, hi, nextra - 1)) {
+    if (is_inside(i, j, k, lo, hi, nextra - 1)) 
+    {
       amrex::Real tmp0;
       amrex::Real tmp1;
       amrex::Real tmp2;
@@ -347,13 +375,15 @@ pc_compute_hyp_mol_flux(
       flux_tmp[UMX] = -flux_tmp[UMX] * ebnorm[0];
 
       // Compute species flux like passive scalar from intermediate state
-      for (int n = 0; n < NUM_SPECIES; n++) {
+      for (int n = 0; n < NUM_SPECIES; n++) 
+      {
         flux_tmp[UFS + n] = flux_tmp[URHO] * qtempl[R_Y + n];
       }
 
       // Copy result into ebflux vector. Being a bit chicken here and only
       // copy values where ebg % iv is within box
-      for (int n = 0; n < NVAR; n++) {
+      for (int n = 0; n < NVAR; n++) 
+      {
         ebflux[n * nebflux + L] += flux_tmp[n] * ebg[L].eb_area * full_area;
       }
     }

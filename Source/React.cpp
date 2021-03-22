@@ -433,6 +433,14 @@ PeleC::react_state(
     S_new.FillBoundary(geom.periodicity());
   }
 
+  if(pc_use_ss)
+  {
+      for(int n=0;n<(NUM_SPECIES+1);n++)
+      {
+        amrex::MultiFab::Multiply(react_src, vfrac_SS, 0, n, 1, 0);
+      }
+  }
+
   if (verbose > 1) {
     const int IOProc = amrex::ParallelDescriptor::IOProcessorNumber();
     amrex::Real run_time = amrex::ParallelDescriptor::second() - strt_time;
