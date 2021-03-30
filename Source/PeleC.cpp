@@ -137,6 +137,19 @@ PeleC::read_params()
 
 #include "pelec_queries.H"
 
+  //sstep cant be used without 
+  //EB enabled
+#ifndef PELEC_USE_EB
+  AMREX_ASSERT(use_sstep==0);
+#endif
+
+//sstep not implemented in 2d
+#ifdef PELEC_USE_EB
+#if AMREX_SPACEDIM < 3
+  AMREX_ASSERT(use_sstep==0);
+#endif
+#endif
+
   pp.query("v", verbose);
   pp.query("sum_interval", sum_interval);
   pp.query("dump_old", dump_old);
@@ -1328,7 +1341,7 @@ PeleC::reflux()
 
 #ifdef PELEC_USE_EB
 
-  if(!pc_use_ss)
+  //if(!use_sstep)
   {
       amrex::MultiFab& S_fine = fine_level.get_new_data(State_Type);
 
@@ -1338,10 +1351,10 @@ PeleC::reflux()
           amrex::Abort("rz not yet compatible with EB");
       }
   }
-  else
+  /*else
   {
       fine_level.flux_reg.Reflux(S_crse);
-  }
+  }*/
 
 #else
 

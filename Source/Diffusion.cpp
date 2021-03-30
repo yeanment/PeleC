@@ -259,7 +259,7 @@ PeleC::getMOLSrcTerm(
       amrex::surroundingNodes(cbox, 2))};
       amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM> flx;
       const amrex::GpuArray<const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM>
-        areafab{{AMREX_D_DECL(area[0].array(mfi), area[1].array(mfi), area[2].array(mfi))}};
+        area_array{{AMREX_D_DECL(area[0].array(mfi), area[1].array(mfi), area[2].array(mfi))}};
       
       for (int dir = 0; dir < AMREX_SPACEDIM; dir++) 
       {
@@ -276,7 +276,7 @@ PeleC::getMOLSrcTerm(
 
       pc_compute_diffusion_flux
       (
-        cbox, qar, coe_cc, flx, a, dx, do_harmonic
+        cbox, qar, coe_cc, flx, area_array, dx, do_harmonic
 #ifdef PELEC_USE_EB
         ,
         typ, Ncut, d_sv_eb_bndry_geom, flags.array(mfi)
@@ -412,7 +412,7 @@ PeleC::getMOLSrcTerm(
 #endif
           // auto const& vol = volume.array(mfi);
           pc_compute_hyp_mol_flux(
-            cbox, qar, qauxar, flx, a, dx, plm_iorder
+            cbox, qar, qauxar, flx, area_array, dx, plm_iorder
 #ifdef PELEC_USE_EB
             ,
             eb_small_vfrac, vfrac.array(mfi), flags.array(mfi),

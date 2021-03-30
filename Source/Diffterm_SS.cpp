@@ -12,7 +12,7 @@
 void
 pc_compute_diffusion_flux_SS(
   const amrex::Box& box,
-  const amrex::Array4<const amrex::Real>& q,
+  const amrex::Array4<amrex::Real>& q,
   const amrex::Array4<const amrex::Real>& coef,
   const amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM> flx,
   const amrex::GpuArray<const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM>
@@ -36,7 +36,7 @@ pc_compute_diffusion_flux_SS(
           q(i, j ,k, QV) = 0.0;
           q(i, j ,k, QW) = 0.0;
        }
-    });
+   });
 
     // Compute Extensive diffusion fluxes for X, Y, Z
     BL_PROFILE("PeleC::diffusion_flux()");
@@ -81,7 +81,8 @@ pc_compute_diffusion_flux_SS(
             pc_move_transcoefs_to_ec(i, j, k, n, coef, c, dir, do_harmonic);
           }
           pc_diffusion_flux_SS(i, j, k, q, c, tander, 
-                  a[dir], flx[dir], delta, dir);
+                  a[dir], flx[dir], delta, flags, 
+                  eb_isothermal, eb_boundary_T, dir);
       });
     }
   }

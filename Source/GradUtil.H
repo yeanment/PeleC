@@ -161,6 +161,7 @@ void pc_compute_tangential_vel_derivs_SS(
   }
 
 }
+#endif
 
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE

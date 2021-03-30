@@ -217,4 +217,19 @@ void pc_compute_hyp_mol_flux(
 #endif
         );
 
+#ifdef PELEC_USE_EB
+void
+pc_compute_hyp_mol_flux_SS(
+        const amrex::Box& cbox,
+        const amrex::Array4<const amrex::Real>& q,
+        const amrex::Array4<const amrex::Real>& qaux,
+        const amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM> flx,
+        const amrex::GpuArray<const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM> 
+        area,
+        const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> del,
+        const int plm_iorder,
+        const amrex::Array4<const amrex::Real>& vfrac,
+        const amrex::Array4<amrex::EBCellFlag const>& flags);
+#endif
+
 #endif

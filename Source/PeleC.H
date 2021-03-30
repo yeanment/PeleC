@@ -466,6 +466,15 @@ public:
     amrex::Real time,
     amrex::Real dt,
     amrex::Real flux_factor);
+#ifdef PELEC_USE_EB
+  void
+  getMOLSrcTerm_SS(
+  const amrex::MultiFab& S,
+  amrex::MultiFab& MOLSrcTerm,
+  amrex::Real /*time*/,
+  amrex::Real dt,
+  amrex::Real flux_factor);
+#endif
 
   static void enforce_consistent_e(amrex::MultiFab& S);
 

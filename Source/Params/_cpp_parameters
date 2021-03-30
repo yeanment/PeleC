@@ -357,22 +357,25 @@ react_rho_max                Real          1.e200
 disable_shock_burning        int           0
 
 # chemistry integrator: 1 for built-in explicit RK, 2 for Sundials
-chem_integrator              int           1                  n
+chem_integrator              int           1                  
 
 #explict RK chemistry integrator options (minimum substeps)
-adaptrk_nsubsteps_min        int           20                 n
+adaptrk_nsubsteps_min        int           20                
 
 #explict RK chemistry integrator options (maximum substeps)
-adaptrk_nsubsteps_max        int           300                n
+adaptrk_nsubsteps_max        int           300               
 
 #explict RK chemistry integrator options (guess substeps)
-adaptrk_nsubsteps_guess      int           50                 n
+adaptrk_nsubsteps_guess      int           50                
 
 #explict RK chemistry integrator options (absolute error tol.)
-adaptrk_errtol               Real          1e-12              n
+adaptrk_errtol               Real          1e-12              
 
 #flag to clean massfractions before react/diffuse/convect
-clean_massfrac         int           1                  n
+clean_massfrac         int           1                  
+
+#use stairstep
+use_sstep              int           0                  
 
 #-----------------------------------------------------------------------------
 # category: parallelization

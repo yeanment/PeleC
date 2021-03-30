@@ -101,11 +101,11 @@ PeleC::initialize_eb2_structs()
     if (typ == amrex::FabType::regular) 
     {
       mfab.setVal<amrex::RunOn::Device>(1);
-      vfrac_SS[mfi].setVal<amrex::RunOn::Device)(1.0);
+      vfrac_SS[mfi].setVal<amrex::RunOn::Device>(1.0);
     } 
     else if (typ == amrex::FabType::covered) 
     {
-      vfrac_SS[mfi].setVal<amrex::RunOn::Device)(0.0);
+      vfrac_SS[mfi].setVal<amrex::RunOn::Device>(0.0);
       mfab.setVal<amrex::RunOn::Device>(-1);
     } 
     else if (typ == amrex::FabType::singlevalued) 

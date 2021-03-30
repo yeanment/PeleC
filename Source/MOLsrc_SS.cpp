@@ -100,10 +100,11 @@ PeleC::getMOLSrcTerm_SS(
       {
         BL_PROFILE("PeleC::ctoprim()");
         PassMap const* lpmap = d_pass_map;
+        const int captured_clean_massfrac = clean_massfrac;
         amrex::ParallelFor(
           gbox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept 
           {
-            pc_ctoprim(i, j, k, s, qar, qauxar, *lpmap);
+            pc_ctoprim(i, j, k, s, qar, qauxar, *lpmap,captured_clean_massfrac);
           });
       }
       
@@ -137,7 +138,7 @@ PeleC::getMOLSrcTerm_SS(
       amrex::surroundingNodes(cbox, 2))};
       amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM> flx;
       const amrex::GpuArray<const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM>
-      areafab{{AMREX_D_DECL(area[0].array(mfi), area[1].array(mfi), area[2].array(mfi))}};
+      area_array{{AMREX_D_DECL(area[0].array(mfi), area[1].array(mfi), area[2].array(mfi))}};
       
       for (int dir = 0; dir < AMREX_SPACEDIM; dir++) 
       {
@@ -152,10 +153,12 @@ PeleC::getMOLSrcTerm_SS(
       auto const& Dterm = Dfab.array();
       setV(cbox, NVAR, Dterm, 0.0);
 
+      const int captured_eb_isothermal = eb_isothermal;
+      const int captured_eb_boundary_T = eb_boundary_T;
       pc_compute_diffusion_flux_SS
       (
-        cbox, qar, coe_cc, flx, a, dx, do_harmonic,
-        typ, Ncut, d_sv_eb_bndry_geom, flags.array(mfi),
+        cbox, qar, coe_cc, flx, area_array, dx, do_harmonic,
+        typ, flags.array(mfi),
         captured_eb_isothermal,captured_eb_boundary_T
       );
 
@@ -226,10 +229,8 @@ PeleC::getMOLSrcTerm_SS(
           
           // auto const& vol = volume.array(mfi);
           pc_compute_hyp_mol_flux_SS(
-            cbox, qar, qauxar, flx, a, dx, plm_iorder,
-            eb_small_vfrac, vfrac.array(mfi), flags.array(mfi),
-            d_sv_eb_bndry_geom, Ncut, d_eb_flux_thdlocal, nFlux
-          );
+            cbox, qar, qauxar, flx, area_array, dx, plm_iorder,
+            vfrac.array(mfi), flags.array(mfi));
         }
 
         // Filter hydro source term and fluxes here
@@ -352,14 +353,13 @@ PeleC::getMOLSrcTerm_SS(
 
       copy_array4(vbox, NVAR, Dterm, MOLSrc);
 
-#ifdef PELEC_USE_EB
       if (do_mol_load_balance && cost) 
       {
         amrex::Gpu::streamSynchronize();
         wt = (amrex::ParallelDescriptor::second() - wt) / vbox.d_numPts();
         (*cost)[mfi].plus<amrex::RunOn::Device>(wt, vbox);
       }
-#endif
     }
   }
 }
+#endif
