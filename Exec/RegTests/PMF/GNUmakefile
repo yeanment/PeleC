@@ -1,45 +1,40 @@
-USE_EB = FALSE
+# AMReX
+DIM = 3
+COMP = gnu
+PRECISION = DOUBLE
 
-PRECISION  = DOUBLE
+# Profiling
+PROFILE = FALSE
+TINY_PROFILE = FALSE
+COMM_PROFILE = FALSE
+TRACE_PROFILE = FALSE
+MEM_PROFILE = FALSE
+USE_GPROF = FALSE
 
-PROFILE    = FALSE
+# Performance
+USE_MPI = TRUE
+USE_OMP = FALSE
+USE_CUDA = TRUE
+USE_HIP = FALSE
+USE_DPCPP = FALSE
 
-DEBUG      = FALSE
+# Debugging
+DEBUG = FALSE
+FSANITIZER = FALSE
+THREAD_SANITIZER = FALSE
 
-#DIM        = 1
-DIM        = 2
-DIM        = 3
-
-COMP	   = gcc
-
-USE_MPI    = FALSE
-
-USE_REACT  = TRUE
-
-###### CVODE
+# PeleC
+USE_REACT = TRUE
 USE_SUNDIALS_PP = FALSE
-USE_KLU_PP = FALSE
+USE_EB = FALSE
+USE_MASA = FALSE
+Eos_dir := Fuego
+Chemistry_Model := dodecane_35
+Transport_dir := Simple
 
-#HYP_TYPE   = MOL
-
-# This sets the EOS directory in $(PELE_PHYSICS_HOME)/Eos
-#Eos_dir     := Soave-Redlich-Kwong
-Eos_dir     := Fuego
-
-# This sets the network directory in $(PELE_PHYSICS_HOME)/Reactions
-Reactions_dir := Fuego
-
-# This sets the model directory in $(PELE_PHYSICS_HOME)/Support/Fuego/Mechanism/Models
-#Chemistry_Model := Davis
-Chemistry_Model := LiDryer
-
-# This sets the transport directory in $(PELE_PHYSICS_HOME)/Transport
-Transport_dir := EGLib
-#Transport_dir := Simple
-
-Bpack   := ./Make.package
-Blocs   := .
-
-# define the location of the PELE top directory
-PELEC_HOME    := ../../..
+# GNU Make
+Bpack := ./Make.package
+Blocs := .
+PELEC_HOME := ../../..
 include $(PELEC_HOME)/Exec/Make.PeleC
+DEFINES += -DAMREX_GPUS_PER_NODE=2

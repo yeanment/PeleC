@@ -1,35 +1,37 @@
-PRECISION  = DOUBLE
-PROFILE    = FALSE
-USE_EB     = FALSE
-DEBUG      = FALSE
+# AMReX
+DIM = 3
+COMP = gnu
+PRECISION = DOUBLE
 
-DIM        = 2
+# Profiling
+PROFILE = FALSE
+TINY_PROFILE = FALSE
+COMM_PROFILE = FALSE
+TRACE_PROFILE = FALSE
+MEM_PROFILE = FALSE
+USE_GPROF = FALSE
 
-COMP	   = gcc
+# Performance
+USE_MPI = FALSE
+USE_OMP = FALSE
+USE_CUDA = FALSE
+USE_HIP = FALSE
+USE_DPCPP = FALSE
 
-USE_MPI    = FALSE
-USE_OMP    = FALSE
+# Debugging
+DEBUG = FALSE
+FSANITIZER = FALSE
+THREAD_SANITIZER = FALSE
 
-
-# This sets the EOS directory in $(PELE_PHYSICS_HOME)/Eos
-Eos_dir     := GammaLaw
-
-# This sets the network directory in $(PELE_PHYSICS_HOME)/Reactions
-Reactions_dir := Fuego
-
-# This sets the transport directory in $(PELE_PHYSICS_HOME)/Transport
+# PeleC
+USE_REACT = FALSE
+USE_EB = FALSE
+Eos_dir := GammaLaw
 Transport_dir := Constant
-
 Chemistry_Model := Null
 
-Bpack   := ./Make.package
-
-# define the location of the PELE top directory
-PELEC_HOME    := ../../..
+# GNU Make
+Bpack := ./Make.package
+Blocs := .
+PELEC_HOME := ../../..
 include $(PELEC_HOME)/Exec/Make.PeleC
-
-ifeq ($(DEBUG), TRUE)
-DEFINES += -DDEBUG
-endif
-
-DEFINES += -DBL_USE_EB
