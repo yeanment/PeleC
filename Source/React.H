@@ -150,10 +150,9 @@ pc_expl_reactions(
 
       amrex::Real wdot[NUM_SPECIES];
       auto eos = pele::physics::PhysicsType::eos();
-      eos.RTY2WDOT(urk[URHO], urk[UTEMP], massfrac, wdot);
-      //amrex::Real diffusion[NUM_SPECIES];
-      //for (int n = UFS; n < UFS + NUM_SPECIES; n++)  diffusion[n] = diff_term(i,j,k,n);
-      //eos.SINGE_BASE_WDOT(urk[URHO], urk[UTEMP], massfrac, diffusion, dt_rk, wdot);
+      amrex::Real diffusion[NUM_SPECIES];
+      for (int n = UFS; n < UFS + NUM_SPECIES; n++)  diffusion[n] = diff_term(i,j,k,n);
+      eos.RTY2WDOT(urk[URHO], urk[UTEMP], massfrac, wdot, diffusion, dt_rk);
 
       for (int n = 0; n < NUM_SPECIES; ++n)
         wdot[n] += rhoydot_ext[n];

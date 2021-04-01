@@ -29,8 +29,9 @@ USE_SUNDIALS_PP = FALSE
 USE_EB = FALSE
 USE_MASA = FALSE
 Eos_dir := Fuego
-Chemistry_Model := dodecane_35
+Chemistry_Model := drm19
 Transport_dir := Simple
+USE_SINGE = TRUE
 
 # GNU Make
 Bpack := ./Make.package
