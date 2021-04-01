@@ -1,15 +1,15 @@
 [submodule "Submodules/AMReX"]
 	path = Submodules/AMReX
-	url = https://github.com/AMReX-Codes/amrex.git
+	url = git@github.com:AMReX-Codes/amrex.git
 [submodule "Submodules/PelePhysics"]
 	path = Submodules/PelePhysics
-	url = https://github.com/AMReX-Combustion/PelePhysics.git
-[submodule "Testing/GoogleTest"]
-	path = Testing/GoogleTest
-	url = https://github.com/google/googletest.git
+	url = git@github.com:AMReX-Combustion/PelePhysics.git
 [submodule "Submodules/PeleC-MP"]
 	path = Submodules/PeleC-MP
-	url = https://github.com/AMReX-Combustion/PeleC-MP.git
-[submodule "TestingCpp/GoogleTest"]
-	path = TestingCpp/GoogleTest
-	url = https://github.com/google/googletest.git
+	url = git@github.com:AMReX-Combustion/PeleC-MP.git
+[submodule "Submodules/sundials"]
+	path = Submodules/sundials
+	url = git@github.com:LLNL/sundials.git
+[submodule "Submodules/GoogleTest"]
+	path = Submodules/GoogleTest
+	url = git@github.com:google/googletest.git
