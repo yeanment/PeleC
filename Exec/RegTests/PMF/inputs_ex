@@ -1,13 +1,13 @@
 # ------------------  INPUTS TO MAIN PROGRAM  -------------------
 stop_time = 6
-max_step = 2
+max_step = 50
 
 # PROBLEM SIZE & GEOMETRY
 geometry.is_periodic = 1 1 0
 geometry.coord_sys   = 0  # 0 => cart, 1 => RZ  2=>spherical
-geometry.prob_lo     =   0.0        0.0       1.0
-geometry.prob_hi     =   0.3125     0.3125    6.0
-amr.n_cell           =   8          8         128
+geometry.prob_lo     =  -0.5   -0.5   -0.5
+geometry.prob_hi     =   1.5    1.5    1.5
+amr.n_cell           =   256    256    256
 
 #pelec.Riemann    = 0     # 0: HLL,  1: JBB,  2: HLLC
 # >>>>>>>>>>>>>  BC KEYWORDS <<<<<<<<<<<<<<<<<<<<<<
@@ -29,11 +29,11 @@ amr.v              = 1       # verbosity in Amr.cpp
 #amr.grid_log       = grdlog  # name of grid logging file
 
 # REFINEMENT / REGRIDDING 
-amr.max_level       = 1       # maximum level number allowed
+amr.max_level       = 0       # maximum level number allowed
 amr.ref_ratio       = 2 2 2 2 # refinement ratio
 amr.regrid_int      = 2 2 2 2 # how often to regrid
-amr.blocking_factor = 8       # block factor in grid generation
-amr.max_grid_size   = 64
+amr.blocking_factor = 4      # block factor in grid generation
+amr.max_grid_size   = 32
 amr.n_error_buf     = 2 2 2 2 # number of buffer cells in error est
 
 # CHECKPOINT FILES
@@ -42,16 +42,18 @@ amr.check_file              = chk    # root name of checkpoint file
 amr.check_int               = 500    # number of timesteps between checkpoints
 
 # PLOTFILES
-amr.plot_files_output = 0
+amr.plot_files_output = 1
 amr.plot_file         = plt     # root name of plotfile
-amr.plot_int          = 10   # number of timesteps between plotfiles
+amr.plot_int          = 25   # number of timesteps between plotfiles
 
 # PROBLEM PARAMETERS
 prob.pamb = 1013250.0  
 prob.phi_in = -0.5
-prob.pertmag = 0.005
-prob.pmf_datafile = "LiDryer_H2_p1_phi0_4000tu0300.dat"
-#prob.pmf_datafile = "PMF_CH4_1bar_300K_DRM_MixAvg.dat"
+prob.pertmag = 0.05
+prob.pmf_datafile = "H2_Flame.dat" 
+#prob.pmf_datafile = "Methane_Flame.dat"
+#prob.pmf_datafile = "Dodecane_Flame.dat"
+#prob.pmf_datafile = "PRF50_Flame.dat"
 
 tagging.max_ftracerr_lev = 4
 tagging.ftracerr = 150.e-6
