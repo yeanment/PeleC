@@ -1,23 +1,22 @@
 <b>P</b>ump is <b>U</b>seful for <b>M</b>eta <b>P</b>rogramming.
 
+<!-- GOOGLETEST_CM0035 DO NOT DELETE -->
+
 # The Problem
 
 Template and macro libraries often need to define many classes, functions, or
 macros that vary only (or almost only) in the number of arguments they take.
 It's a lot of repetitive, mechanical, and error-prone work.
 
-Variadic templates and variadic macros can alleviate the problem. However, while
-both are being considered by the C++ committee, neither is in the standard yet
-or widely supported by compilers. Thus they are often not a good choice,
-especially when your code needs to be portable. And their capabilities are still
-limited.
+Our experience is that it's tedious to write custom scripts, which tend to
+reflect the structure of the generated code poorly and are often hard to read
+and edit. For example, a small change needed in the generated code may require
+some non-intuitive, non-trivial changes in the script. This is especially
+painful when experimenting with the code.
 
-As a result, authors of such libraries often have to write scripts to generate
-their implementation. However, our experience is that it's tedious to write such
-scripts, which tend to reflect the structure of the generated code poorly and
-are often hard to read and edit. For example, a small change needed in the
-generated code may require some non-intuitive, non-trivial changes in the
-script. This is especially painful when experimenting with the code.
+This script may be useful for generating meta code, for example a series of
+macros of FOO1, FOO2, etc. Nevertheless, please make it your last resort
+technique by favouring C++ template metaprogramming or variadic macros.
 
 # Our Solution
 
@@ -120,7 +119,7 @@ Func(a1 + a2 + a3);  // If n is 3.
 We support the following meta programming constructs:
 
 | `$var id = exp`                  | Defines a named constant value. `$id` is |
-:                                  : valid util the end of the current meta   :
+:                                  : valid until the end of the current meta  :
 :                                  : lexical block.                           :
 | :------------------------------- | :--------------------------------------- |
 | `$range id exp..exp`             | Sets the range of an iteration variable, |
@@ -167,10 +166,11 @@ exp ::= simple_expression_in_Python_syntax
 
 ## Code
 
-You can find the source code of Pump in [scripts/pump.py](../scripts/pump.py).
-It is still very unpolished and lacks automated tests, although it has been
-successfully used many times. If you find a chance to use it in your project,
-please let us know what you think! We also welcome help on improving Pump.
+You can find the source code of Pump in
+[googlemock/scripts/pump.py](../googlemock/scripts/pump.py). It is still very
+unpolished and lacks automated tests, although it has been successfully used
+many times. If you find a chance to use it in your project, please let us know
+what you think! We also welcome help on improving Pump.
 
 ## Real Examples
 
