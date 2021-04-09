@@ -299,7 +299,7 @@ pc_ctoprim(
     clip_normalize_Y(massfrac);
 
     for (int sp = 0; sp < NUM_SPECIES; ++sp) {
-        q(i, j, k, sp+QFS)=massfrac[sp];
+      q(i, j, k, sp + QFS) = massfrac[sp];
     }
   }
 
