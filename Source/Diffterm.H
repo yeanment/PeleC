@@ -112,72 +112,77 @@ struct SpeciesEnergyFlux<pele::physics::eos::SRK>
                 const amrex::Real dxinv,
                 const amrex::Real coef[],
                 const amrex::Array4<const amrex::Real>& q,
-                const amrex::Array4<amrex::Real>& flx)
+                const amrex::Array4<amrex::Real>& flx,
+                const bool regularflagL_SS=true,
+                const bool regularflagR_SS=true)
         {
-            pele::physics::eos::SRK eos;
+            if(regularflagL_SS and regularflagR_SS)
+            {
+                pele::physics::eos::SRK eos;
 
-            // Get massfrac, molefrac, enthalpy
-            amrex::Real mass1[NUM_SPECIES], mass2[NUM_SPECIES];
-            amrex::Real mole1[NUM_SPECIES], mole2[NUM_SPECIES];
-            amrex::Real hi1[NUM_SPECIES], hi2[NUM_SPECIES];
-            for (int ns = 0; ns < NUM_SPECIES; ++ns) {
-                mass1[ns] = q(i, j, k, ns + QFS);
-            }
-            eos.Y2X(mass1, mole1);
-            for (int ns = 0; ns < NUM_SPECIES; ++ns) {
-                mass2[ns] = q(im, jm, km, ns + QFS);
-            }
-            eos.Y2X(mass2, mole2);
-
-            // Compute species and enthalpy fluxes accounting for nonideal EOS
-            // Implementation note: nonideal EOS coeffs are evaluated at cell centers,
-            // then inteprolated to faces. Could be slightly more efficient to
-            // interpolate state to face, then do the EOS calls. Current implementation
-            // matches old Fortran code.
-
-            const amrex::Real rho1 = q(i, j, k, QRHO);
-            const amrex::Real rho2 = q(im, jm, km, QRHO);
-            const amrex::Real T1 = q(i, j, k, QTEMP);
-            const amrex::Real T2 = q(im, jm, km, QTEMP);
-            const amrex::Real dpdx = dxinv * (q(i, j, k, QPRES) - q(im, jm, km, QPRES));
-
-            amrex::Real Vc = 0.0;
-            amrex::Real diP1[NUM_SPECIES], dijY1[NUM_SPECIES][NUM_SPECIES];
-            eos.RTY2transport(rho1, T1, mass1, diP1, dijY1);
-            eos.RTY2Hi(rho1, T1, mass1, hi1);
-            amrex::Real diP2[NUM_SPECIES], dijY2[NUM_SPECIES][NUM_SPECIES];
-            eos.RTY2transport(rho2, T2, mass2, diP2, dijY2);
-            eos.RTY2Hi(rho2, T2, mass2, hi2);
-            amrex::Real dYdx[NUM_SPECIES], ddrive[NUM_SPECIES];
-            for (int ns = 0; ns < NUM_SPECIES; ++ns) {
-                dYdx[ns] = dxinv * (mass1[ns] - mass2[ns]);
-                ddrive[ns] = 0.5 * (diP1[ns] + diP2[ns]) * dpdx;
-            }
-            for (int ns1 = 0; ns1 < NUM_SPECIES; ++ns1) {
-                for (int ns2 = 0; ns2 < NUM_SPECIES; ++ns2) {
-                    ddrive[ns1] += 0.5 * (dijY1[ns1][ns2] + dijY2[ns1][ns2]) * dYdx[ns2];
+                // Get massfrac, molefrac, enthalpy
+                amrex::Real mass1[NUM_SPECIES], mass2[NUM_SPECIES];
+                amrex::Real mole1[NUM_SPECIES], mole2[NUM_SPECIES];
+                amrex::Real hi1[NUM_SPECIES], hi2[NUM_SPECIES];
+                for (int ns = 0; ns < NUM_SPECIES; ++ns) {
+                    mass1[ns] = q(i, j, k, ns + QFS);
                 }
-            }
-            amrex::Real dsum = 0.0;
-            for (int ns = 0; ns < NUM_SPECIES; ++ns) {
-                dsum += ddrive[ns];
-            }
-            for (int ns = 0; ns < NUM_SPECIES; ++ns) {
-                const amrex::Real Yface = 0.5 * (mass1[ns] + mass2[ns]);
-                const amrex::Real hface = 0.5 * (hi1[ns] + hi2[ns]);
-                ddrive[ns] -= Yface * dsum;
-                const amrex::Real Vd = -coef[dComp_rhoD + ns] * ddrive[ns];
-                flx(i, j, k, UFS + ns) = Vd;
-                Vc += Vd;
-                flx(i, j, k, UEDEN) += Vd * hface;
-            }
+                eos.Y2X(mass1, mole1);
+                for (int ns = 0; ns < NUM_SPECIES; ++ns) {
+                    mass2[ns] = q(im, jm, km, ns + QFS);
+                }
+                eos.Y2X(mass2, mole2);
 
-            // Add correction velocity to fluxes
-            for (int ns = 0; ns < NUM_SPECIES; ++ns) {
-                const amrex::Real Yface = 0.5 * (mass1[ns] + mass2[ns]);
-                const amrex::Real hface = 0.5 * (hi1[ns] + hi2[ns]);
-                flx(i, j, k, UFS + ns) -= Yface * Vc;
-                flx(i, j, k, UEDEN) -= Yface * hface * Vc;
+                // Compute species and enthalpy fluxes accounting for nonideal EOS
+                // Implementation note: nonideal EOS coeffs are evaluated at cell centers,
+                // then inteprolated to faces. Could be slightly more efficient to
+                // interpolate state to face, then do the EOS calls. Current implementation
+                // matches old Fortran code.
+
+                const amrex::Real rho1 = q(i, j, k, QRHO);
+                const amrex::Real rho2 = q(im, jm, km, QRHO);
+                const amrex::Real T1 = q(i, j, k, QTEMP);
+                const amrex::Real T2 = q(im, jm, km, QTEMP);
+                const amrex::Real dpdx = dxinv * (q(i, j, k, QPRES) - q(im, jm, km, QPRES));
+
+                amrex::Real Vc = 0.0;
+                amrex::Real diP1[NUM_SPECIES], dijY1[NUM_SPECIES][NUM_SPECIES];
+                eos.RTY2transport(rho1, T1, mass1, diP1, dijY1);
+                eos.RTY2Hi(rho1, T1, mass1, hi1);
+                amrex::Real diP2[NUM_SPECIES], dijY2[NUM_SPECIES][NUM_SPECIES];
+                eos.RTY2transport(rho2, T2, mass2, diP2, dijY2);
+                eos.RTY2Hi(rho2, T2, mass2, hi2);
+                amrex::Real dYdx[NUM_SPECIES], ddrive[NUM_SPECIES];
+                for (int ns = 0; ns < NUM_SPECIES; ++ns) {
+                    dYdx[ns] = dxinv * (mass1[ns] - mass2[ns]);
+                    ddrive[ns] = 0.5 * (diP1[ns] + diP2[ns]) * dpdx;
+                }
+                for (int ns1 = 0; ns1 < NUM_SPECIES; ++ns1) {
+                    for (int ns2 = 0; ns2 < NUM_SPECIES; ++ns2) {
+                        ddrive[ns1] += 0.5 * (dijY1[ns1][ns2] + dijY2[ns1][ns2]) * dYdx[ns2];
+                    }
+                }
+                amrex::Real dsum = 0.0;
+                for (int ns = 0; ns < NUM_SPECIES; ++ns) {
+                    dsum += ddrive[ns];
+                }
+                for (int ns = 0; ns < NUM_SPECIES; ++ns) {
+                    const amrex::Real Yface = 0.5 * (mass1[ns] + mass2[ns]);
+                    const amrex::Real hface = 0.5 * (hi1[ns] + hi2[ns]);
+                    ddrive[ns] -= Yface * dsum;
+                    const amrex::Real Vd = -coef[dComp_rhoD + ns] * ddrive[ns];
+                    flx(i, j, k, UFS + ns) = Vd;
+                    Vc += Vd;
+                    flx(i, j, k, UEDEN) += Vd * hface;
+                }
+
+                // Add correction velocity to fluxes
+                for (int ns = 0; ns < NUM_SPECIES; ++ns) {
+                    const amrex::Real Yface = 0.5 * (mass1[ns] + mass2[ns]);
+                    const amrex::Real hface = 0.5 * (hi1[ns] + hi2[ns]);
+                    flx(i, j, k, UFS + ns) -= Yface * Vc;
+                    flx(i, j, k, UEDEN) -= Yface * hface * Vc;
+                }
             }
         }
 };
@@ -259,11 +264,11 @@ pc_diffusion_flux_SS(
         const amrex::Real dwdy = dxinv * (wR-wL);
         const amrex::Real dvdz = td(i, j, k, 4);
         const amrex::Real dwdz = td(i, j, k, 5);
-        tauz = coef[dComp_mu] * (dwdy + dvdz);
         const amrex::Real divu = AMREX_D_TERM(dudx, +dvdy, +dwdz);
+
         taux = coef[dComp_mu] * (dudy + dvdx);
-        tauy =
-            coef[dComp_mu] * (2.0 * dvdy - 2.0 / 3.0 * divu) + coef[dComp_xi] * divu;
+        tauy = coef[dComp_mu] * (2.0 * dvdy - 2.0 / 3.0 * divu) + coef[dComp_xi] * divu;
+        tauz = coef[dComp_mu] * (dwdy + dvdz);
     } 
     else if (dir == 2) 
     {
@@ -278,8 +283,7 @@ pc_diffusion_flux_SS(
 
         taux = coef[dComp_mu] * (dudz + dwdx);
         tauy = coef[dComp_mu] * (dvdz + dwdy);
-        tauz =
-            coef[dComp_mu] * (2.0 * dwdz - 2.0 / 3.0 * divu) + coef[dComp_xi] * divu;
+        tauz = coef[dComp_mu] * (2.0 * dwdz - 2.0 / 3.0 * divu) + coef[dComp_xi] * divu;
     }
     flx(i, j, k, UMX) = -taux;
     flx(i, j, k, UMY) = -tauy;
@@ -450,19 +454,19 @@ void pc_compute_diffusion_flux(
 #ifdef PELEC_USE_EB
 void
 pc_compute_diffusion_flux_SS(
-  const amrex::Box& box,
-  const amrex::Array4<amrex::Real>& q,
-  const amrex::Array4<const amrex::Real>& coef,
-  const amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM> flx,
-  const amrex::GpuArray<const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM>
-    a,
-  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> del,
-  const int do_harmonic,
-  const amrex::FabType typ,
-  const amrex::Array4<amrex::EBCellFlag const>& flags,
-  const int eb_isothermal,
-  const amrex::Real eb_boundary_T
-);
+        const amrex::Box& box,
+        const amrex::Array4<amrex::Real>& q,
+        const amrex::Array4<const amrex::Real>& coef,
+        const amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM> flx,
+        const amrex::GpuArray<const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM>
+        a,
+        const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> del,
+        const int do_harmonic,
+        const amrex::FabType typ,
+        const amrex::Array4<amrex::EBCellFlag const>& flags,
+        const int eb_isothermal,
+        const amrex::Real eb_boundary_T
+        );
 #endif
 
 #endif

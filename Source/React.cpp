@@ -433,7 +433,7 @@ PeleC::react_state(
     S_new.FillBoundary(geom.periodicity());
   }
 
-  if(pc_use_ss)
+  if(use_sstep)
   {
       for(int n=0;n<(NUM_SPECIES+1);n++)
       {
