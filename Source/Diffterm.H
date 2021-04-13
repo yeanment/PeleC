@@ -220,24 +220,24 @@ pc_diffusion_flux_SS(
     amrex::Real taux = 0.0, tauy = 0.0, tauz = 0.0;
 
     amrex::Real uL,uR,vL,vR,wL,wR,TL,TR;
-    uL=flags(i  , j,  k).isRegular() ? q(i,   j,  k, QU) : -q(im, jm, km, QU);
-    uR=flags(im ,jm, km).isRegular() ? q(im, jm, km, QU) : -q(i,   j,  k, QU);
+    uL=flags(im  , jm,  km).isRegular() ? q(im,   jm,  km, QU) : -q(i,   j,  k, QU);
+    uR=flags(i   , j ,   k).isRegular() ? q(i,     j,   k, QU) : -q(im, jm, km, QU);
 
-    vL=flags(i  , j,  k).isRegular() ? q(i,   j,  k, QV) : -q(im, jm, km, QV);
-    vR=flags(im ,jm, km).isRegular() ? q(im, jm, km, QV) : -q(i,   j,  k, QV);
+    vL=flags(im  , jm,  km).isRegular() ? q(im,   jm,  km, QV) : -q(i,   j,  k, QV);
+    vR=flags(i   ,  j,   k).isRegular() ? q(i,     j,   k, QV) : -q(im, jm, km, QV);
 
-    wL=flags(i  , j,  k).isRegular() ? q(i,   j,  k, QW) : -q(im, jm, km, QW);
-    wR=flags(im ,jm, km).isRegular() ? q(im, jm, km, QW) : -q(i,   j,  k, QW);
+    wL=flags(im  , jm,  km).isRegular() ? q(im,  jm,  km, QW)  : -q(i,   j,  k, QW);
+    wR=flags(i   ,  j,   k).isRegular() ? q(i,    j,   k, QW)  : -q(im, jm, km, QW);
 
     if(eb_isothermal)
     {
-        TL=flags(i  , j,  k).isRegular() ? q(i,   j,  k, QTEMP) : eb_boundary_T;
-        TR=flags(i  , j,  k).isRegular() ? q(im, jm, km, QTEMP) : eb_boundary_T;
+        TL=flags(im  , jm,  km).isRegular() ? q(im,   jm,  km, QTEMP) : eb_boundary_T;
+        TR=flags(i   ,  j,   k).isRegular() ? q(i,     j,   k, QTEMP) : eb_boundary_T;
     }
     else
     {
-        TL=flags(i  , j,  k).isRegular() ? q(i,   j,  k, QTEMP) : q(im, jm, km, QTEMP);
-        TR=flags(i  , j,  k).isRegular() ? q(im, jm, km, QTEMP) : q(i,   j,  k, QTEMP);
+        TL=flags(im  , jm,  km).isRegular() ? q(im,   jm,  km, QTEMP) : q(i,    j,    k, QTEMP);
+        TR=flags(i   ,  j,   k).isRegular() ? q(i,     j,   k, QTEMP) : q(im,   jm,  km, QTEMP);
     }
 
     if (dir == 0) 
