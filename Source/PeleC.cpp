@@ -534,6 +534,7 @@ PeleC::buildMetrics()
   const auto& ebfactory =
     dynamic_cast<amrex::EBFArrayBoxFactory const&>(Factory());
   amrex::MultiFab::Copy(vfrac, ebfactory.getVolFrac(), 0, 0, 1, NUM_GROW);
+  amrex::MultiFab::Copy(vfrac_SS, ebfactory.getVolFrac(), 0, 0, 1, NUM_GROW);
   areafrac = ebfactory.getAreaFrac();
 #endif
 

@@ -365,7 +365,7 @@ pc_compute_hyp_mol_flux_SS(
                         }
                         for (int ivar = 0; ivar < NVAR; ivar++) 
                         {
-                            //flx[dir](i, j, k, ivar) += flux_tmp[ivar] * area[dir](i, j, k);
+                            flx[dir](i, j, k, ivar) += flux_tmp[ivar] * area[dir](i, j, k);
                         }
                     }
                 }

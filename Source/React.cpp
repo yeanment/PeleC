@@ -130,7 +130,9 @@ PeleC::react_state(
       const int captured_clean_massfrac = clean_massfrac;
 
 #ifdef PELEC_USE_EB
+      const int captured_use_sstep      = use_sstep;
       const auto& flag_fab = flags[mfi];
+      const auto& flagarr=flags.array(mfi);
       amrex::FabType typ = flag_fab.getType(bx);
       if (typ == amrex::FabType::covered) {
         if (do_react_load_balance) {
@@ -159,7 +161,10 @@ PeleC::react_state(
               pc_expl_reactions(
                 i, j, k, sold_arr, snew_arr, nonrs_arr, I_R, dt, nsubsteps_min,
                 nsubsteps_max, nsubsteps_guess, errtol, do_update,
-                captured_clean_massfrac);
+                captured_clean_massfrac
+#ifdef PELEC_USE_EB
+                ,flagarr,captured_use_sstep);
+#endif
             });
         }
 
@@ -357,104 +362,122 @@ PeleC::react_state(
                 }
               }
 
-              if (do_update) {
-                snew_arr(i, j, k, URHO) = rhonew;
-                snew_arr(i, j, k, UMX) = umnew;
-                snew_arr(i, j, k, UMY) = vmnew;
-                snew_arr(i, j, k, UMZ) = wmnew;
 
-                if (captured_chem_integrator == 2) {
-                  for (int nsp = 0; nsp < NUM_SPECIES; nsp++) {
-                    snew_arr(i, j, k, UFS + nsp) =
-                      d_rY_in[offset * (NUM_SPECIES + 1) + nsp];
+              if (do_update) 
+              {
+                  bool update_soln_at_cell=false;
+                  if(captured_use_sstep)
+                  {
+                      if(flagarr(i,j,k).isRegular())
+                      {
+                          update_soln_at_cell=true;
+                      }
                   }
-                  snew_arr(i, j, k, UTEMP) =
-                    d_rY_in[offset * (NUM_SPECIES + 1) + NUM_SPECIES];
-                } else {
-                  for (int nsp = 0; nsp < NUM_SPECIES; nsp++) {
-                    snew_arr(i, j, k, UFS + nsp) = rhoY(i, j, k, nsp);
+                  else
+                  {
+                      update_soln_at_cell=true;
                   }
-                  snew_arr(i, j, k, UTEMP) = T(i, j, k);
-                }
 
-                snew_arr(i, j, k, UEINT) = rho_old * e_old + dt * rhoedot_ext;
-                snew_arr(i, j, k, UEDEN) =
-                  snew_arr(i, j, k, UEINT) +
-                  0.5 * (umnew * umnew + vmnew * vmnew + wmnew * wmnew) /
-                    rhonew;
+                  if(update_soln_at_cell)
+                  {
+                      snew_arr(i, j, k, URHO) = rhonew;
+                      snew_arr(i, j, k, UMX) = umnew;
+                      snew_arr(i, j, k, UMY) = vmnew;
+                      snew_arr(i, j, k, UMZ) = wmnew;
+
+                      if (captured_chem_integrator == 2) {
+                          for (int nsp = 0; nsp < NUM_SPECIES; nsp++) {
+                              snew_arr(i, j, k, UFS + nsp) =
+                                  d_rY_in[offset * (NUM_SPECIES + 1) + nsp];
+                          }
+                          snew_arr(i, j, k, UTEMP) =
+                              d_rY_in[offset * (NUM_SPECIES + 1) + NUM_SPECIES];
+                      } else {
+                          for (int nsp = 0; nsp < NUM_SPECIES; nsp++) {
+                              snew_arr(i, j, k, UFS + nsp) = rhoY(i, j, k, nsp);
+                          }
+                          snew_arr(i, j, k, UTEMP) = T(i, j, k);
+                      }
+
+                      snew_arr(i, j, k, UEINT) = rho_old * e_old + dt * rhoedot_ext;
+                      snew_arr(i, j, k, UEDEN) =
+                          snew_arr(i, j, k, UEINT) +
+                          0.5 * (umnew * umnew + vmnew * vmnew + wmnew * wmnew) /
+                          rhonew;
+                  }
               }
 
               if (captured_chem_integrator == 2) {
-                for (int nsp = 0; nsp < NUM_SPECIES; nsp++) {
-                  I_R(i, j, k, nsp) =
-                    (d_rY_in[offset * (NUM_SPECIES + 1) + nsp] // new rhoy
-                     - sold_arr(i, j, k, UFS + nsp))           // old rhoy
-                      / dt -
-                    nonrs_arr(i, j, k, UFS + nsp);
-                }
+                  for (int nsp = 0; nsp < NUM_SPECIES; nsp++) {
+                      I_R(i, j, k, nsp) =
+                          (d_rY_in[offset * (NUM_SPECIES + 1) + nsp] // new rhoy
+                           - sold_arr(i, j, k, UFS + nsp))           // old rhoy
+                          / dt -
+                          nonrs_arr(i, j, k, UFS + nsp);
+                  }
               } else {
-                for (int nsp = 0; nsp < NUM_SPECIES; nsp++) {
-                  I_R(i, j, k, nsp) =
-                    (rhoY(i, j, k, nsp)              // new rhoy
-                     - sold_arr(i, j, k, UFS + nsp)) // old rhoy
-                      / dt -
-                    nonrs_arr(i, j, k, UFS + nsp);
-                }
+                  for (int nsp = 0; nsp < NUM_SPECIES; nsp++) {
+                      I_R(i, j, k, nsp) =
+                          (rhoY(i, j, k, nsp)              // new rhoy
+                           - sold_arr(i, j, k, UFS + nsp)) // old rhoy
+                          / dt -
+                          nonrs_arr(i, j, k, UFS + nsp);
+                  }
               }
 
               I_R(i, j, k, NUM_SPECIES) =
-                (rho_old * e_old + dt * rhoedot_ext // new internal energy
-                 + 0.5 * (umnew * umnew + vmnew * vmnew + wmnew * wmnew) /
-                     rhonew                  // new KE
-                 - sold_arr(i, j, k, UEDEN)) // old total energy
+                  (rho_old * e_old + dt * rhoedot_ext // new internal energy
+                   + 0.5 * (umnew * umnew + vmnew * vmnew + wmnew * wmnew) /
+                   rhonew                  // new KE
+                   - sold_arr(i, j, k, UEDEN)) // old total energy
                   / dt -
-                nonrs_arr(i, j, k, UEDEN);
+                  nonrs_arr(i, j, k, UEDEN);
             });
 
           wt = (amrex::ParallelDescriptor::second() - wt) / bx.d_numPts();
 
           if (do_react_load_balance) {
-            const amrex::Box vbox = mfi.tilebox();
-            get_new_data(Work_Estimate_Type)[mfi].plus<amrex::RunOn::Device>(
-              wt, vbox);
+              const amrex::Box vbox = mfi.tilebox();
+              get_new_data(Work_Estimate_Type)[mfi].plus<amrex::RunOn::Device>(
+                      wt, vbox);
           }
 #else
           amrex::Abort(
-            "chem_integrator=2,3 which requires Sundials to be enabled");
+                  "chem_integrator=2,3 which requires Sundials to be enabled");
 #endif
         } else {
-          amrex::Abort("chem_integrator must be equal to 1, 2, or 3");
+            amrex::Abort("chem_integrator must be equal to 1, 2, or 3");
         }
       }
     }
   }
 
   if (ng > 0) {
-    S_new.FillBoundary(geom.periodicity());
+      S_new.FillBoundary(geom.periodicity());
   }
 
   if(use_sstep)
   {
       for(int n=0;n<(NUM_SPECIES+1);n++)
       {
-        amrex::MultiFab::Multiply(react_src, vfrac_SS, 0, n, 1, 0);
+          amrex::MultiFab::Multiply(react_src, vfrac_SS, 0, n, 1, 0);
       }
   }
 
   if (verbose > 1) {
-    const int IOProc = amrex::ParallelDescriptor::IOProcessorNumber();
-    amrex::Real run_time = amrex::ParallelDescriptor::second() - strt_time;
+      const int IOProc = amrex::ParallelDescriptor::IOProcessorNumber();
+      amrex::Real run_time = amrex::ParallelDescriptor::second() - strt_time;
 
 #ifdef AMREX_LAZY
-    Lazy::QueueReduction([=]() mutable {
+      Lazy::QueueReduction([=]() mutable {
 #endif
-      amrex::ParallelDescriptor::ReduceRealMax(run_time, IOProc);
+              amrex::ParallelDescriptor::ReduceRealMax(run_time, IOProc);
 
-      if (amrex::ParallelDescriptor::IOProcessor()) {
-        amrex::Print() << "PeleC::react_state() time = " << run_time << "\n";
-      }
+              if (amrex::ParallelDescriptor::IOProcessor()) {
+              amrex::Print() << "PeleC::react_state() time = " << run_time << "\n";
+              }
 #ifdef AMREX_LAZY
-    });
+              });
 #endif
   }
 }

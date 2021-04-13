@@ -433,6 +433,37 @@ pc_flux_div(
         V(i, j, k);
 }
 
+// This function computes the flux divergence.
+AMREX_GPU_DEVICE
+AMREX_FORCE_INLINE
+void
+pc_flux_div_SS(
+        const int i,
+        const int j,
+        const int k,
+        const int n,
+        AMREX_D_DECL(
+            const amrex::Array4<const amrex::Real>& fx,
+            const amrex::Array4<const amrex::Real>& fy,
+            const amrex::Array4<const amrex::Real>& fz),
+        const amrex::Array4<amrex::EBCellFlag const>& flags,
+        const amrex::Array4<const amrex::Real>& V,
+        const amrex::Array4<amrex::Real>& D)
+{
+    if(flags(i,j,k).isRegular())
+    {
+        D(i, j, k, n) =
+            -(AMREX_D_TERM(
+                        fx(i + 1, j, k, n) - fx(i, j, k, n), +fy(i, j + 1, k, n) - fy(i, j, k, n),
+                        +fz(i, j, k + 1, n) - fz(i, j, k, n))) /
+            V(i, j, k);
+    }
+    else
+    {
+        D(i, j, k, n) = 0.0;
+    }
+}
+
 void pc_compute_diffusion_flux(
         const amrex::Box& box,
         const amrex::Array4<const amrex::Real>& q,

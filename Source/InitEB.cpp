@@ -70,6 +70,7 @@ PeleC::initialize_eb2_structs()
   facecent = ebfactory.getFaceCent();
 
   vfrac.copy(*volfrac);
+  vfrac_SS.copy(*volfrac);
 
   // First pass over fabs to fill sparse per cut-cell ebg structures
   sv_eb_bndry_geom.resize(vfrac.local_size());

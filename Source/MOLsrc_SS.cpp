@@ -21,14 +21,16 @@ PeleC::getMOLSrcTerm_SS(
 
   const int nCompTr = dComp_lambda + 1;
   const int do_harmonic = 1; // TODO: parmparse this
-  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx = geom.CellSizeArray();
+  const amrex::GpuArray<amrex::Real, 
+        AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
   amrex::Real dx1 = dx[0];
   for (int dir = 1; dir < AMREX_SPACEDIM; ++dir) 
   {
     dx1 *= dx[dir];
   }
-  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dxD = {
+  const amrex::GpuArray
+      <amrex::Real, AMREX_SPACEDIM> dxD = {
     {AMREX_D_DECL(dx1, dx1, dx1)}};
 
   // Fetch some gpu arrays
@@ -155,6 +157,7 @@ PeleC::getMOLSrcTerm_SS(
 
       const int captured_eb_isothermal = eb_isothermal;
       const int captured_eb_boundary_T = eb_boundary_T;
+
       pc_compute_diffusion_flux_SS
       (
         cbox, qar, coe_cc, flx, area_array, dx, do_harmonic,
@@ -203,24 +206,6 @@ PeleC::getMOLSrcTerm_SS(
 
       if (do_hydro && do_mol) 
       {
-        // save off the diffusion source term and fluxes (don't want to filter
-        // these)
-        amrex::FArrayBox diffusion_flux[AMREX_SPACEDIM];
-        amrex::Elixir diffusion_flux_eli[AMREX_SPACEDIM];
-        amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM>
-          diffusion_flux_arr;
-        if (use_explicit_filter) 
-        {
-          for (int dir = 0; dir < AMREX_SPACEDIM; dir++) 
-          {
-            diffusion_flux[dir].resize(flux_ec[dir].box(), NVAR);
-            diffusion_flux_eli[dir] = diffusion_flux[dir].elixir();
-            diffusion_flux_arr[dir] = diffusion_flux[dir].array();
-            copy_array4(
-              flux_ec[dir].box(), flux_ec[dir].nComp(), flx[dir],
-              diffusion_flux_arr[dir]);
-          }
-        }
 
         { 
           // Get face-centered hyperbolic fluxes and their divergences.
@@ -229,65 +214,22 @@ PeleC::getMOLSrcTerm_SS(
           
           // auto const& vol = volume.array(mfi);
           pc_compute_hyp_mol_flux_SS(
-            cbox, qar, qauxar, flx, area_array, dx, plm_iorder,
-            vfrac.array(mfi), flags.array(mfi));
-        }
-
-        // Filter hydro source term and fluxes here
-        if (use_explicit_filter) 
-        {
-          // Get the hydro term
-          amrex::FArrayBox hydro_flux[AMREX_SPACEDIM];
-          amrex::Elixir hydro_flux_eli[AMREX_SPACEDIM];
-          amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM>
-            hydro_flux_arr;
-          for (int dir = 0; dir < AMREX_SPACEDIM; dir++) 
-          {
-            hydro_flux[dir].resize(flux_ec[dir].box(), NVAR);
-            hydro_flux_eli[dir] = hydro_flux[dir].elixir();
-            hydro_flux_arr[dir] = hydro_flux[dir].array();
-            lincomb_array4(
-              flux_ec[dir].box(), Density, NVAR, flx[dir],
-              diffusion_flux_arr[dir], 1.0, -1.0, hydro_flux_arr[dir]);
-          }
-
-          // Filter
-          const amrex::Box fbox = amrex::grow(cbox, -nGrowF);
-          for (int dir = 0; dir < AMREX_SPACEDIM; dir++) 
-          {
-            const amrex::Box& bxtmp = amrex::surroundingNodes(fbox, dir);
-            amrex::FArrayBox filtered_hydro_flux;
-            filtered_hydro_flux.resize(bxtmp, NVAR);
-            amrex::Elixir filtered_hydro_flux_eli =
-              filtered_hydro_flux.elixir();
-            les_filter.apply_filter(
-              bxtmp, hydro_flux[dir], filtered_hydro_flux, Density, NVAR);
-
-            setV(bxtmp, hydro_flux[dir].nComp(), hydro_flux_arr[dir], 0.0);
-            copy_array4(
-              bxtmp, hydro_flux[dir].nComp(), filtered_hydro_flux.array(),
-              hydro_flux_arr[dir]);
-          }
-
-          // Combine with diffusion
-          for (int dir = 0; dir < AMREX_SPACEDIM; dir++) 
-          {
-            lincomb_array4(
-              diffusion_flux[dir].box(), Density, NVAR, diffusion_flux_arr[dir],
-              hydro_flux_arr[dir], 1.0, 1.0, flx[dir]);
-          }
+          cbox, qar, qauxar, flx, area_array, dx, plm_iorder,
+          vfrac.array(mfi), flags.array(mfi));
         }
 
         // Compute flux divergence (1/Vol).Div(F.A)
         {
+          auto const& flagarr = flags.array(mfi);
           BL_PROFILE("PeleC::pc_flux_div()");
           auto const& vol = volume.array(mfi);
           amrex::ParallelFor(
             cbox, NVAR,
             [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept 
             {
-              pc_flux_div(
-                i, j, k, n, AMREX_D_DECL(flx[0], flx[1], flx[2]), vol, Dterm);
+              pc_flux_div_SS(
+                i, j, k, n, AMREX_D_DECL(flx[0], flx[1], flx[2]), 
+                flagarr, vol, Dterm);
             });
         }
       }
@@ -317,7 +259,8 @@ PeleC::getMOLSrcTerm_SS(
             dxD.data(), dt, device);
         }
 
-        if (level > 0) {
+        if (level > 0) 
+        {
           getFluxReg(level).FineAdd(
             mfi, {{AMREX_D_DECL(&flux_ec[0], &flux_ec[1], &flux_ec[2])}},
             dxD.data(), dt, device);
