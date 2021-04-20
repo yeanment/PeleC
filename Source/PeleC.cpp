@@ -832,6 +832,8 @@ amrex::Real PeleC::estTimeStep(amrex::Real /*dt_old*/)
     prefetchToDevice(stateMF); // This should accelerate the below operations.
     amrex::Real AMREX_D_DECL(dx1 = dx[0], dx2 = dx[1], dx3 = dx[2]);
 
+    int captured_use_sstep=use_sstep;
+
     if (do_hydro) {
       amrex::Real dt = amrex::ReduceMin(
         stateMF,
@@ -850,6 +852,7 @@ amrex::Real PeleC::estTimeStep(amrex::Real /*dt_old*/)
             bx, fab_arr,
 #ifdef PELEC_USE_EB
             flag_arr,
+            captured_use_sstep,
 #endif
             AMREX_D_DECL(dx1, dx2, dx3));
         });
@@ -876,6 +879,7 @@ amrex::Real PeleC::estTimeStep(amrex::Real /*dt_old*/)
             bx, fab_arr,
 #ifdef PELEC_USE_EB
             flag_arr,
+            captured_use_sstep,
 #endif
             AMREX_D_DECL(dx1, dx2, dx3), ltransparm);
         });
@@ -902,6 +906,7 @@ amrex::Real PeleC::estTimeStep(amrex::Real /*dt_old*/)
             bx, fab_arr,
 #ifdef PELEC_USE_EB
             flag_arr,
+            captured_use_sstep,
 #endif
             AMREX_D_DECL(dx1, dx2, dx3), ltransparm);
         });
@@ -928,6 +933,7 @@ amrex::Real PeleC::estTimeStep(amrex::Real /*dt_old*/)
             bx, fab_arr,
 #ifdef PELEC_USE_EB
             flag_arr,
+            captured_use_sstep,
 #endif
             AMREX_D_DECL(dx1, dx2, dx3), ltransparm);
         });

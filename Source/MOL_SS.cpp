@@ -44,7 +44,7 @@ pc_compute_hyp_mol_flux_SS(
         {
             amrex::ParallelFor(
                     cbox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept 
-                    {
+            {
                     mol_slope_SS(i, j, k, bdim, q_idx, q, qaux, dq,flags);
                     });
         }
@@ -228,8 +228,10 @@ pc_compute_hyp_mol_flux_SS(
 
                             qtempr[R_UN]  = q(i, j, k, q_idx[0]);
                             qtempr[R_P]   = q(i, j, k, QPRES);
-                            qtempr[R_UT1] = q(i, j, k, q_idx[1]);
-                            qtempr[R_UT2] = q(i, j, k, q_idx[2]);
+                            //qtempr[R_UT1] = q(i, j, k, q_idx[1]);
+                            //qtempr[R_UT2] = q(i, j, k, q_idx[2]);
+                            qtempr[R_UT1] = 0.0;
+                            qtempr[R_UT2] = 0.0;
                             qtempr[R_RHO] = 0.0;
 
                             for (int n = 0; n < NUM_SPECIES; n++) 
@@ -283,8 +285,10 @@ pc_compute_hyp_mol_flux_SS(
                         {
                             qtempl[R_UN]  = q(ii, jj, kk, q_idx[0]);
                             qtempl[R_P]   = q(ii, jj, kk, QPRES);
-                            qtempl[R_UT1] = q(ii, jj, kk, q_idx[1]);
-                            qtempl[R_UT2] = q(ii, jj, kk, q_idx[2]);
+                            //qtempl[R_UT1] = q(ii, jj, kk, q_idx[1]);
+                            //qtempl[R_UT2] = q(ii, jj, kk, q_idx[2]);
+                            qtempl[R_UT1] = 0.0;
+                            qtempl[R_UT2] = 0.0;
                             qtempl[R_RHO] = 0.0;
 
                             for (int n = 0; n < NUM_SPECIES; n++) 
@@ -363,6 +367,13 @@ pc_compute_hyp_mol_flux_SS(
                         {
                             flux_tmp[n] = (NUM_ADV > 0) ? 0.0 : flux_tmp[n];
                         }
+
+                        for (int n = 0; n < NVAR; n++) 
+                        {
+                            flux_tmp[n] = 0.0; //0 flux at wall
+                        }
+                        flux_tmp[UMX+dir] = qtempl[R_P];
+
                         for (int ivar = 0; ivar < NVAR; ivar++) 
                         {
                             flx[dir](i, j, k, ivar) += flux_tmp[ivar] * area[dir](i, j, k);
