@@ -164,8 +164,9 @@ PeleC::react_state(
                 captured_clean_massfrac
 #ifdef PELEC_USE_EB
                 ,
-                flagarr, captured_use_sstep);
+                flagarr, captured_use_sstep
 #endif
+              );
             });
         }
 
@@ -450,11 +451,13 @@ PeleC::react_state(
     S_new.FillBoundary(geom.periodicity());
   }
 
+#ifdef PELEC_USE_EB
   if (use_sstep) {
     for (int n = 0; n < (NUM_SPECIES + 1); n++) {
       amrex::MultiFab::Multiply(react_src, vfrac_SS, 0, n, 1, 0);
     }
   }
+#endif
 
   if (verbose > 1) {
     const int IOProc = amrex::ParallelDescriptor::IOProcessorNumber();

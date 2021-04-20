@@ -418,6 +418,7 @@ pc_flux_div(
     V(i, j, k);
 }
 
+#ifdef PELEC_USE_EB
 // This function computes the flux divergence.
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
@@ -445,6 +446,7 @@ pc_flux_div_SS(
     D(i, j, k, n) = 0.0;
   }
 }
+#endif
 
 void pc_compute_diffusion_flux(
   const amrex::Box& box,

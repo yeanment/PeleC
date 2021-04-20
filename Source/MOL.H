@@ -11,6 +11,7 @@
 #include "Riemann.H"
 #include "PelePhysics.H"
 
+#ifdef PELEC_USE_EB
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
 void
@@ -22,12 +23,8 @@ mol_slope_SS(
   const amrex::GpuArray<const int, 3> q_idx,
   const amrex::Array4<const amrex::Real>& q,
   const amrex::Array4<const amrex::Real>& qaux,
-  const amrex::Array4<amrex::Real>& dq
-#ifdef PELEC_USE_EB
-  ,
-  const amrex::Array4<amrex::EBCellFlag const>& flags
-#endif
-)
+  const amrex::Array4<amrex::Real>& dq,
+  const amrex::Array4<amrex::EBCellFlag const>& flags)
 {
   const int im = i - bdim[0];
   const int jm = j - bdim[1];
@@ -100,6 +97,7 @@ mol_slope_SS(
     }
   }
 }
+#endif
 
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE

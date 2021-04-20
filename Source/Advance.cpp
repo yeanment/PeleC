@@ -97,11 +97,16 @@ PeleC::do_mol_advance(
   }
   FillPatch(*this, Sborder, NUM_GROW + nGrowF, time, State_Type, 0, NVAR);
   amrex::Real flux_factor = 0;
+
+#ifdef PELEC_USE_EB
   if (!use_sstep) {
     getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
   } else {
     getMOLSrcTerm_SS(Sborder, molSrc, time, dt, flux_factor);
   }
+#else
+  getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
+#endif
 
   // Build other (neither spray nor diffusion) sources at t_old
   for (int n = 0; n < src_list.size(); ++n) {
@@ -143,11 +148,15 @@ PeleC::do_mol_advance(
   }
   FillPatch(*this, Sborder, NUM_GROW + nGrowF, time + dt, State_Type, 0, NVAR);
   flux_factor = mol_iters > 1 ? 0 : 1;
+#ifdef PELEC_USE_EB
   if (!use_sstep) {
     getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
   } else {
     getMOLSrcTerm_SS(Sborder, molSrc, time, dt, flux_factor);
   }
+#else
+  getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
+#endif
 
   // Build other (neither spray nor diffusion) sources at t_new
   for (int n = 0; n < src_list.size(); ++n) {
@@ -202,11 +211,15 @@ PeleC::do_mol_advance(
       FillPatch(
         *this, Sborder, NUM_GROW + nGrowF, time + dt, State_Type, 0, NVAR);
       flux_factor = mol_iter == mol_iters ? 1 : 0;
+#ifdef PELEC_USE_EB
       if (!use_sstep) {
         getMOLSrcTerm(Sborder, molSrc_new, time, dt, flux_factor);
       } else {
         getMOLSrcTerm_SS(Sborder, molSrc_new, time, dt, flux_factor);
       }
+#else
+      getMOLSrcTerm(Sborder, molSrc_new, time, dt, flux_factor);
+#endif
 
       // F_{AD} = (1/2)(molSrc_old + molSrc_new)
       amrex::MultiFab::LinComb(

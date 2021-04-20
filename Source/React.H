@@ -50,11 +50,13 @@ pc_expl_reactions(
   const int nsteps_guess,
   const amrex::Real errtol,
   const int do_update,
-  const int clean_massfrac,
+  const int clean_massfrac
 #ifdef PELEC_USE_EB
+  ,
   const amrex::Array4<amrex::EBCellFlag const>& flags,
-  const int use_sstep)
+  const int use_sstep
 #endif
+)
 {
   const amrex::Real alpha_rk64[6] = {
     0.218150805229859,  // 3296351145737.0/15110423921029.0,
@@ -135,6 +137,7 @@ pc_expl_reactions(
   // reaction time-stepping
   amrex::Real rhoe_rk = rho * e_old;
 
+#ifdef PELEC_USE_EB
   if (use_sstep) {
     if (flags(i, j, k).isRegular()) {
       do_chem_advance = true;
@@ -142,6 +145,9 @@ pc_expl_reactions(
   } else {
     do_chem_advance = true;
   }
+#else
+  do_chem_advance = true;
+#endif
 
   if (do_chem_advance) {
     // Do RK time-stepping
