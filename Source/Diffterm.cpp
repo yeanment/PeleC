@@ -30,24 +30,18 @@ pc_compute_diffusion_flux(
   {
     // Compute Extensive diffusion fluxes for X, Y, Z
     BL_PROFILE("PeleC::diffusion_flux()");
-    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) 
-    {
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
       const amrex::Real delta = del[dir];
       amrex::Real d1 = 0.0;
       amrex::Real d2 = 0.0;
       amrex::Box ebox = amrex::surroundingNodes(box, dir);
-      if (dir == 0) 
-      {
+      if (dir == 0) {
         // cppcheck-suppress redundantAssignment
         AMREX_D_TERM(d2 = 1.;, d1 = del[1];, d2 = del[2];);
-      } 
-      else if (dir == 1) 
-      {
+      } else if (dir == 1) {
         // cppcheck-suppress redundantAssignment
         AMREX_D_TERM(d2 = 1.;, d1 = del[0];, d2 = del[2];);
-      } 
-      else if (dir == 2) 
-      {
+      } else if (dir == 2) {
         d1 = del[0];
         d2 = del[1];
       }
@@ -62,17 +56,13 @@ pc_compute_diffusion_flux(
 
 #ifdef PELEC_USE_EB
       // Reset tangential derivatives to avoid using covered (invalid) data
-      if (typ == amrex::FabType::singlevalued) 
-      {
-        if (Ncut > 0) 
-        {
+      if (typ == amrex::FabType::singlevalued) {
+        if (Ncut > 0) {
           BL_PROFILE("PeleC::pc_compute_tangential_vel_derivs_eb()");
           pc_compute_tangential_vel_derivs_eb(
             ebox, dir, d1, d2, ebg, Ncut, q, flags, tander);
         }
-      } 
-      else if (typ == amrex::FabType::multivalued) 
-      {
+      } else if (typ == amrex::FabType::multivalued) {
         amrex::Abort(
           "multi-valued eb tangential derivatives to be implemented");
       }
@@ -81,8 +71,7 @@ pc_compute_diffusion_flux(
       amrex::ParallelFor(
         ebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
           amrex::Real c[dComp_lambda + 1];
-          for (int n = 0; n < dComp_lambda + 1; n++) 
-          {
+          for (int n = 0; n < dComp_lambda + 1; n++) {
             pc_move_transcoefs_to_ec(i, j, k, n, coef, c, dir, do_harmonic);
           }
           pc_diffusion_flux(

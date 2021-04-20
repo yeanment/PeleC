@@ -121,7 +121,7 @@ pc_expl_reactions(
   const amrex::Real dt_min = dt_react / nsteps_max;
   const amrex::Real dt_max = dt_react / nsteps_min;
   amrex::Real updt_time = 0.0;
-  bool do_chem_advance=false;
+  bool do_chem_advance = false;
 
   amrex::Real urk[NVAR];
   for (int n = 0; n < NVAR; ++n)
@@ -135,86 +135,81 @@ pc_expl_reactions(
   // reaction time-stepping
   amrex::Real rhoe_rk = rho * e_old;
 
-  if(use_sstep)
-  {
-      if(flags(i,j,k).isRegular())
-      {
-          do_chem_advance=true;
+  if (use_sstep) {
+    if (flags(i, j, k).isRegular()) {
+      do_chem_advance = true;
+    }
+  } else {
+    do_chem_advance = true;
+  }
+
+  if (do_chem_advance) {
+    // Do RK time-stepping
+    while (updt_time < dt_react) {
+      amrex::Real urk_err[NVAR] = {0.0};
+      amrex::Real urk_carryover[NVAR];
+      for (int n = 0; n < NVAR; n++) {
+        urk_carryover[n] = urk[n];
       }
-  }
-  else
-  {
-      do_chem_advance=true;
-  }
+      amrex::Real rhoe_carryover = rhoe_rk;
 
-  if(do_chem_advance)
-  {
-      // Do RK time-stepping
-      while (updt_time < dt_react) {
-          amrex::Real urk_err[NVAR] = {0.0};
-          amrex::Real urk_carryover[NVAR];
-          for (int n = 0; n < NVAR; n++) {
-              urk_carryover[n] = urk[n];
-          }
-          amrex::Real rhoe_carryover = rhoe_rk;
+      for (int stage = 0; stage < 6; stage++) {
+        rhoInv = 1.0 / urk[URHO];
+        amrex::Real massfrac[NUM_SPECIES];
+        for (int n = 0; n < NUM_SPECIES; ++n) {
+          massfrac[n] = urk[UFS + n] * rhoInv;
+        }
 
-          for (int stage = 0; stage < 6; stage++) {
-              rhoInv = 1.0 / urk[URHO];
-              amrex::Real massfrac[NUM_SPECIES];
-              for (int n = 0; n < NUM_SPECIES; ++n) {
-                  massfrac[n] = urk[UFS + n] * rhoInv;
-              }
+        amrex::Real wdot[NUM_SPECIES];
+        auto eos = pele::physics::PhysicsType::eos();
+        eos.RTY2WDOT(urk[URHO], urk[UTEMP], massfrac, wdot);
 
-              amrex::Real wdot[NUM_SPECIES];
-              auto eos = pele::physics::PhysicsType::eos();
-              eos.RTY2WDOT(urk[URHO], urk[UTEMP], massfrac, wdot);
+        for (int n = 0; n < NUM_SPECIES; ++n)
+          wdot[n] += rhoydot_ext[n];
 
-              for (int n = 0; n < NUM_SPECIES; ++n)
-                  wdot[n] += rhoydot_ext[n];
+        // ================== Update urk_err ===================
+        // Species
+        for (int n = 0; n < NUM_SPECIES; ++n)
+          urk_err[UFS + n] += err_rk64[stage] * dt_rk * wdot[n];
+        // Temperature
+        urk_err[UEDEN] += err_rk64[stage] * dt_rk * rhoedot_ext;
 
-              // ================== Update urk_err ===================
-              // Species
-              for (int n = 0; n < NUM_SPECIES; ++n)
-                  urk_err[UFS + n] += err_rk64[stage] * dt_rk * wdot[n];
-              // Temperature
-              urk_err[UEDEN] += err_rk64[stage] * dt_rk * rhoedot_ext;
+        // ================== Update Stage solution ===================
+        // Species
+        for (int n = 0; n < NUM_SPECIES; ++n) {
+          urk[UFS + n] =
+            urk_carryover[UFS + n] + alpha_rk64[stage] * dt_rk * wdot[n];
+        }
+        // update energy
+        rhoe_rk = rhoe_carryover + alpha_rk64[stage] * dt_rk * rhoedot_ext;
 
-              // ================== Update Stage solution ===================
-              // Species
-              for (int n = 0; n < NUM_SPECIES; ++n) {
-                  urk[UFS + n] =
-                      urk_carryover[UFS + n] + alpha_rk64[stage] * dt_rk * wdot[n];
-              }
-              // update energy
-              rhoe_rk = rhoe_carryover + alpha_rk64[stage] * dt_rk * rhoedot_ext;
+        // ================== Update urk_carryover ===========================
+        // Species
+        for (int n = 0; n < NUM_SPECIES; ++n) {
+          urk_carryover[UFS + n] =
+            urk[UFS + n] + beta_rk64[stage] * dt_rk * wdot[n];
+        }
+        // update energy
+        rhoe_carryover = rhoe_rk + beta_rk64[stage] * dt_rk * rhoedot_ext;
 
-              // ================== Update urk_carryover ===========================
-              // Species
-              for (int n = 0; n < NUM_SPECIES; ++n) {
-                  urk_carryover[UFS + n] =
-                      urk[UFS + n] + beta_rk64[stage] * dt_rk * wdot[n];
-              }
-              // update energy
-              rhoe_carryover = rhoe_rk + beta_rk64[stage] * dt_rk * rhoedot_ext;
+        // ================= Update urk[rho] =========================
+        urk[URHO] = 0.0;
+        for (int n = 0; n < NUM_SPECIES; ++n)
+          urk[URHO] += urk[UFS + n];
 
-              // ================= Update urk[rho] =========================
-              urk[URHO] = 0.0;
-              for (int n = 0; n < NUM_SPECIES; ++n)
-                  urk[URHO] += urk[UFS + n];
+        // ================= Update urk[temp] =========================
+        rhoInv = 1.0 / urk[URHO];
+        for (int n = 0; n < NUM_SPECIES; ++n) {
+          massfrac[n] = urk[UFS + n] * rhoInv;
+        }
+        eos.REY2T(urk[URHO], rhoe_rk / urk[URHO], massfrac, urk[UTEMP]);
 
-              // ================= Update urk[temp] =========================
-              rhoInv = 1.0 / urk[URHO];
-              for (int n = 0; n < NUM_SPECIES; ++n) {
-                  massfrac[n] = urk[UFS + n] * rhoInv;
-              }
-              eos.REY2T(urk[URHO], rhoe_rk / urk[URHO], massfrac, urk[UTEMP]);
-
-              // ================ Adapt Time step! ========================
-          } // end rk stages
-          updt_time += dt_rk;
-          // steps += 1;
-          adapt_timestep(urk_err, dt_max, dt_rk, dt_min, errtol);
-      } // end timestep loop
+        // ================ Adapt Time step! ========================
+      } // end rk stages
+      updt_time += dt_rk;
+      // steps += 1;
+      adapt_timestep(urk_err, dt_max, dt_rk, dt_min, errtol);
+    } // end timestep loop
   }
 
   // Add drhoY/dt to reactions MultiFab and update snew if needed
@@ -222,37 +217,36 @@ pc_expl_reactions(
   amrex::Real vmnew = sold(i, j, k, UMY) + dt_react * nr_src(i, j, k, UMY);
   amrex::Real wmnew = sold(i, j, k, UMZ) + dt_react * nr_src(i, j, k, UMZ);
 
-  if (do_update) 
-  {
-      snew(i, j, k, URHO) = urk[URHO];
-      snew(i, j, k, UMX) = umnew;
-      snew(i, j, k, UMY) = vmnew;
-      snew(i, j, k, UMZ) = wmnew;
-      snew(i, j, k, UTEMP) = urk[UTEMP];
-      for (int n = 0; n < NUM_SPECIES; ++n) {
-          snew(i, j, k, UFS + n) = urk[UFS + n];
-      }
-      // old rhoe + source*dt
-      snew(i, j, k, UEINT) = rho_old * e_old + dt_react * rhoedot_ext;
-      // total new energy
-      snew(i, j, k, UEDEN) =
-          snew(i, j, k, UEINT) +
-          0.5 * (umnew * umnew + vmnew * vmnew + wmnew * wmnew) / urk[URHO];
+  if (do_update) {
+    snew(i, j, k, URHO) = urk[URHO];
+    snew(i, j, k, UMX) = umnew;
+    snew(i, j, k, UMY) = vmnew;
+    snew(i, j, k, UMZ) = wmnew;
+    snew(i, j, k, UTEMP) = urk[UTEMP];
+    for (int n = 0; n < NUM_SPECIES; ++n) {
+      snew(i, j, k, UFS + n) = urk[UFS + n];
+    }
+    // old rhoe + source*dt
+    snew(i, j, k, UEINT) = rho_old * e_old + dt_react * rhoedot_ext;
+    // total new energy
+    snew(i, j, k, UEDEN) =
+      snew(i, j, k, UEINT) +
+      0.5 * (umnew * umnew + vmnew * vmnew + wmnew * wmnew) / urk[URHO];
   }
 
   // we are using urk instead of snew here because snew is updated only
   // if do_update is true
   for (int n = 0; n < NUM_SPECIES; ++n) {
-      IR(i, j, k, n) =
-          (urk[UFS + n] - sold(i, j, k, UFS + n)) / dt_react - rhoydot_ext[n];
+    IR(i, j, k, n) =
+      (urk[UFS + n] - sold(i, j, k, UFS + n)) / dt_react - rhoydot_ext[n];
   }
   IR(i, j, k, NUM_SPECIES) =
-      (rho_old * e_old + dt_react * rhoedot_ext // new internal energy
-       +
-       0.5 * (umnew * umnew + vmnew * vmnew + wmnew * wmnew) / urk[URHO] // new KE
-       - sold(i, j, k, UEDEN)) // old total energy
+    (rho_old * e_old + dt_react * rhoedot_ext // new internal energy
+     +
+     0.5 * (umnew * umnew + vmnew * vmnew + wmnew * wmnew) / urk[URHO] // new KE
+     - sold(i, j, k, UEDEN)) // old total energy
       / dt_react -
-      nr_src(i, j, k, UEDEN);
+    nr_src(i, j, k, UEDEN);
 }
 
 #endif

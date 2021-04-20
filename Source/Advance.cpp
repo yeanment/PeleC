@@ -30,12 +30,9 @@ PeleC::advance(
   }
 
   amrex::Real dt_new;
-  if (do_mol) 
-  {
+  if (do_mol) {
     dt_new = do_mol_advance(time, dt, amr_iteration, amr_ncycle);
-  } 
-  else 
-  {
+  } else {
     dt_new = do_sdc_advance(time, dt, amr_iteration, amr_ncycle);
   }
 
@@ -52,11 +49,9 @@ PeleC::do_mol_advance(
   // if (src_list.size() > 0) amrex::Abort("Have not integrated other sources
   // into MOL advance yet");
 
-  for (int i = 0; i < num_state_type; ++i) 
-  {
+  for (int i = 0; i < num_state_type; ++i) {
 #ifdef PELEC_USE_REACTIONS
-    if (!(i == Reactions_Type && do_react)) 
-    {
+    if (!(i == Reactions_Type && do_react)) {
 #endif
       state[i].allocOldData();
       state[i].swapTimeLevels(dt);
@@ -65,8 +60,7 @@ PeleC::do_mol_advance(
 #endif
   }
 
-  if (do_mol_load_balance || do_react_load_balance) 
-  {
+  if (do_mol_load_balance || do_react_load_balance) {
     get_new_data(Work_Estimate_Type).setVal(0.0);
   }
 
@@ -80,15 +74,13 @@ PeleC::do_mol_advance(
 
   amrex::MultiFab molSrc_old;
   amrex::MultiFab molSrc_new;
-  if (mol_iters > 1) 
-  {
+  if (mol_iters > 1) {
     molSrc_old.define(grids, dmap, NVAR, 0, amrex::MFInfo(), Factory());
     molSrc_new.define(grids, dmap, NVAR, 0, amrex::MFInfo(), Factory());
   }
 
 #ifdef PELEC_USE_REACTIONS
-  if (do_react == 0) 
-  {
+  if (do_react == 0) {
     get_new_data(Reactions_Type).setVal(0.0);
   }
   const amrex::MultiFab& I_R = get_new_data(Reactions_Type);
@@ -100,31 +92,25 @@ PeleC::do_mol_advance(
 #endif
 
   // Compute S^{n} = MOLRhs(U^{n})
-  if (verbose) 
-  {
+  if (verbose) {
     amrex::Print() << "... Computing MOL source term at t^{n} " << std::endl;
   }
   FillPatch(*this, Sborder, NUM_GROW + nGrowF, time, State_Type, 0, NVAR);
   amrex::Real flux_factor = 0;
-  if(!use_sstep)
-  {
-     getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
-  }
-  else
-  {
-     getMOLSrcTerm_SS(Sborder, molSrc, time, dt, flux_factor);
+  if (!use_sstep) {
+    getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
+  } else {
+    getMOLSrcTerm_SS(Sborder, molSrc, time, dt, flux_factor);
   }
 
   // Build other (neither spray nor diffusion) sources at t_old
-  for (int n = 0; n < src_list.size(); ++n) 
-  {
+  for (int n = 0; n < src_list.size(); ++n) {
     if (
       src_list[n] != diff_src
 #ifdef AMREX_PARTICLES
       && src_list[n] != spray_src
 #endif
-    ) 
-    {
+    ) {
       construct_old_source(
         src_list[n], time, dt, amr_iteration, amr_ncycle, 0, 0);
 
@@ -134,8 +120,7 @@ PeleC::do_mol_advance(
     }
   }
 
-  if (mol_iters > 1) 
-  {
+  if (mol_iters > 1) {
     amrex::MultiFab::Copy(molSrc_old, molSrc, 0, 0, NVAR, 0);
   }
 
@@ -144,8 +129,7 @@ PeleC::do_mol_advance(
 
 #ifdef PELEC_USE_REACTIONS
   // U^{n+1,*} = U^n + dt*molSrc^n + dt*I_R
-  if (do_react == 1) 
-  {
+  if (do_react == 1) {
     amrex::MultiFab::Saxpy(S_new, dt, I_R, 0, FirstSpec, NUM_SPECIES, 0);
     amrex::MultiFab::Saxpy(S_new, dt, I_R, NUM_SPECIES, Eden, 1, 0);
   }
@@ -154,31 +138,25 @@ PeleC::do_mol_advance(
   computeTemp(S_new, 0);
 
   // Compute molSrc^{n+1} = MOLRhs(U^{n+1,*})
-  if (verbose) 
-  {
+  if (verbose) {
     amrex::Print() << "... Computing MOL source term at t^{n+1} " << std::endl;
   }
   FillPatch(*this, Sborder, NUM_GROW + nGrowF, time + dt, State_Type, 0, NVAR);
   flux_factor = mol_iters > 1 ? 0 : 1;
-  if(!use_sstep)
-  {
-      getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
-  }
-  else
-  {
-      getMOLSrcTerm_SS(Sborder, molSrc, time, dt, flux_factor);
+  if (!use_sstep) {
+    getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
+  } else {
+    getMOLSrcTerm_SS(Sborder, molSrc, time, dt, flux_factor);
   }
 
   // Build other (neither spray nor diffusion) sources at t_new
-  for (int n = 0; n < src_list.size(); ++n) 
-  {
+  for (int n = 0; n < src_list.size(); ++n) {
     if (
       src_list[n] != diff_src
 #ifdef AMREX_PARTICLES
       && src_list[n] != spray_src
 #endif
-    ) 
-    {
+    ) {
       construct_new_source(
         src_list[n], time + dt, dt, amr_iteration, amr_ncycle, 0, 0);
 
@@ -188,21 +166,20 @@ PeleC::do_mol_advance(
     }
   }
 
-  // U^{n+1.**} = 0.5*(U^n + U^{n+1,*}) + 0.5*dt*molSrc^{n+1} = U^n + 0.5*dt*molSrc^n +
-  // 0.5*dt*molSrc^{n+1} + 0.5*dt*I_R
+  // U^{n+1.**} = 0.5*(U^n + U^{n+1,*}) + 0.5*dt*molSrc^{n+1} = U^n +
+  // 0.5*dt*molSrc^n + 0.5*dt*molSrc^{n+1} + 0.5*dt*I_R
   amrex::MultiFab::LinComb(S_new, 0.5, Sborder, 0, 0.5, S_old, 0, 0, NVAR, 0);
   amrex::MultiFab::Saxpy(
     S_new, 0.5 * dt, molSrc, 0, 0, NVAR,
     0); //  NOTE: If I_R=0, we are done and U_new is the final new-time state
 
 #ifdef PELEC_USE_REACTIONS
-  if (do_react == 1) 
-  {
+  if (do_react == 1) {
     amrex::MultiFab::Saxpy(S_new, 0.5 * dt, I_R, 0, FirstSpec, NUM_SPECIES, 0);
     amrex::MultiFab::Saxpy(S_new, 0.5 * dt, I_R, NUM_SPECIES, Eden, 1, 0);
 
-    // F_{AD} = (1/dt)(U^{n+1,**} - U^n) - I_R = 0.5*(molSrc^{n}+molSrc^{n+1}(which is a
-    // guess!))
+    // F_{AD} = (1/dt)(U^{n+1,**} - U^n) - I_R =
+    // 0.5*(molSrc^{n}+molSrc^{n+1}(which is a guess!))
     amrex::MultiFab::LinComb(
       molSrc, 1.0 / dt, S_new, 0, -1.0 / dt, S_old, 0, 0, NVAR, 0);
     amrex::MultiFab::Subtract(molSrc, I_R, 0, FirstSpec, NUM_SPECIES, 0);
@@ -216,25 +193,19 @@ PeleC::do_mol_advance(
   computeTemp(S_new, 0);
 
 #ifdef PELEC_USE_REACTIONS
-  if (do_react == 1) 
-  {
-    for (int mol_iter = 2; mol_iter <= mol_iters; ++mol_iter) 
-    {
-      if (verbose) 
-      {
+  if (do_react == 1) {
+    for (int mol_iter = 2; mol_iter <= mol_iters; ++mol_iter) {
+      if (verbose) {
         amrex::Print() << "... Re-computing MOL source term at t^{n+1} (iter = "
                        << mol_iter << " of " << mol_iters << ")" << std::endl;
       }
       FillPatch(
         *this, Sborder, NUM_GROW + nGrowF, time + dt, State_Type, 0, NVAR);
       flux_factor = mol_iter == mol_iters ? 1 : 0;
-      if(!use_sstep)
-      {
-          getMOLSrcTerm(Sborder, molSrc_new, time, dt, flux_factor);
-      }
-      else
-      {
-          getMOLSrcTerm_SS(Sborder, molSrc_new, time, dt, flux_factor);
+      if (!use_sstep) {
+        getMOLSrcTerm(Sborder, molSrc_new, time, dt, flux_factor);
+      } else {
+        getMOLSrcTerm_SS(Sborder, molSrc_new, time, dt, flux_factor);
       }
 
       // F_{AD} = (1/2)(molSrc_old + molSrc_new)

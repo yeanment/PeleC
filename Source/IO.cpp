@@ -350,13 +350,10 @@ PeleC::setPlotVariables()
 #ifdef PELEC_USE_EB
   bool plot_vfrac = eb_in_domain;
   pp.query("plot_vfrac ", plot_vfrac);
-  if (plot_vfrac) 
-  {
+  if (plot_vfrac) {
     amrex::Amr::addDerivePlotVar("vfrac");
     amrex::Amr::addDerivePlotVar("vfracSS");
-  } 
-  else if (amrex::Amr::isDerivePlotVar("vfrac")) 
-  {
+  } else if (amrex::Amr::isDerivePlotVar("vfrac")) {
     amrex::Amr::deleteDerivePlotVar("vfrac");
   }
 #endif

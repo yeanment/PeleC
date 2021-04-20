@@ -61,8 +61,8 @@ pc_estdt_hydro(
 
   amrex::Loop(bx, [=, &dt](int i, int j, int k) {
 #ifdef PELEC_USE_EB
-    bool checkcellflag=(use_sstep==0)?
-    (not flags(i, j, k).isCovered()):flags(i, j, k).isRegular();
+    bool checkcellflag = (use_sstep == 0) ? (not flags(i, j, k).isCovered())
+                                          : flags(i, j, k).isRegular();
     if (checkcellflag) {
 #endif
       const amrex::Real rho = u(i, j, k, URHO);
@@ -110,8 +110,8 @@ pc_estdt_veldif(
 
   amrex::Loop(bx, [=, &dt](int i, int j, int k) {
 #ifdef PELEC_USE_EB
-    bool checkcellflag=(use_sstep==0)?
-    (not flags(i, j, k).isCovered()):flags(i, j, k).isRegular();
+    bool checkcellflag = (use_sstep == 0) ? (not flags(i, j, k).isCovered())
+                                          : flags(i, j, k).isRegular();
     if (checkcellflag) {
 #endif
       const amrex::Real rho = u(i, j, k, URHO);
@@ -161,8 +161,8 @@ pc_estdt_tempdif(
 
   amrex::Loop(bx, [=, &dt](int i, int j, int k) {
 #ifdef PELEC_USE_EB
-    bool checkcellflag=(use_sstep==0)?
-    (not flags(i, j, k).isCovered()):flags(i, j, k).isRegular();
+    bool checkcellflag = (use_sstep == 0) ? (not flags(i, j, k).isCovered())
+                                          : flags(i, j, k).isRegular();
     if (checkcellflag) {
 #endif
       const amrex::Real rho = u(i, j, k, URHO);
@@ -215,8 +215,8 @@ pc_estdt_enthdif(
 
   amrex::Loop(bx, [=, &dt](int i, int j, int k) {
 #ifdef PELEC_USE_EB
-    bool checkcellflag=(use_sstep==0)?
-    (not flags(i, j, k).isCovered()):flags(i, j, k).isRegular();
+    bool checkcellflag = (use_sstep == 0) ? (not flags(i, j, k).isCovered())
+                                          : flags(i, j, k).isRegular();
     if (checkcellflag) {
 #endif
       const amrex::Real rho = u(i, j, k, URHO);
