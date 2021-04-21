@@ -161,6 +161,9 @@ function(build_pelec_exe pelec_exe_name)
        ${SRC_DIR}/LES.cpp
        ${SRC_DIR}/MOL.H
        ${SRC_DIR}/MOL.cpp
+       ${SRC_DIR}/MOL_SS.cpp
+       ${SRC_DIR}/MOLsrc_SS.cpp
+       ${SRC_DIR}/Diffterm_SS.cpp
        ${SRC_DIR}/Particle.cpp
        ${SRC_DIR}/PeleC.H
        ${SRC_DIR}/PeleC.cpp
