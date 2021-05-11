@@ -181,15 +181,22 @@ pc_compute_hyp_mol_flux_SS(
           for (int ivar = 0; ivar < NVAR; ivar++) {
             flx[dir](i, j, k, ivar) += flux_tmp[ivar] * area[dir](i, j, k);
           }
-        } else {
+        } 
+        else 
+        {
           amrex::Real flux_tmp[NVAR] = {0.0};
-          amrex::Real pres_inside;
+          amrex::Real qtemp_inside[5 + NUM_SPECIES] = {0.0};
+         
 
           // at least one cell should be regular
-          if (flags(i, j, k).isRegular() || flags(ii, jj, kk).isRegular()) {
-            if (flags(i, j, k).isRegular() && !flags(ii, jj, kk).isRegular()) {
-              pres_inside = q(i, j, k, QPRES);
-            } else {
+          if (flags(i, j, k).isRegular() || flags(ii, jj, kk).isRegular()) 
+          {
+            if (flags(i, j, k).isRegular() && !flags(ii, jj, kk).isRegular()) 
+            {
+                  
+            } 
+            else 
+            {
               pres_inside = q(ii, jj, kk, QPRES);
             }
 
