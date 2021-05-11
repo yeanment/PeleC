@@ -160,11 +160,11 @@ pc_compute_hyp_mol_flux(
         amrex::Real flux_tmp[NVAR] = {0.0};
         amrex::Real ustar = 0.0;
 
-        amrex::Real tmp0;
-        amrex::Real tmp1;
-        amrex::Real tmp2;
-        amrex::Real tmp3;
-        amrex::Real tmp4;
+        amrex::Real tmp0 = 0.0;
+        amrex::Real tmp1 = 0.0;
+        amrex::Real tmp2 = 0.0;
+        amrex::Real tmp3 = 0.0;
+        amrex::Real tmp4 = 0.0;
         riemann(
           qtempl[R_RHO], qtempl[R_UN], qtempl[R_UT1], qtempl[R_UT2],
           qtempl[R_P], rhoe_l, spl, gamc_l, qtempr[R_RHO], qtempr[R_UN],
@@ -328,11 +328,11 @@ pc_compute_hyp_mol_flux(
     }
 
     if (is_inside(i, j, k, lo, hi, nextra - 1)) {
-      amrex::Real tmp0;
-      amrex::Real tmp1;
-      amrex::Real tmp2;
-      amrex::Real tmp3;
-      amrex::Real tmp4;
+      amrex::Real tmp0 = 0.0;
+      amrex::Real tmp1 = 0.0;
+      amrex::Real tmp2 = 0.0;
+      amrex::Real tmp3 = 0.0;
+      amrex::Real tmp4 = 0.0;
       amrex::Real ustar = 0.0;
       riemann(
         qtempl[R_RHO], qtempl[R_UN], qtempl[R_UT1], qtempl[R_UT2], qtempl[R_P],

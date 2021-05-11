@@ -22,12 +22,8 @@ PeleC::init_eb(
   const amrex::BoxArray& /*ba*/,
   const amrex::DistributionMapping& /*dm*/)
 {
-  amrex::ParmParse pp("eb2");
-  std::string geom_type("all_regular");
-  pp.query("geom_type", geom_type);
-  if (geom_type != "all_regular") {
-    eb_in_domain = true;
-  }
+
+  eb_in_domain = ebInDomain();
 
   // Build the geometry information; this is done for each new set of grids
   initialize_eb2_structs();
@@ -54,7 +50,6 @@ PeleC::initialize_eb2_structs()
     std::is_standard_layout<EBBndryGeom>::value,
     "EBBndryGeom is not standard layout");
 
-  const amrex::MultiFab* volfrac;
   const amrex::MultiCutFab* bndrycent;
   std::array<const amrex::MultiCutFab*, AMREX_SPACEDIM> eb2areafrac;
   std::array<const amrex::MultiCutFab*, AMREX_SPACEDIM> facecent;
@@ -63,7 +58,9 @@ PeleC::initialize_eb2_structs()
     dynamic_cast<amrex::EBFArrayBoxFactory const&>(Factory());
 
   // These are the data sources
-  volfrac = &(ebfactory.getVolFrac());
+  vfrac.clear();
+  vfrac.define(grids, dmap, 1, numGrow(), amrex::MFInfo(), Factory());
+  amrex::MultiFab::Copy(vfrac, ebfactory.getVolFrac(), 0, 0, 1, numGrow());
   bndrycent = &(ebfactory.getBndryCent());
   eb2areafrac = ebfactory.getAreaFrac();
   facecent = ebfactory.getFaceCent();
@@ -246,7 +243,7 @@ PeleC::initialize_eb2_structs()
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
     for (amrex::MFIter mfi(vfrac, false); mfi.isValid(); ++mfi) {
-      const amrex::Box tbox = mfi.growntilebox(NUM_GROW);
+      const amrex::Box tbox = mfi.growntilebox(numGrow());
       const auto& flagfab = flags[mfi];
       amrex::FabType typ = flagfab.getType(tbox);
       int iLocal = mfi.LocalIndex();
@@ -816,6 +813,20 @@ initialize_EB2(
     auto gshop = amrex::EB2::makeShop(pipe);
 
     amrex::EB2::Build(gshop, geom, max_coarsening_level, max_coarsening_level);
+  } else if (geom_type == "quarter-circle") {
+
+    amrex::Real r_inner = 1.0;
+    amrex::Real r_outer = 2.0;
+    ppeb2.query("r_inner", r_inner);
+    ppeb2.query("r_outer", r_outer);
+
+    amrex::EB2::CylinderIF inner(r_inner, 10, 2, {0, 0, 0}, false);
+    amrex::EB2::CylinderIF outer(r_outer, 10, 2, {0, 0, 0}, true);
+
+    auto polys = amrex::EB2::makeUnion(inner, outer);
+    auto gshop = amrex::EB2::makeShop(polys);
+    amrex::EB2::Build(
+      gshop, geom, max_coarsening_level, max_coarsening_level, 4, false);
   } else if (geom_type == "sco2-combustor") {
 #ifdef sCO2Combustor
     EBsCO2Combustor(geom, max_level);
