@@ -194,7 +194,7 @@ PeleC::getMOLSrcTerm_SS(
           BL_PROFILE("PeleC::pc_hyp_mol_flux()");
 
           // auto const& vol = volume.array(mfi);
-          pc_compute_hyp_mol_flux_SS(
+          pc_compute_hyp_mol_flux_SS(geom,
             cbox, qar, qauxar, flx, area_array, dx, plm_iorder,
             vfrac.array(mfi), flags.array(mfi));
         }

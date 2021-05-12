@@ -1,8 +1,10 @@
 #include "MOL.H"
+#include "prob.H"
 
 #ifdef PELEC_USE_EB
 void
 pc_compute_hyp_mol_flux_SS(
+  amrex::Geometry const& geom,
   const amrex::Box& cbox,
   const amrex::Array4<const amrex::Real>& q,
   const amrex::Array4<const amrex::Real>& qaux,
@@ -21,6 +23,8 @@ pc_compute_hyp_mol_flux_SS(
   const int R_P = 4;
   const int R_Y = 5;
   const int bc_test_val = 1;
+  const auto geomdata = geom.data();
+  ProbParmDevice const* prob_parm = PeleC::d_prob_parm_device;
 
   for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
     amrex::FArrayBox dq_fab(cbox, QVAR);
@@ -213,7 +217,7 @@ pc_compute_hyp_mol_flux_SS(
                   qtemp_inside[R_Y + n] = qtemp_inside[R_Y + n] / qtemp_inside[R_RHO];
               }
 
-              ebfill_SS(geom,i,j,k,qtemp_inside,flux_tmp,dir);
+              ebfill_SS(geomdata,i,j,k,qtemp_inside,flux_tmp,dir,prob_parm);
 
               for (int ivar = 0; ivar < NVAR; ivar++) 
               {
