@@ -61,12 +61,15 @@ PeleC::initialize_eb2_structs()
   vfrac.clear();
   vfrac.define(grids, dmap, 1, numGrow(), amrex::MFInfo(), Factory());
   amrex::MultiFab::Copy(vfrac, ebfactory.getVolFrac(), 0, 0, 1, numGrow());
+
+  vfrac_SS.clear();
+  vfrac_SS.define(grids, dmap, 1, numGrow(), amrex::MFInfo(), Factory());
+  amrex::MultiFab::Copy(vfrac_SS, ebfactory.getVolFrac(), 0, 0, 1, numGrow());
+
   bndrycent = &(ebfactory.getBndryCent());
   eb2areafrac = ebfactory.getAreaFrac();
   facecent = ebfactory.getFaceCent();
 
-  vfrac.copy(*volfrac);
-  vfrac_SS.copy(*volfrac);
 
   // First pass over fabs to fill sparse per cut-cell ebg structures
   sv_eb_bndry_geom.resize(vfrac.local_size());

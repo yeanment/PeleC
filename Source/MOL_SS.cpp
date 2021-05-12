@@ -186,28 +186,39 @@ pc_compute_hyp_mol_flux_SS(
         {
           amrex::Real flux_tmp[NVAR] = {0.0};
           amrex::Real qtemp_inside[5 + NUM_SPECIES] = {0.0};
+          int i_in,j_in,k_in;
          
 
           // at least one cell should be regular
           if (flags(i, j, k).isRegular() || flags(ii, jj, kk).isRegular()) 
           {
-            if (flags(i, j, k).isRegular() && !flags(ii, jj, kk).isRegular()) 
-            {
-                  
-            } 
-            else 
-            {
-              pres_inside = q(ii, jj, kk, QPRES);
-            }
+              i_in = (flags(i, j, k).isRegular()) ? i:ii;
+              j_in = (flags(i, j, k).isRegular()) ? j:jj;
+              k_in = (flags(i, j, k).isRegular()) ? k:kk;
 
-            for (int n = 0; n < NVAR; n++) {
-              flux_tmp[n] = 0.0; // 0 flux at wall
-            }
-            flux_tmp[UMX + dir] = pres_inside;
+              qtemp_inside[R_UN]  = q(i_in, j_in, k_in, QU);
+              qtemp_inside[R_UT1] = q(i_in, j_in, k_in, QV);
+              qtemp_inside[R_UT2] = q(i_in, j_in, k_in, QW);
+              qtemp_inside[R_P]   = q(i_in, j_in, k_in, QPRES);
+              qtemp_inside[R_RHO] = 0.0;
 
-            for (int ivar = 0; ivar < NVAR; ivar++) {
-              flx[dir](i, j, k, ivar) += flux_tmp[ivar] * area[dir](i, j, k);
-            }
+              for (int n = 0; n < NUM_SPECIES; n++) 
+              {
+                  qtemp_inside[R_Y + n] =
+                      q(i_in, j_in, k_in, QFS + n) * q(i_in, j_in, k_in, QRHO);
+                  qtemp_inside[R_RHO] += qtemp_inside[R_Y + n];
+              }
+              for (int n = 0; n < NUM_SPECIES; n++) 
+              {
+                  qtemp_inside[R_Y + n] = qtemp_inside[R_Y + n] / qtemp_inside[R_RHO];
+              }
+
+              ebfill_SS(geom,i,j,k,qtemp_inside,flux_tmp,dir);
+
+              for (int ivar = 0; ivar < NVAR; ivar++) 
+              {
+                  flx[dir](i, j, k, ivar) += flux_tmp[ivar] * area[dir](i, j, k);
+              }
           }
         }
       });
