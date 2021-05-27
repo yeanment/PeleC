@@ -1,0 +1,9 @@
+This case uses EB to implement a 180 degree u-turn flow.
+
+The right domain boundary is an inlet for the upper half and an outlet for the lower half.
+
+The EB consists of a restriction followed by a u-turn around a fairly narrow splitter plate.
+
+With the Fortran version of PeleC we were able to run this case correctly (see subfolder "fortran_case").
+
+Porting it over to the C++ version gives pressure waves that pass straight through the EB and flows that exist inside the solid bodies.

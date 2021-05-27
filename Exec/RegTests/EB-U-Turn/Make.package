@@ -1,0 +1,6 @@
+#f90EXE_sources += probdata.f90
+#f90EXE_sources += pmf_generic.f90
+CEXE_headers += prob.H
+CEXE_headers += prob_parm.H
+CEXE_sources += prob.cpp
+CEXE_sources += InitEB.cpp

@@ -1,0 +1,29 @@
+&fortin
+
+ ! p_domain = 1013250.0
+ ! dens_domain = 0.00116
+ ! vx_in =  9000.0
+ ! vy_in =  0.0
+ ! Re_L = 625.0
+ ! Pr = 0.7
+  pamb = 1513250.d0
+  phi_in = -.5d0
+  pertmag = .000d0
+  T_inlet_pert_mag = 0.0d0
+  T_inlet_pert_freq = 100.d0
+  P_inlet_pert_mag = 0.0d0
+  P_inlet_pert_freq = 100.d0
+  pmf_datafile = "H2-deflagration-LiDryer-pelec-T_700.0-P_1.0-phi_0.4.dat"
+  ipmf_on = .false.
+  ipmf_datafile = "autoign-H2-pelec-T_1100.0-P_101325.0-phi_0.35_ipmf.dat"
+  !ipmf_datafile = "test-035.dat"
+  !pmf_datafile = "LiDryer_H2_p1_phi0_4000tu0300.dat"
+
+/
+
+&tagging
+
+  max_ftracerr_lev = 4
+  ftracerr = 200.d-7
+/
+
