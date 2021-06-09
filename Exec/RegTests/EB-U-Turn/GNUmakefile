@@ -1,6 +1,6 @@
 # AMReX
 DIM = 3
-COMP = clang
+COMP = gcc
 PRECISION = DOUBLE
 
 # Profiling
@@ -12,7 +12,7 @@ MEM_PROFILE = FALSE
 USE_GPROF = FALSE
 
 # Performance
-USE_MPI = FALSE
+USE_MPI = TRUE
 USE_OMP = FALSE
 USE_CUDA = FALSE
 USE_HIP = FALSE
@@ -35,5 +35,5 @@ Chemistry_Model := LiDryer
 # GNU Make
 Bpack := ./Make.package
 Blocs := .
-#PELEC_HOME := ../../..
+PELEC_HOME := ../../..
 include $(PELEC_HOME)/Exec/Make.PeleC

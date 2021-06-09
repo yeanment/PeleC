@@ -1,8 +1,8 @@
 PELEC_HOME        ?= ../
-PELE_PHYSICS_HOME ?= $(PELEC_HOME)/Submodules/PelePhysics
-AMREX_HOME        ?= $(PELEC_HOME)/Submodules/AMReX
-AMREX_HYDRO_HOME  ?= $(PELEC_HOME)/Submodules/AMReX-Hydro
-PELEMP_HOME       ?= $(PELEC_HOME)/Submodules/PeleMP
+PELE_PHYSICS_HOME = $(PELEC_HOME)/Submodules/PelePhysics
+AMREX_HOME        = $(PELEC_HOME)/Submodules/AMReX
+AMREX_HYDRO_HOME  = $(PELEC_HOME)/Submodules/AMReX-Hydro
+PELEMP_HOME       = $(PELEC_HOME)/Submodules/PeleMP
 
 TOP := $(PELEC_HOME)
 

@@ -515,6 +515,21 @@ initialize_EB2(
     pp.get("exp_y_lo", p1_y);
     pp.get("exp_y_hi", p2_y);
 
+    amrex::Real thick_square;
+    amrex::Real length_square;
+    amrex::Real height_square;
+    amrex::Real pos_z_square;
+    amrex::Real square_pos_1;
+    amrex::Real square_pos_2;
+
+    amrex::ParmParse pp_sq("square_grid");
+    pp_sq.get("thick_square", thick_square);
+    pp_sq.get("length_square", length_square);
+    pp_sq.get("height_square", height_square);
+    pp_sq.get("pos_z_square", pos_z_square);
+    pp_sq.get("square_pos_1", square_pos_1);
+    pp_sq.get("square_pos_2", square_pos_2);
+
     //p2_y = 1.8;
     //p1_y = 0.0;
     cen_y = 0.5*(p2_y-p1_y);
@@ -556,7 +571,43 @@ initialize_EB2(
     auto triangle4 = amrex::EB2::makeComplement(triangle3);
     auto channel5 = amrex::EB2::makeUnion(channel4,triangle4);
 
-    auto gshop = amrex::EB2::makeShop(channel5);
+//    amrex::Real thick_square = 0.025;
+//    amrex::Real length_square = 0.25;
+//    amrex::Real height_square = 0.25;
+//    amrex::Real pos_z_square = 7.5;
+//    amrex::Real square_pos_1 = 0.5;
+//    amrex::Real square_pos_2 = 1.5;
+
+    amrex::Real pos_big_square = length_square + thick_square;
+    amrex::Real pos_small_square = length_square - thick_square;
+    amrex::Array<amrex::Real, 3> big_square_lo_1 = { square_pos_1 - pos_big_square, square_pos_1 - pos_big_square, pos_z_square - height_square};
+    amrex::Array<amrex::Real, 3> big_square_hi_1 = { square_pos_1 + pos_big_square, square_pos_1 + pos_big_square, pos_z_square};
+
+    amrex::Array<amrex::Real, 3> small_square_lo_1 = { square_pos_1 - pos_small_square, square_pos_1 - pos_small_square, pos_z_square - height_square};
+    amrex::Array<amrex::Real, 3> small_square_hi_1 = { square_pos_1 + pos_small_square, square_pos_1 + pos_small_square, pos_z_square};
+
+    amrex::EB2::BoxIF big_square_1(big_square_lo_1, big_square_hi_1,   0);
+    amrex::EB2::BoxIF small_square_1(small_square_lo_1, small_square_hi_1, 0);
+    auto square_grid_1 = amrex::EB2::makeDifference(big_square_1, small_square_1);
+
+    auto square_grid_1_all = amrex::EB2::makeUnion(square_grid_1,channel5);
+
+    amrex::Array<amrex::Real, 3> big_square_lo_2 = { square_pos_2 - pos_big_square, square_pos_1 - pos_big_square, pos_z_square - height_square};
+    amrex::Array<amrex::Real, 3> big_square_hi_2 = { square_pos_2 + pos_big_square, square_pos_1 + pos_big_square, pos_z_square};
+
+    amrex::Array<amrex::Real, 3> small_square_lo_2 = { square_pos_2 - pos_small_square, square_pos_1 - pos_small_square, pos_z_square - height_square};
+    amrex::Array<amrex::Real, 3> small_square_hi_2 = { square_pos_2 + pos_small_square, square_pos_1 + pos_small_square, pos_z_square};
+
+    amrex::EB2::BoxIF big_square_2(big_square_lo_2, big_square_hi_2,   0);
+    amrex::EB2::BoxIF small_square_2(small_square_lo_2, small_square_hi_2, 0);
+    auto square_grid_2 = amrex::EB2::makeDifference(big_square_2, small_square_2);
+
+
+    auto final_geom = amrex::EB2::makeUnion(square_grid_2,square_grid_1_all);
+
+    
+
+    auto gshop = amrex::EB2::makeShop(final_geom);
     amrex::EB2::Build(gshop, geom, max_coarsening_level, max_coarsening_level);
     //
     //
