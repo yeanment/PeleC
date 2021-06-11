@@ -1,15 +1,15 @@
 # ------------------  INPUTS TO MAIN PROGRAM  -------------------
 #max_step = 2000000
 max_step = 300000
-stop_time = 0.004
+stop_time = 0.4
 
 # PROBLEM SIZE & GEOMETRY
 geometry.is_periodic =  1  0  0
 geometry.coord_sys   =  0       # 0 => cart
 geometry.prob_lo     =  0     0.00   0    
-geometry.prob_hi     =  2.0  2.0 8.0
-amr.n_cell           =  128    128   512
-amr.n_cell           =  64 64 256
+geometry.prob_hi     =  1.0  2.0 8.0
+amr.n_cell           =  64    128   512
+amr.n_cell           =  128 256 1024
 #geometry.prob_hi     =  1.0 2.0 8.0
 #amr.n_cell           =  128    256   1024 
 
@@ -42,7 +42,7 @@ pelec.flame_trac_name = HO2
 
 # TIME STEP CONTROL
 pelec.dt_cutoff      = 5.e-20  # level 0 timestep below which we halt
-pelec.cfl            = 0.4     # cfl number for hyperbolic system
+pelec.cfl            = 0.3     # cfl number for hyperbolic system
 pelec.init_shrink    = 0.1    # scale back initial timestep
 pelec.change_max     = 1.10     # maximum increase in dt over successive steps
 
@@ -57,19 +57,19 @@ amr.max_level       = 0       # maximum level number allowed
 amr.ref_ratio       = 2 2 2 2 # refinement ratio
 amr.regrid_int      = 2 2 2 2 #2 2 2 2       # how often to regrid
 amr.blocking_factor = 2       # block factor in grid generation
-amr.max_grid_size   = 128
+#amr.max_grid_size   = 128
 amr.n_error_buf     = 2 2 2 2 # number of buffer cells in error est
 
 # CHECKPOINT FILES
 amr.check_file      = chk      # root name of checkpoint file
 amr.check_int       = 100       # number of timesteps between checkpoints
 #amr.check_int       = -1       # number of timesteps between checkpoints
-#amr.restart         = chk0000000100
+#amr.restart         = chk0000001800
 
 # PLOTFILES
 amr.plot_file       = plt
-#amr.plot_int        = 100
-amr.plot_per        = 1e-6
+amr.plot_int        = 100
+amr.plot_per        = 5e-6
 amr.file_name_digits  = 10
 amr.derive_plot_vars=ALL
 
@@ -103,8 +103,8 @@ exp_chan.exp_y_lo = 0.0
 exp_chan.exp_y_hi = 1.8
 ebd.boundary_grad_stencil_type = 0
 
-square_grid.thick_square = 0.025
-square_grid.length_square = 0.25
+square_grid.thick_square = 0.075
+square_grid.length_square = 0.2
 square_grid.height_square = 0.1
 square_grid.pos_z_square = 7.7
 square_grid.square_pos_1 = 0.5
