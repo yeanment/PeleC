@@ -191,8 +191,9 @@ pc_initdata(
 
       for (int n = 0; n < NUM_SPECIES; n++)
 	massfrac[n] = prob_parm.fuel_state[UFS + n - 1]/prob_parm.fuel_state[URHO];
-
-      u[AMREX_SPACEDIM - 1] = pmf_vals[1]*tanh(-10.0*(y-0.5*prob_hi[1]+0.1));
+      // Initial velocity - check u_turn geometry.
+      // tanh profile set up to switch sign inside the mid plate.
+      u[AMREX_SPACEDIM - 1] = pmf_vals[1]*tanh(-10.0*(y-0.5*prob_hi[1]+0.05));
       
       auto eos = pele::physics::PhysicsType::eos();
       //eos.X2Y(molefrac, massfrac);
@@ -250,7 +251,8 @@ bcnormal(
     u[1] = 0.0;
     u[2] = 0.0;
 
-    if (x[1] > 0.5*prob_hi[1]-0.1)
+    if (x[1] > 0.5*prob_hi[1]-0.05)
+      // Inlet
       {
 	u[AMREX_SPACEDIM - 1] = - pmf_vals[1];
       }

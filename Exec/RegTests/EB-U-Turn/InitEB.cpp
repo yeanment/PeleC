@@ -196,9 +196,45 @@ PeleC::initialize_eb2_structs()
       sv_eb_flux[iLocal].define(sv_eb_bndry_grad_stencil[iLocal], NVAR);
       sv_eb_bcval[iLocal].define(sv_eb_bndry_grad_stencil[iLocal], QVAR);
 
+      // if (eb_isothermal && (diffuse_temp != 0 || diffuse_enth != 0)) {
+      // sv_eb_bcval[iLocal].setVal(eb_boundary_T, QTEMP);
+      // }
+      // STM
       if (eb_isothermal && (diffuse_temp != 0 || diffuse_enth != 0)) {
-        sv_eb_bcval[iLocal].setVal(eb_boundary_T, QTEMP);
+        int ivec = 0;
+        auto dx = geom.CellSize(0);
+        // Actual location of centroid of boundary face (computed below)
+        amrex::Real eb_loc[AMREX_SPACEDIM];
+        for (auto& sv_ebg : sv_eb_bndry_geom[iLocal]) {
+          // index of cell containing cut cell 
+          const auto& iv = sv_ebg.iv;
+          // unit normal of boundary intersection (into wall)
+          const auto& eb_normal = sv_ebg.eb_normal;
+          // normalized location of centroid of (linear) boundary intersection
+          const auto& eb_centroid = sv_ebg.eb_centroid;
+          // area of boundary intersection
+          const auto& eb_area =sv_ebg.eb_area;
+          
+          for (int i=0; i<AMREX_SPACEDIM; ++i) {
+            eb_loc[i] = geom.ProbLo()[i] + (iv[i] + 0.5 + eb_centroid[i])*dx;
+          }
+
+          // Set Dirichlet boundary Temperature based on eb_loc, eb_normal, etc
+          // Regarding 0.85*dx -- see the geometry specification in
+          // initialize_EB2
+          if (eb_loc[1]  < 0.85*dx){
+            // amrex::Print() << "Jawohl, y = " << eb_loc[1] << std::endl;
+            // amrex::Print() << "T_ignite = " << boundary_T_ignite << std::endl;
+            // What's the right way of adding an input parameter?
+            // sv_eb_bcval[iLocal].dataPtr(QTEMP)[ivec] = 2000.0;
+            sv_eb_bcval[iLocal].dataPtr(QTEMP)[ivec] = eb_boundary_T;
+          } else {
+            sv_eb_bcval[iLocal].dataPtr(QTEMP)[ivec] = eb_boundary_T;
+          }
+          ivec++;
+        }
       }
+      
       if (eb_noslip && diffuse_vel == 1) {
         sv_eb_bcval[iLocal].setVal(0, QU, AMREX_SPACEDIM);
       }
@@ -504,7 +540,7 @@ initialize_EB2(
     auto gshop = amrex::EB2::makeShop(ramp);
     amrex::EB2::Build(gshop, geom, max_level, max_level);
   } else if (geom_type == "u_turn"){
-    // Under arbeid. Fiks parametrisering og input.
+    // In progress. Parameterization and input to be fixed.
     amrex::ParmParse pp("exp_chan");
     amrex::Vector<amrex::Real> box1lo, box1hi, box2lo, box2hi;
     amrex::Real p1_y, p2_y, cen_y;
@@ -524,41 +560,41 @@ initialize_EB2(
     amrex::Print() << "Wi nøt trei a høliday in Sweden this yër?\n";
     
     // Main part: Box with half cylinder added to the left
-    amrex::EB2::BoxIF box1({-1.0,0.0+0.8*dx,cen_y}, {20.0,p2_y,8.0+0.3*dx}, true);
+    // Put a margin of 0.3*dx to make sure the EB algorithm finds the boundaries in y and not the z boundary. (Needed?)
+    amrex::EB2::BoxIF box1({-1.0,0.0+0.3*dx,cen_y}, {20.0,p2_y,8.0+0.3*dx}, true);
     //    EB2::CylinderIF cyl(Real a_radius, int a_direction,
     //            const RealArray& a_center, bool a_inside)
-    //    direction == 0 for x osv.
-    amrex::EB2::CylinderIF cyl(cen_y-0.8*dx, 0, {0.0,cen_y,cen_y}, true);
+    //    direction == 0 for x etc.
+    amrex::EB2::CylinderIF cyl(cen_y-0.3*dx, 0, {0.0,cen_y,cen_y}, true);
     auto channel = amrex::EB2::makeIntersection(cyl, box1);
 
     // The upper 'extension' of the channel
     // Straight part
-    amrex::EB2::BoxIF box2({-1.0,p2_y,4.2}, {20.0,2.0-0.8*dx,8.0+0.3*dx}, true);
+    amrex::EB2::BoxIF box2({-1.0,p2_y,4.2}, {20.0,2.0-0.3*dx,8.0+0.3*dx}, true);
     auto channel2 = amrex::EB2::makeIntersection(channel, box2);
     // The tip.  Construct triangle from planes:
     amrex::EB2::PlaneIF plane1({0.0, p2_y, 4.2}, {0.0, -1.0, 0.0});
     amrex::EB2::PlaneIF plane2({0.0, p2_y, 4.2}, {0.0, 0.0, 1.0});
     amrex::EB2::PlaneIF plane3({0.0, p2_y, 3.8}, {0.0, 2.0, -1.0});
     auto triangle = amrex::EB2::makeUnion(plane1,plane2,plane3);
-    // Jeg faar ikke lov til aa si triangle = amrex::EB2::makeComplement(triangle);
+    // I'm not allowed to say: triangle = amrex::EB2::makeComplement(triangle);
     // auto triangle4 = amrex::EB2::makeComplement(triangle3);
     auto channel3 = amrex::EB2::makeIntersection(channel2,triangle);
 
     // The separation wall
     // Straight part
-    amrex::EB2::BoxIF box3({-1.0,cen_y-0.01,1.2}, {20.0,0.96,8.0}, false);
+    amrex::EB2::BoxIF box3({-1.0,cen_y,1.2}, {20.0,1.0,8.0}, false);
     auto channel4 = amrex::EB2::makeUnion(channel3, box3);
     // The tip. Construct triangle from planes:
-    amrex::EB2::PlaneIF plane4({0.0, cen_y-0.01, 1.2}, {0.0, -1.0, 0.0});
-    amrex::EB2::PlaneIF plane5({0.0, cen_y-0.01, 1.2}, {0.0, 0.0, 1.0});
-    amrex::EB2::PlaneIF plane6({0.0, cen_y-0.01, 1.06}, {0.0, 2.0, -1.0});
+    amrex::EB2::PlaneIF plane4({0.0, cen_y, 1.2}, {0.0, -1.0, 0.0});
+    amrex::EB2::PlaneIF plane5({0.0, cen_y, 1.2}, {0.0, 0.0, 1.0});
+    amrex::EB2::PlaneIF plane6({0.0, cen_y, 1.0}, {0.0, 2.0, -1.0});
     auto triangle3 = amrex::EB2::makeUnion(plane4,plane5,plane6);
     auto triangle4 = amrex::EB2::makeComplement(triangle3);
     auto channel5 = amrex::EB2::makeUnion(channel4,triangle4);
 
     auto gshop = amrex::EB2::makeShop(channel5);
     amrex::EB2::Build(gshop, geom, max_coarsening_level, max_coarsening_level);
-    //
     //
     //
   } else if (geom_type == "combustor") {

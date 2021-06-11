@@ -211,6 +211,7 @@ amrex_probinit(
   pp.query("T_inlet_pert_freq", PeleC::h_prob_parm_device->T_inlet_pert_freq);
   pp.query("P_inlet_pert_mag", PeleC::h_prob_parm_device->P_inlet_pert_mag);
   pp.query("P_inlet_pert_freq", PeleC::h_prob_parm_device->P_inlet_pert_freq);
+  // pp.query("boundary_T_ignite", PeleC::h_prob_parm_device->boundary_T_ignite);
   pp.query("pmf_datafile", pmf_datafile);
   //pp.query("ipmf_on", PeleC::h_prob_parm_device->ipmf_on);
   //pp.query("ipmf_datafile", PeleC::h_prob_parm_device->ipmf_datafile);

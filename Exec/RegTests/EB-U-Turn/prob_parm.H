@@ -16,6 +16,7 @@ struct ProbParmDevice
   amrex::Real T_inlet_pert_freq = 0.0;
   amrex::Real P_inlet_pert_mag = 0.0;
   amrex::Real P_inlet_pert_freq = 0.0;
+  // amrex::Real boundary_T_ignite = 0.0;
   amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> L = {{1.0}};
   unsigned int pmf_N = 0;
   unsigned int pmf_M = 0;
