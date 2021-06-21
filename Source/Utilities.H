@@ -90,6 +90,67 @@ pc_cmpTemp(
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
 void
+pc_addTemp(
+  const int i, const int j, const int k, amrex::Array4<amrex::Real> const& S)
+{
+auto eos = pele::physics::PhysicsType::eos();
+  amrex::Real rhoInv = 1.0 / S(i, j, k, URHO);
+  amrex::Real u[AMREX_SPACEDIM];
+  for (int n = 0; n < AMREX_SPACEDIM; n++)
+    u[n] = S(i,j,k, UMX + n);
+
+  amrex::Real T = S(i, j, k, UTEMP);
+  amrex::Real energy; // = S(i, j, k, UEINT) * rhoInv;
+  amrex::Real massfrac[NUM_SPECIES];
+  for (int n = 0; n < NUM_SPECIES; ++n) {
+    massfrac[n] = S(i, j, k, UFS + n) * rhoInv;
+  }
+  amrex::Real rho = S(i, j, k, URHO);
+  amrex::Real pres;
+  eos.RTY2P(rho, T, massfrac, pres);
+
+  if (k >= 101 && k <= 203 ){
+    if ( j >= 26 && j <= 94){
+      if ( i >= 19 && i <= 111){
+
+         T *= 3;
+
+      }
+    }
+  }
+
+
+  eos.PYT2RE(pres, massfrac, T, rho, energy);
+
+  S(i, j, k, URHO) = rho;
+  S(i, j, k, UMX) = rho * u[0];
+  S(i, j, k, UMY) = rho * u[1];
+  S(i, j, k, UMZ) = rho * u[2];
+  S(i, j, k, UEINT) = rho * energy;
+  S(i, j, k, UEDEN) =
+        rho * (energy + 0.5 * (u[0] * u[0] + u[1] * u[1] + u[2] * u[2]));
+  S(i, j, k, UTEMP) = T;
+  for (int n = 0; n < NUM_SPECIES; n++)
+    S(i, j, k, UFS + n) = rho * massfrac[n];
+
+
+
+//  if (k >= 101 && k <= 203 ){
+//    if ( j >= 26 && j <= 94){
+//      if ( i >= 19 && i <= 111){
+
+//        S(i, j, k, UTEMP) = S(i, j, k, UTEMP) * 3;
+
+//      }
+//    }
+//  }
+
+}
+
+
+AMREX_GPU_DEVICE
+AMREX_FORCE_INLINE
+void
 pc_rst_int_e(
   const int i,
   const int j,

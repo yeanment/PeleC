@@ -1184,6 +1184,13 @@ PeleC::post_restart()
   }
 
   problem_post_restart();
+
+/*
+  amrex::MultiFab& S_new = get_new_data(State_Type);
+  addTemp(S_new,0);
+*/
+
+
 }
 
 void
@@ -2060,6 +2067,39 @@ PeleC::computeTemp(amrex::MultiFab& S, int ng)
     });
   }
 }
+
+void
+PeleC::addTemp(amrex::MultiFab& S, int ng)
+{
+
+//#ifdef PELEC_USE_EB
+//  auto const& fact =
+//    dynamic_cast<amrex::EBFArrayBoxFactory const&>(S.Factory());
+//  auto const& flags = fact.getMultiEBCellFlagFab();
+//#endif
+
+#ifdef _OPENMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+  for (amrex::MFIter mfi(S, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+    const amrex::Box& bx = mfi.growntilebox(ng);
+
+//#ifdef PELEC_USE_EB
+//    const auto& flag_fab = flags[mfi];
+//    amrex::FabType typ = flag_fab.getType(bx);
+//    if (typ == amrex::FabType::covered) {
+//      continue;
+//    }
+//#endif
+
+    const auto& sarr = S.array(mfi);
+    amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+      pc_addTemp(i, j, k, sarr);
+    });
+  }
+}
+
+
 
 amrex::Real
 PeleC::getCPUTime()

@@ -461,6 +461,8 @@ public:
 
   void computeTemp(amrex::MultiFab& State, int ng);
 
+  void addTemp(amrex::MultiFab& State, int ng);
+
   void getMOLSrcTerm(
     const amrex::MultiFab& S,
     amrex::MultiFab& MOLSrcTerm,
