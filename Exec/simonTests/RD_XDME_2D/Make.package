@@ -1,0 +1,6 @@
+CEXE_headers += kinsolma.H
+CEXE_headers += prob_parm.H
+CEXE_headers += prob.H
+
+CEXE_sources += kinsolma.cpp
+CEXE_sources += prob.cpp
