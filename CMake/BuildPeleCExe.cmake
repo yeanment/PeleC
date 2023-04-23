@@ -5,7 +5,8 @@ function(build_pelec_exe pelec_exe_name pelec_lib_name)
   add_executable(${pelec_exe_name} "")
 
   if(CLANG_TIDY_EXE)
-    set_target_properties(${pelec_exe_name} PROPERTIES CXX_CLANG_TIDY ${CLANG_TIDY_EXE})
+    set_target_properties(${pelec_exe_name} PROPERTIES CXX_CLANG_TIDY 
+                          "${CLANG_TIDY_EXE};--config-file=${CMAKE_SOURCE_DIR}/.clang-tidy")
   endif()
 
   target_sources(${pelec_exe_name}
@@ -39,6 +40,7 @@ function(build_pelec_exe pelec_exe_name pelec_lib_name)
                    ${PELEMP_SRC_DIR}/PP_Spray/SprayDerive.cpp
                    ${PELEMP_SRC_DIR}/PP_Spray/SprayJet.H
                    ${PELEMP_SRC_DIR}/PP_Spray/SprayJet.cpp
+                   ${PELEMP_SRC_DIR}/PP_Spray/SprayIO.cpp
                    ${PELEMP_SRC_DIR}/PP_Spray/WallFunctions.H
                    ${PELEMP_SRC_DIR}/PP_Spray/Distribution/DistBase.H
                    ${PELEMP_SRC_DIR}/PP_Spray/Distribution/Distributions.H

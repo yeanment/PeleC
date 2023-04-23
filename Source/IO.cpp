@@ -684,7 +684,7 @@ PeleC::writeBuildInfo(std::ostream& os)
   int kk;
   int ii;
   int nfit;
-  CKINDX(&mm, &kk, &ii, &nfit);
+  CKINDX(mm, kk, ii, nfit);
   os << std::setw(40) << std::left << "Number elements from chem cpp : " << mm
      << std::endl;
   os << std::setw(40) << std::left << "Number species from chem cpp : " << kk
@@ -815,7 +815,7 @@ PeleC::initLevelDataFromPlt(
       }
 
       // If the sumY isn't too far from 1, renormalize
-      if (amrex::Math::abs(1.0 - sumY) < tol) {
+      if (std::abs(1.0 - sumY) < tol) {
         for (int n = 0; n < NUM_SPECIES; n++) {
           sarr(i, j, k, UFS + n) /= sumY;
         }
