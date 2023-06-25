@@ -23,6 +23,7 @@
 #include "turbinflow.H"
 #include "SparseData.H"
 #include "EBStencilTypes.H"
+#include "DiagBase.H"
 
 enum StateType { State_Type = 0, Reactions_Type, Work_Estimate_Type };
 
@@ -128,7 +129,7 @@ public:
   void createDataParticles();
 
   // How to initialize at restart
-  void postRestartParticles(bool is_checkpoint = true);
+  void postRestartParticles();
 
   // Post timestep particle functions
   void postTimeStepParticles(int iteration);
@@ -180,9 +181,6 @@ public:
 
   // Number of source terms in temporary spray data
   static int num_spray_src;
-
-  // Should we write particle ascii files?
-  static int write_spray_ascii_files;
 
   static std::unique_ptr<SprayParticleContainer> SprayPC;
   static std::unique_ptr<SprayParticleContainer> VirtPC;
@@ -591,6 +589,10 @@ public:
     pele::physics::PhysicsType::transport_type>
     trans_parms;
   static pele::physics::turbinflow::TurbInflow turb_inflow;
+
+  // A set of runtime diagnostics from PelePhysics lib
+  static amrex::Vector<std::unique_ptr<DiagBase>> m_diagnostics;
+  static amrex::Vector<std::string> m_diagVars;
 
 #ifdef PELEC_USE_SOOT
   static SootModel soot_model;
