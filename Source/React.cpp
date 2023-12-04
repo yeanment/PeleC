@@ -51,7 +51,6 @@ PeleC::react_state(
 
   amrex::MultiFab& S_new = get_new_data(State_Type);
   const int ng = S_new.nGrow();
-  prefetchToDevice(S_new);
 
   // Create a MultiFab with all of the non-reacting source terms.
   amrex::MultiFab non_react_src_tmp;
@@ -71,11 +70,11 @@ PeleC::react_state(
       non_react_src_tmp.setVal(0);
       non_react_src = &non_react_src_tmp;
 
-      for (int n = 0; n < src_list.size(); ++n) {
+      for (int src : src_list) {
         amrex::MultiFab::Saxpy(
-          non_react_src_tmp, 0.5, *new_sources[src_list[n]], 0, 0, NVAR, ng);
+          non_react_src_tmp, 0.5, *new_sources[src], 0, 0, NVAR, ng);
         amrex::MultiFab::Saxpy(
-          non_react_src_tmp, 0.5, *old_sources[src_list[n]], 0, 0, NVAR, ng);
+          non_react_src_tmp, 0.5, *old_sources[src], 0, 0, NVAR, ng);
       }
 
       if (do_hydro && !do_mol) {
@@ -83,7 +82,7 @@ PeleC::react_state(
       }
     } else {
       // in MOL update all non-reacting sources
-      // are passed into auxillary sources
+      // are passed into auxiliary sources
       non_react_src = aux_src;
     }
 
@@ -95,7 +94,6 @@ PeleC::react_state(
 
   amrex::MultiFab& react_src = get_new_data(Reactions_Type);
   react_src.setVal(0.0);
-  prefetchToDevice(react_src);
 
   // for sundials box integration
   amrex::MultiFab STemp(grids, dmap, NUM_SPECIES + 2, 0);

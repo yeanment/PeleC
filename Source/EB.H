@@ -13,6 +13,7 @@
 #include <AMReX_EB2_IF_Complement.H>
 #include <AMReX_EB2_IF_Scale.H>
 #include <AMReX_EB2_IF_Translation.H>
+#include <AMReX_EB2_IF_Rotation.H>
 #include <AMReX_EB2_IF_Lathe.H>
 #include <AMReX_EB2_IF_Box.H>
 #include <AMReX_EB2_IF_Cylinder.H>
@@ -221,6 +222,12 @@ void pc_fill_bndry_grad_stencil_ls(
   const amrex::Array4<amrex::EBCellFlag const>& flags,
   EBBndrySten* /*grad_stencil*/);
 
+void pc_check_bndry_grad_stencil(
+  const amrex::Box& /*bx*/,
+  const int /*Nsten*/,
+  const amrex::Array4<amrex::EBCellFlag const>& flags,
+  const EBBndrySten* /*grad_stencil*/);
+
 void pc_fill_bndry_grad_stencil_quadratic(
   const amrex::Box& /*bx*/,
   const amrex::Real /*dx*/,
@@ -231,7 +238,6 @@ void pc_fill_bndry_grad_stencil_quadratic(
 
 void pc_fill_flux_interp_stencil(
   const amrex::Box& /*bx*/,
-  const amrex::Box /*unused*/,
   const int /*Nsten*/,
   const amrex::Array4<const amrex::Real>& /*fc*/,
   const amrex::Array4<const amrex::Real>& /*fa*/,
@@ -293,6 +299,17 @@ void pc_eb_clean_massfrac(
   const amrex::Real /*threshold*/,
   amrex::Array4<const amrex::Real> const& /*state*/,
   amrex::Array4<amrex::EBCellFlag const> const& /*flags*/,
+  amrex::Array4<amrex::Real> const& /*scratch*/,
+  amrex::Array4<amrex::Real> const& /*div*/);
+
+void pc_post_eb_redistribution(
+  const amrex::Box& /*bx*/,
+  const amrex::Real /*dt*/,
+  const bool /*eb_clean_massfrac*/,
+  const amrex::Real /*threshold*/,
+  amrex::Array4<const amrex::Real> const& /*state*/,
+  const amrex::FabType& /*typ*/,
+  const amrex::Array4<amrex::EBCellFlag const>& /*flags*/,
   amrex::Array4<amrex::Real> const& /*scratch*/,
   amrex::Array4<amrex::Real> const& /*div*/);
 

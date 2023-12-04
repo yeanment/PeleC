@@ -23,6 +23,9 @@ FSANITIZER = FALSE
 THREAD_SANITIZER = FALSE
 
 # PeleC
+PELE_CVODE_FORCE_YCORDER = FALSE
+PELE_USE_MAGMA = FALSE
+PELE_COMPILE_AJACOBIAN = FALSE
 Eos_Model := Fuego
 Chemistry_Model := decane_3sp
 Transport_Model := Simple
@@ -34,4 +37,5 @@ SPRAY_FUEL_NUM = 1
 # GNU Make
 Bpack := ./Make.package
 Blocs := .
+PELEC_HOME := ../../..
 include $(PELEC_HOME)/Exec/Make.PeleC

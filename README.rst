@@ -17,14 +17,13 @@ To build `PeleC` and run a sample 3D flame problem:
     make TPLrealclean && make realclean && make TPL && make -j
     ./Pele3d.xxx.yyy.ex example.inp
 
-* Notes
-
+.. note::
    A. In the exec line above, xxx.yyy is a tag identifying your compiler and various build options, and will vary across pltaform.  (Note that GNU compilers must be at least version 7, and MPI should be at least of standard version 3).
    B. The example is 3D premixed flame, flowing vertically upward through the domain with no gravity. The lateral boundaries are periodic.  A detailed hydrogen model is used.  The solution is initialized with a wrinkled (perturbed) 2D steady flame solution computed using the PREMIX code.  Two levels of solution-adaptive refinement are automatically triggered by the presence of the flame intermediate, HO2.
-   C. In addition to informative output to the terminal, periodic plotfiles are written in the run folder.  These may be viewed with CCSE's Amrvis (<https://ccse.lbl.gov/Downloads/downloadAmrvis.html>) or Vis-It (<http://vis.lbl.gov/NERSC/Software/visit/>):
+   C. In addition to informative output to the terminal, periodic plotfiles are written in the run folder.  These may be viewed with AMReX's `Amrvis <https://amrex-codes.github.io/amrex/docs_html/Visualization.html>`_ or `VisIt <https://visit-dav.github.io/visit-website/>`_:
 
       1. In VisIt, direct the File->Open dialogue to select the file named "Header" that is inside each plotfile folder..
-      2. With Amrvis, "amrvis3d plt00030", for example.
+      2. With Amrvis, `$ amrvis3d plt00030`, for example.
 
 
 Dependencies
@@ -43,7 +42,7 @@ To add a new feature to PeleC, the procedure is:
     git checkout -b AmazingNewFeature
 
 2. Develop the feature, merging changes often from the development branch into your AmazingNewFeature branch: ::
-   
+
     git commit -m "Developed AmazingNewFeature"
     git checkout development
     git pull                     [fix any identified conflicts between local and remote branches of "development"]
@@ -83,13 +82,13 @@ Documentation
 ~~~~~~~~~~~~~
 
 The full documentation for Pele exists in the Docs directory; at present this is maintained inline using
-Sphinx  `Sphinx <http://www.sphinx-doc.org>`_. With 
+Sphinx  `Sphinx <http://www.sphinx-doc.org>`_. With
 Sphinx, documentation is written in *Restructured Text*. reST is a markup language
 similar to Markdown, but with somewhat greater capabilities (and idiosyncrasies). There
 are several `primers <http://thomas-cokelaer.info/tutorials/sphinx/rest_syntax.html>`_
-available to get started. One gotcha is that indentation matters.
+available to get started. One gotcha is that indentation matters. To build ::
 
-    cd Docs && mkdir build && cd build && cmake .. && make
+    $ cd Docs && mkdir build && cd build && sphinx-build -M html ../sphinx .
 
 
 Citation
@@ -101,9 +100,9 @@ To cite the PeleC software and refer to its computational performance, use the f
       author = {Marc T {Henry de Frahan} and Jon S Rood and Marc S Day and Hariswaran Sitaraman and Shashank Yellapantula and Bruce A Perry and Ray W Grout and Ann Almgren and Weiqun Zhang and John B Bell and Jacqueline H Chen},
       title = {{PeleC: An adaptive mesh refinement solver for compressible reacting flows}},
       journal = {The International Journal of High Performance Computing Applications},
-      volume = {0},
-      number = {0},
-      pages = {10943420221121151},
+      volume = {37},
+      number = {2},
+      pages = {115-131},
       year = {2022},
       doi = {10.1177/10943420221121151},
       url = {https://doi.org/10.1177/10943420221121151}
@@ -112,7 +111,7 @@ To cite the PeleC software and refer to its computational performance, use the f
 Additionally, to cite the application of PeleC to compressible reacting flows, use the following `Combustion and Flame journal article <https://doi.org/10.1016/j.combustflame.2021.111531>`_::
 
   @article{Sitaraman2021,
-    author = {Hariswaran Sitaraman and Shashank Yellapantula and Marc T. {Henry de Frahan} and Bruce Perry and Jon Rood and Ray Grout and Marc Day}
+    author = {Hariswaran Sitaraman and Shashank Yellapantula and Marc T. {Henry de Frahan} and Bruce Perry and Jon Rood and Ray Grout and Marc Day},
     title = {Adaptive mesh based combustion simulations of direct fuel injection effects in a supersonic cavity flame-holder},
     journal = {Combustion and Flame},
     volume = {232},

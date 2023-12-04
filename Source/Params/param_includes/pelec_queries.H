@@ -3,10 +3,6 @@
 // or add runtime parameters, please edit _cpp_parameters and then run
 // mk_params.sh
 
-pp.query("levmsk_interior", levmsk_interior);
-pp.query("levmsk_covered", levmsk_covered);
-pp.query("levmsk_notcovered", levmsk_notcovered);
-pp.query("levmsk_physbnd", levmsk_physbnd);
 pp.query("state_interp_order", state_interp_order);
 pp.query("lin_limit_state_interp", lin_limit_state_interp);
 pp.query("state_nghost", state_nghost);
@@ -14,6 +10,7 @@ pp.query("do_reflux", do_reflux);
 pp.query("do_avg_down", do_avg_down);
 pp.query("init_pltfile", init_pltfile);
 pp.query("init_pltfile_massfrac_tol", init_pltfile_massfrac_tol);
+pp.query("init_pltfile_coarse_levels", init_pltfile_coarse_levels);
 pp.query("dump_old", dump_old);
 pp.query("difmag", difmag);
 pp.query("small_pres", small_pres);
@@ -39,6 +36,7 @@ pp.query("forcing_force", forcing_force);
 pp.query("ppm_type", ppm_type);
 pp.query("ppm_trace_sources", ppm_trace_sources);
 pp.query("plm_iorder", plm_iorder);
+pp.query("mol_iorder", mol_iorder);
 pp.query("use_laxf_flux", use_laxf_flux);
 pp.query("use_flattening", use_flattening);
 pp.query("dual_energy_update_E_from_e", dual_energy_update_E_from_e);
@@ -56,6 +54,21 @@ pp.query("diffuse_enth", diffuse_enth);
 pp.query("diffuse_spec", diffuse_spec);
 pp.query("diffuse_vel", diffuse_vel);
 pp.query("transport_harmonic_mean", transport_harmonic_mean);
+pp.query("do_isothermal_walls", do_isothermal_walls);
+{
+  amrex::Vector<amrex::Real> tmp(AMREX_SPACEDIM, -1.0);
+  pp.queryarr("domlo_isothermal_temp", tmp, 0, AMREX_SPACEDIM);
+  for (int i = 0; i < tmp.size(); i++) {
+    domlo_isothermal_temp[i] = tmp[i];
+  }
+}
+{
+  amrex::Vector<amrex::Real> tmp(AMREX_SPACEDIM, -1.0);
+  pp.queryarr("domhi_isothermal_temp", tmp, 0, AMREX_SPACEDIM);
+  for (int i = 0; i < tmp.size(); i++) {
+    domhi_isothermal_temp[i] = tmp[i];
+  }
+}
 pp.query("do_les", do_les);
 pp.query("use_explicit_filter", use_explicit_filter);
 pp.query("Cs", Cs);
@@ -68,6 +81,8 @@ pp.query("redistribution_type", redistribution_type);
 pp.query("eb_clean_massfrac", eb_clean_massfrac);
 pp.query("eb_clean_massfrac_threshold", eb_clean_massfrac_threshold);
 pp.query("eb_srd_max_order", eb_srd_max_order);
+pp.query("eb_weights_type", eb_weights_type);
+pp.query("eb_zero_body_state", eb_zero_body_state);
 pp.query("do_mms", do_mms);
 pp.query("masa_solution_name", masa_solution_name);
 pp.query("fixed_dt", fixed_dt);
@@ -83,7 +98,6 @@ pp.query("do_react", do_react);
 pp.query("chem_integrator", chem_integrator);
 pp.query("bndry_func_thread_safe", bndry_func_thread_safe);
 pp.query("print_energy_diagnostics", print_energy_diagnostics);
-pp.query("track_grid_losses", track_grid_losses);
 pp.query("sum_interval", sum_interval);
 pp.query("track_extrema", track_extrema);
 pp.query("extrema_spec_name", extrema_spec_name);

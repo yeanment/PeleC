@@ -74,11 +74,11 @@ PeleC::sum_integrated_quantities()
       amrex::Print() << "TIME = " << time << " FUEL PROD   = " << fuel_prod
                      << '\n';
 
-      const int log_index = find_datalog_index("datalog");
+      const int log_index = find_datalog_index("datlog");
       if (log_index >= 0) {
         std::ostream& data_log1 = parent->DataLog(log_index);
         if (data_log1.good()) {
-          const int datwidth = 14;
+          const int datwidth = 24;
           if (time == 0.0) {
             data_log1 << std::setw(datwidth) << "          time";
             data_log1 << std::setw(datwidth) << "          mass";
@@ -94,7 +94,7 @@ PeleC::sum_integrated_quantities()
           }
 
           // Write the quantities at this time
-          const int datprecision = 6;
+          const int datprecision = 16;
           data_log1 << std::setw(datwidth) << time;
           data_log1 << std::setw(datwidth) << std::setprecision(datprecision)
                     << mass;
@@ -173,7 +173,7 @@ PeleC::monitor_extrema()
         minima[ii], pc_lev.minDerive(extrema_vars[ii], time, local_flag));
     }
 
-    // Handle species seperately
+    // Handle species separately
     auto mf = pc_lev.derive("massfrac", time, 0);
     BL_ASSERT(!(mf == nullptr));
     amrex::MultiFab sumY(pc_lev.grids, pc_lev.dmap, 1, 0);

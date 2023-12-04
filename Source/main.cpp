@@ -21,6 +21,7 @@ void initialize_EB2(
   const amrex::Geometry& geom,
   const int eb_max_level,
   const int max_level,
+  const int coarsening,
   const amrex::Vector<amrex::IntVect>& ref_ratio,
   const amrex::IntVect& max_grid_size);
 
@@ -124,13 +125,11 @@ main(int argc, char* argv[])
 
   amrex::AmrLevel::SetEBSupportLevel(
     amrex::EBSupport::full); // need both area and volume fractions
-  amrex::AmrLevel::SetEBMaxGrowCells(
-    5, 5,
-    5); // 5 focdr ebcellflags, 4 for vfrac, 2 is not used for EBSupport::volume
+  amrex::AmrLevel::SetEBMaxGrowCells(7, 7, 7);
 
   initialize_EB2(
     amrptr->Geom(PeleC::getEBMaxLevel()), PeleC::getEBMaxLevel(),
-    amrptr->maxLevel(), amrptr->refRatio(),
+    amrptr->maxLevel(), PeleC::getEBCoarsening(), amrptr->refRatio(),
     amrptr->maxGridSize(amrptr->maxLevel()));
 
   amrptr->init(strt_time, stop_time);

@@ -389,10 +389,47 @@ pc_fill_bndry_grad_stencil_ls(
   });
 }
 
+/* Because the quadratic EB boundary flux stencil can unintentionally access
+   covered cells, here we check whether any of the accessed cells are covered
+   and raise an error if they are */
+void
+pc_check_bndry_grad_stencil(
+  const amrex::Box& bx,
+  const int Nsten,
+  const amrex::Array4<amrex::EBCellFlag const>& flags,
+  const EBBndrySten* sten)
+{
+  amrex::ParallelFor(Nsten, [=] AMREX_GPU_DEVICE(int L) {
+    const amrex::IntVect iv = sten[L].iv;
+    if (bx.contains(iv)) {
+      for (int ii = 0; ii < 3; ii++) {
+        for (int jj = 0; jj < 3; jj++) {
+#if AMREX_SPACEDIM > 2
+          for (int kk = 0; kk < 3; kk++) {
+#endif
+            const amrex::IntVect ivp = amrex::IntVect(AMREX_D_DECL(
+              sten[L].iv_base[0] + ii, sten[L].iv_base[1] + jj,
+              sten[L].iv_base[2] + kk));
+            if (
+              flags(ivp).isCovered() &&
+              std::abs(sten[L].val AMREX_D_TERM([ii], [jj], [kk])) > 1e-14) {
+              amrex::Abort(
+                "EB Boundary Stencil for noslip/isothermal EB accesses a "
+                "covered cell. Try again with alternate option for"
+                " ebd.boundary_grad_stencil_type or refine your base grid.");
+            }
+#if AMREX_SPACEDIM > 2
+          }
+#endif
+        }
+      }
+    }
+  });
+}
+
 void
 pc_fill_flux_interp_stencil(
   const amrex::Box& bx,
-  const amrex::Box /*fbx*/,
   const int Nsten,
   const amrex::Array4<const amrex::Real>& fc,
   const amrex::Array4<const amrex::Real>& fa,
@@ -456,8 +493,9 @@ pc_apply_face_stencil(
 #endif
               const amrex::IntVect ivd = amrex::IntVect{
                 AMREX_D_DECL(iv[0], iv[1] - 1 + t0, iv[2] - 1 + t1)};
+              amrex::Real stenval = sten[L].val AMREX_D_TERM(, [t0], [t1]);
               d_newval[L] +=
-                sten[L].val AMREX_D_TERM(, [t0], [t1]) * vout(ivd, n);
+                (std::abs(stenval) > 1e-14) ? stenval * vout(ivd, n) : 0.0;
 #if AMREX_SPACEDIM > 2
             }
 #endif
@@ -469,8 +507,9 @@ pc_apply_face_stencil(
 #endif
               const amrex::IntVect ivd = amrex::IntVect{
                 AMREX_D_DECL(iv[0] - 1 + t0, iv[1], iv[2] - 1 + t1)};
+              amrex::Real stenval = sten[L].val AMREX_D_TERM(, [t0], [t1]);
               d_newval[L] +=
-                sten[L].val AMREX_D_TERM(, [t0], [t1]) * vout(ivd, n);
+                (std::abs(stenval) > 1e-14) ? stenval * vout(ivd, n) : 0.0;
 #if AMREX_SPACEDIM > 2
             }
 #endif
@@ -481,8 +520,9 @@ pc_apply_face_stencil(
             for (int t1 = 0; t1 < 3; t1++) {
               const amrex::IntVect ivd = amrex::IntVect{
                 AMREX_D_DECL(iv[0] - 1 + t0, iv[1] - 1 + t1, iv[2])};
+              amrex::Real stenval = sten[L].val AMREX_D_TERM(, [t0], [t1]);
               d_newval[L] +=
-                sten[L].val AMREX_D_TERM(, [t0], [t1]) * vout(ivd, n);
+                (std::abs(stenval) > 1e-14) ? stenval * vout(ivd, n) : 0.0;
             }
           }
 #endif
@@ -653,8 +693,10 @@ pc_apply_eb_boundry_visc_flux_stencil(
           for (int kk = 0; kk < 3; kk++) {
 #endif
             for (int idir = 0; idir < AMREX_SPACEDIM; idir++) {
-              sum[idir] += sten[L].val AMREX_D_TERM([ii], [jj], [kk]) *
-                           Ut AMREX_D_TERM([ii], [jj], [kk])[idir];
+              amrex::Real stenval = sten[L].val AMREX_D_TERM([ii], [jj], [kk]);
+              sum[idir] += (std::abs(stenval) > 1e-14)
+                             ? stenval * Ut AMREX_D_TERM([ii], [jj], [kk])[idir]
+                             : 0.0;
             }
 #if AMREX_SPACEDIM > 2
           }
@@ -709,8 +751,9 @@ pc_apply_eb_boundry_flux_stencil(
               const amrex::IntVect ivp = amrex::IntVect(AMREX_D_DECL(
                 sten[L].iv_base[0] + ii, sten[L].iv_base[1] + jj,
                 sten[L].iv_base[2] + kk));
+              amrex::Real stenval = sten[L].val AMREX_D_TERM([ii], [jj], [kk]);
               sum +=
-                sten[L].val AMREX_D_TERM([ii], [jj], [kk]) * s(ivp, scomp + n);
+                (std::abs(stenval) > 1e-14) ? stenval * s(ivp, scomp + n) : 0.0;
 #if AMREX_SPACEDIM > 2
             }
 #endif
@@ -761,4 +804,39 @@ pc_eb_clean_massfrac(
         div(iv, n) = (scratch(iv, n) - state(iv, n)) / dt;
       }
     });
+}
+
+void
+pc_post_eb_redistribution(
+  const amrex::Box& bx,
+  const amrex::Real dt,
+  const bool eb_clean_massfrac,
+  const amrex::Real threshold,
+  amrex::Array4<const amrex::Real> const& state,
+  const amrex::FabType& typ,
+  const amrex::Array4<amrex::EBCellFlag const>& flags,
+  amrex::Array4<amrex::Real> const& scratch,
+  amrex::Array4<amrex::Real> const& div)
+{
+  // Make sure div is zero in covered cells
+  amrex::ParallelFor(
+    bx, state.nComp(),
+    [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept {
+      if (flags(i, j, k).isCovered()) {
+        div(i, j, k, n) = 0.0;
+      }
+    });
+
+  // Make sure rho div is same as sum rhoY div
+  amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+    div(i, j, k, URHO) = 0.0;
+    for (int n = 0; n < NUM_SPECIES; n++) {
+      div(i, j, k, URHO) += div(i, j, k, UFS + n);
+    }
+  });
+
+  // Make sure the massfractions are ok in cut cells
+  if ((eb_clean_massfrac) && (typ != amrex::FabType::covered)) {
+    pc_eb_clean_massfrac(bx, dt, threshold, state, flags, scratch, div);
+  }
 }

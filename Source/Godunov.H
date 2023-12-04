@@ -100,8 +100,8 @@ AMREX_FORCE_INLINE
 void
 pc_transd_passive(
   const amrex::IntVect iv,
-  const amrex::IntVect ivp0,
-  const amrex::IntVect ivp1,
+  const amrex::IntVect ivpt,
+  const amrex::IntVect ivpn,
   const int n,
   const int u_offset,
   const int q_offset,
@@ -120,14 +120,14 @@ pc_transd_passive(
   const int uc = u_offset + n;
   const int qc = q_offset + n;
   const amrex::Real srcpass = srcQ(iv, qc);
-  const amrex::Real compn = cdtdx * (flxx(ivp0, uc) - flxx(iv, uc));
+  const amrex::Real compn = cdtdx * (flxx(ivpt, uc) - flxx(iv, uc));
   amrex::Real rrnew = rrr - flxrho;
   amrex::Real compo = rrr * qyp(iv, qc) - compn;
   qp(iv, qc) = compo / rrnew + hdt * srcpass;
 
   rrnew = rrl - flxrho;
-  compo = rrl * qym(ivp1, qc) - compn;
-  qm(ivp1, qc) = compo / rrnew + hdt * srcpass;
+  compo = rrl * qym(ivpn, qc) - compn;
+  qm(ivpn, qc) = compo / rrnew + hdt * srcpass;
 }
 
 AMREX_GPU_DEVICE
@@ -229,7 +229,6 @@ pc_cmpflx(
   amrex::Real cav, ustar;
   amrex::Real spl[NUM_SPECIES];
   amrex::Real spr[NUM_SPECIES];
-  amrex::Real ul, ur, vl, vr, v2l, v2r;
   int idx;
   int IU, IV, IV2;
   int GU, GV, GV2;
@@ -273,37 +272,66 @@ pc_cmpflx(
     spl[sp] = ql(i, j, k, QFS + sp);
     spr[sp] = qr(i, j, k, QFS + sp);
   }
-  ul = ql(i, j, k, IU);
-  vl = ql(i, j, k, IV);
-  v2l = ql(i, j, k, IV2);
 
-  ur = qr(i, j, k, IU);
-  vr = qr(i, j, k, IV);
-  v2r = qr(i, j, k, IV2);
+  amrex::Real ul = ql(i, j, k, IU);
+  amrex::Real vl = ql(i, j, k, IV);
+  amrex::Real v2l = ql(i, j, k, IV2);
+  amrex::Real pl = ql(i, j, k, QPRES);
+  amrex::Real rhol = ql(i, j, k, QRHO);
 
-  // Outflow Hack
+  amrex::Real ur = qr(i, j, k, IU);
+  amrex::Real vr = qr(i, j, k, IV);
+  amrex::Real v2r = qr(i, j, k, IV2);
+  amrex::Real pr = qr(i, j, k, QPRES);
+  amrex::Real rhor = qr(i, j, k, QRHO);
+
+  // Boundary condition corrections
   if (dir == 2) {
     idx = k;
   } else {
     idx = (dir == 0) ? i : j;
   }
-  if (bclo == Outflow && idx == domlo) {
-    ul = ur;
-    vl = vr;
-    v2l = v2r;
-  }
-  if (bchi == Outflow && idx == domhi + 1) {
-    ur = ul;
-    vr = vl;
-    v2r = v2l;
+  if (idx == domlo) {
+    if (
+      bclo == PCPhysBCType::no_slip_wall || bclo == PCPhysBCType::slip_wall ||
+      bclo == PCPhysBCType::symmetry) {
+      ul = -ur;
+      vl = vr;
+      v2l =
+        v2r; // NoSlip: this is fine because Godunov velocity normal will be 0
+      pl = pr;
+      rhol = rhor;
+    } else if (bclo == PCPhysBCType::outflow) {
+      ul = ur;
+      vl = vr;
+      v2l = v2r;
+      pl = pr;
+      rhol = rhor;
+    }
+  } else if (idx == domhi + 1) {
+    if (
+      bchi == PCPhysBCType::no_slip_wall || bchi == PCPhysBCType::slip_wall ||
+      bchi == PCPhysBCType::symmetry) {
+      ur = -ul;
+      vr = vl;
+      v2r =
+        v2l; // NoSlip: this is fine because Godunov velocity normal will be 0
+      pr = pl;
+      rhor = rhol;
+    } else if (bchi == PCPhysBCType::outflow) {
+      ur = ul;
+      vr = vl;
+      v2r = v2l;
+      pr = pl;
+      rhor = rhol;
+    }
   }
 
   const int bc_test_val = 1;
   amrex::Real dummy_flx[NUM_SPECIES] = {0.0};
   riemann(
-    ql(i, j, k, QRHO), ul, vl, v2l, ql(i, j, k, QPRES), spl, qr(i, j, k, QRHO),
-    ur, vr, v2r, qr(i, j, k, QPRES), spr, bc_test_val, cav, ustar,
-    flx(i, j, k, URHO), dummy_flx, flx(i, j, k, f_idx[0]),
+    rhol, ul, vl, v2l, pl, spl, rhor, ur, vr, v2r, pr, spr, bc_test_val, cav,
+    ustar, flx(i, j, k, URHO), dummy_flx, flx(i, j, k, f_idx[0]),
     flx(i, j, k, f_idx[1]), flx(i, j, k, f_idx[2]), flx(i, j, k, UEDEN),
     flx(i, j, k, UEINT), q(i, j, k, GU), q(i, j, k, GV), q(i, j, k, GV2),
     q(i, j, k, GDPRES), q(i, j, k, GDGAME));
@@ -639,52 +667,56 @@ pc_transd(
   const amrex::Real cdtdx)
 {
   const amrex::IntVect iv{AMREX_D_DECL(i, j, k)};
-  const amrex::IntVect ivp0(
+  // ivpt is an offset by 1 in the transverse direction
+  // ivpn is an offset by 1 in the     normal direction
+  // If (dir == 0),  ivpt = (i,j+1) and ivpn = (i+1,j) and qvidx = GDV
+  // If (dir == 1),  ivpt = (i+1,j) and ivpn = (i,j+1) and qvidx = GDU
+  const amrex::IntVect ivpt(
     iv + amrex::IntVect::TheDimensionVector(dir == 0 ? 1 : 0));
-  const amrex::IntVect ivp1(
+  const amrex::IntVect ivpn(
     iv + amrex::IntVect::TheDimensionVector(dir == 0 ? 0 : 1));
   const int qvidx = (dir == 0) ? GDV : GDU;
 
-  const amrex::Real flxrho = cdtdx * (flxx(ivp0, URHO) - flxx(iv, URHO));
-  const amrex::Real flxu = cdtdx * (flxx(ivp0, UMX) - flxx(iv, UMX));
-  const amrex::Real flxv = cdtdx * (flxx(ivp0, UMY) - flxx(iv, UMY));
-  const amrex::Real flxe = cdtdx * (flxx(ivp0, UEDEN) - flxx(iv, UEDEN));
+  const amrex::Real flxrho = cdtdx * (flxx(ivpt, URHO) - flxx(iv, URHO));
+  const amrex::Real flxu = cdtdx * (flxx(ivpt, UMX) - flxx(iv, UMX));
+  const amrex::Real flxv = cdtdx * (flxx(ivpt, UMY) - flxx(iv, UMY));
+  const amrex::Real flxe = cdtdx * (flxx(ivpt, UEDEN) - flxx(iv, UEDEN));
   const amrex::Real srcr = srcQ(iv, QRHO);
   const amrex::Real srce = srcQ(iv, QREINT);
   const amrex::Real srcp = srcQ(iv, QPRES);
   const amrex::Real rrr = qyp(iv, QRHO);
-  const amrex::Real rrl = qym(ivp1, QRHO);
+  const amrex::Real rrl = qym(ivpn, QRHO);
   const amrex::Real c = qa(iv, QGAMC);
 
   // Update passive variables
 #if AMREX_SPACEDIM == 2
   pc_transd_passive(
-    iv, ivp0, ivp1, 0, UMZ, QW, cdtdx, hdt, flxrho, rrr, rrl, srcQ, qyp, qym,
+    iv, ivpt, ivpn, 0, UMZ, QW, cdtdx, hdt, flxrho, rrr, rrl, srcQ, qyp, qym,
     flxx, qp, qm);
 #endif
   for (int n = 0; n < NUM_ADV; n++) {
     pc_transd_passive(
-      iv, ivp0, ivp1, n, UFA, QFA, cdtdx, hdt, flxrho, rrr, rrl, srcQ, qyp, qym,
+      iv, ivpt, ivpn, n, UFA, QFA, cdtdx, hdt, flxrho, rrr, rrl, srcQ, qyp, qym,
       flxx, qp, qm);
   }
   for (int n = 0; n < NUM_SPECIES; n++) {
     pc_transd_passive(
-      iv, ivp0, ivp1, n, UFS, QFS, cdtdx, hdt, flxrho, rrr, rrl, srcQ, qyp, qym,
+      iv, ivpt, ivpn, n, UFS, QFS, cdtdx, hdt, flxrho, rrr, rrl, srcQ, qyp, qym,
       flxx, qp, qm);
   }
   for (int n = 0; n < NUM_AUX; n++) {
     pc_transd_passive(
-      iv, ivp0, ivp1, n, UFX, QFX, cdtdx, hdt, flxrho, rrr, rrl, srcQ, qyp, qym,
+      iv, ivpt, ivpn, n, UFX, QFX, cdtdx, hdt, flxrho, rrr, rrl, srcQ, qyp, qym,
       flxx, qp, qm);
   }
   for (int n = 0; n < NUM_LIN; n++) {
     pc_transd_passive(
-      iv, ivp0, ivp1, n, ULIN, QLIN, cdtdx, hdt, 0., 1., 1., srcQ, qyp, qym,
+      iv, ivpt, ivpn, n, ULIN, QLIN, cdtdx, hdt, 0., 1., 1., srcQ, qyp, qym,
       flxx, qp, qm);
   }
-  const amrex::Real pggp = qint(ivp0, GDPRES);
+  const amrex::Real pggp = qint(ivpt, GDPRES);
   const amrex::Real pggm = qint(iv, GDPRES);
-  const amrex::Real ugp = qint(ivp0, qvidx);
+  const amrex::Real ugp = qint(ivpt, qvidx);
   const amrex::Real ugm = qint(iv, qvidx);
 
   const amrex::Real dAup = pggp * ugp - pggm * ugm;
@@ -722,12 +754,12 @@ pc_transd(
   // QM
 
   // Conversion to Conservative
-  amrex::Real rul = qym(ivp1, QU);
-  amrex::Real rvl = qym(ivp1, QV);
+  amrex::Real rul = qym(ivpn, QU);
+  amrex::Real rvl = qym(ivpn, QV);
   const amrex::Real ekinl = 0.5 * rrl * (rul * rul + rvl * rvl);
   rul *= rrl;
   rvl *= rrl;
-  const amrex::Real rel = qym(ivp1, QREINT) + ekinl;
+  const amrex::Real rel = qym(ivpn, QREINT) + ekinl;
 
   // Transverse fluxes
   const amrex::Real rrnewl = rrl - flxrho;
@@ -735,16 +767,16 @@ pc_transd(
   const amrex::Real rvnewl = rvl - flxv;
   const amrex::Real renewl = rel - flxe;
 
-  qm(ivp1, QRHO) = rrnewl + hdt * srcr;
-  qm(ivp1, QU) = runewl / rrnewl + hdt * srcQ(iv, QU);
-  qm(ivp1, QV) = rvnewl / rrnewl + hdt * srcQ(iv, QV);
+  qm(ivpn, QRHO) = rrnewl + hdt * srcr;
+  qm(ivpn, QU) = runewl / rrnewl + hdt * srcQ(iv, QU);
+  qm(ivpn, QV) = rvnewl / rrnewl + hdt * srcQ(iv, QV);
   const amrex::Real rhoekinl =
     0.5 * (runewl * runewl + rvnewl * rvnewl) / rrnewl;
 
-  qm(ivp1, QREINT) = renewl - rhoekinl + hdt * srce;
+  qm(ivpn, QREINT) = renewl - rhoekinl + hdt * srce;
   const amrex::Real pnewl =
-    qym(ivp1, QPRES) - cdtdx * (dAup + pav * dAu * (c - 1.));
-  qm(ivp1, QPRES) = amrex::max<amrex::Real>(
+    qym(ivpn, QPRES) - cdtdx * (dAup + pav * dAu * (c - 1.));
+  qm(ivpn, QPRES) = amrex::max<amrex::Real>(
     pnewl + hdt * srcp, std::numeric_limits<amrex::Real>::min());
 }
 
@@ -838,20 +870,15 @@ void pc_umeth_3D(
   amrex::Array4<const amrex::Real> const& q,
   amrex::Array4<const amrex::Real> const& qaux,
   amrex::Array4<const amrex::Real> const& srcQ,
-  amrex::Array4<amrex::Real> const& flx1,
-  amrex::Array4<amrex::Real> const& flx2,
-  amrex::Array4<amrex::Real> const& flx3,
-  amrex::Array4<amrex::Real> const& q1,
-  amrex::Array4<amrex::Real> const& q2,
-  amrex::Array4<amrex::Real> const& q3,
-  amrex::Array4<const amrex::Real> const& a1,
-  amrex::Array4<const amrex::Real> const& a2,
-  amrex::Array4<const amrex::Real> const& a3,
+  const amrex::GpuArray<const amrex::Array4<amrex::Real>, 3>& flx,
+  const amrex::GpuArray<const amrex::Array4<amrex::Real>, 3>& qec,
+  const amrex::GpuArray<const amrex::Array4<const amrex::Real>, 3>& a,
   amrex::Array4<amrex::Real> const& pdivu,
   amrex::Array4<const amrex::Real> const& vol,
-  const amrex::Real* del,
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& del,
   const amrex::Real dt,
   const int ppm_type,
+  const int plm_iorder,
   const bool use_flattening,
   const bool use_hybrid_weno,
   const int weno_scheme);
@@ -867,18 +894,15 @@ void pc_umeth_2D(
   amrex::Array4<const amrex::Real> const& q,
   amrex::Array4<const amrex::Real> const& qaux,
   amrex::Array4<const amrex::Real> const& srcQ,
-  amrex::Array4<amrex::Real> const& flx1,
-  amrex::Array4<amrex::Real> const& flx2,
-  // amrex::Array4<const amrex::Real> const& dloga,
-  amrex::Array4<amrex::Real> const& q1,
-  amrex::Array4<amrex::Real> const& q2,
-  amrex::Array4<const amrex::Real> const& a1,
-  amrex::Array4<const amrex::Real> const& a2,
+  const amrex::GpuArray<const amrex::Array4<amrex::Real>, 2>& flx,
+  const amrex::GpuArray<const amrex::Array4<amrex::Real>, 2>& qec,
+  const amrex::GpuArray<const amrex::Array4<const amrex::Real>, 2>& a,
   amrex::Array4<amrex::Real> const& pdivu,
   amrex::Array4<const amrex::Real> const& vol,
-  const amrex::Real* del,
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& del,
   const amrex::Real dt,
   const int ppm_type,
+  const int plm_iorder,
   const bool use_flattening,
   const bool use_hybrid_weno,
   const int weno_scheme);

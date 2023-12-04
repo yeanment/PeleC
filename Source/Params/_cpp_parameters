@@ -6,11 +6,6 @@
 
 @namespace: pelec PeleC static
 
-levmsk_interior              int         0
-levmsk_covered               int         1
-levmsk_notcovered            int         2
-levmsk_physbnd               int         3
-
 #-----------------------------------------------------------------------------
 # category: AMR
 #-----------------------------------------------------------------------------
@@ -39,6 +34,9 @@ init_pltfile              string          ""
 
 # Acceptable tolerance for species mass fraction when initializing from a plot file
 init_pltfile_massfrac_tol   Real         1e-8
+
+# Number of coarser levels in the init pltfile vs present simulation
+init_pltfile_coarse_levels  int         0
 
 # Checkpoint old state
 dump_old                   bool          false
@@ -102,7 +100,10 @@ ppm_type                     int           0
 ppm_trace_sources           bool           false
 
 # for piecewise linear, reconstruction order to use
-plm_iorder                   int           2
+plm_iorder                   int           4
+
+# for mol, reconstruction order to use
+mol_iorder                   int           2
 
 # Lax Friedrich's flux
 use_laxf_flux               bool           false
@@ -165,6 +166,15 @@ diffuse_vel                   bool         false
 # flag for harmonic averaging of transport coefficients to the face
 transport_harmonic_mean       bool         true
 
+# flag for isothermal walls
+do_isothermal_walls           bool         false
+
+# low domain boundary isothermal temperature [K] (negative = adiabatic)
+domlo_isothermal_temp         dim_array    -1.0
+
+# hi domain boundary isothermal temperature [K] (negative = adiabatic)
+domhi_isothermal_temp         dim_array    -1.0
+
 #-----------------------------------------------------------------------------
 # category: large eddy simulation
 #-----------------------------------------------------------------------------
@@ -207,7 +217,13 @@ eb_clean_massfrac           bool          true
 eb_clean_massfrac_threshold  Real         0.0
 
 # Max order used for SRD slopes
-eb_srd_max_order             int          2
+eb_srd_max_order             int          0
+
+# Weight types for ML redistribution (0 = 1.0, 1 = energy, 2 = density, 3 = vfrac)
+eb_weights_type              int          2
+
+# Set body state in covered cells to 0
+eb_zero_body_state           bool         false
 
 #-----------------------------------------------------------------------------
 # category: method of manufactured solution
@@ -277,13 +293,10 @@ bndry_func_thread_safe      bool           true
 # display breakdown of energy sources
 print_energy_diagnostics     bool           (false, true)
 
-# calculate losses of material through physical grid boundaries
-track_grid_losses           bool            false
-
 # how often (number of coarse timesteps) to compute integral sums (for runtime diagnostics)
 sum_interval                 int           -1
 
-# record extrema of certain variables along with the intergal sums
+# record extrema of certain variables along with the integral sums
 track_extrema               bool           true
 
 # track the extrema of this species in addition to other quantities

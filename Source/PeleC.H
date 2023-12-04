@@ -15,6 +15,7 @@
 #endif
 
 #include "Filter.H"
+#include "Utilities.H"
 #include "Tagging.H"
 #include "IndexDefines.H"
 #include "prob_parm.H"
@@ -41,6 +42,19 @@ enum sources {
 #endif
   num_src
 };
+
+// These match AMReX_BC_TYPES.H, except user_bc is added
+namespace PCPhysBCType {
+enum phys_bc_type {
+  interior = 0,
+  inflow,
+  outflow,
+  symmetry,
+  slip_wall,
+  no_slip_wall,
+  user_bc
+};
+}
 
 // Forward declarations
 #ifdef PELEC_USE_SOOT
@@ -219,8 +233,6 @@ public:
 
   void set_body_state(amrex::MultiFab& S);
 
-  void zero_in_body(amrex::MultiFab& S) const;
-
   void initialize_signed_distance();
 
   void eb_distance(const int lev, amrex::MultiFab& signDistLev);
@@ -246,7 +258,7 @@ public:
   void initialize_sdc_advance(
     amrex::Real time, amrex::Real dt, int amr_iteration, int amr_ncycle);
 
-  void finalize_sdc_advance(
+  static void finalize_sdc_advance(
     amrex::Real time, amrex::Real dt, int amr_iteration, int amr_ncycle);
 
   amrex::Real do_sdc_iteration(
@@ -257,7 +269,7 @@ public:
     int sub_iteration,
     int sub_ncycle);
 
-  void initialize_sdc_iteration(
+  static void initialize_sdc_iteration(
     amrex::Real time,
     amrex::Real dt,
     int amr_iteration,
@@ -420,7 +432,7 @@ public:
   // Remove data at old time.
   void removeOldData() override;
 
-  // Passes some data about the grid to a Fortran module.
+  // Passes some data about the grid
   void setGridInfo();
 
   // Print information about energy budget.
@@ -572,6 +584,7 @@ public:
 
   static bool ebInitialized();
   static int getEBMaxLevel();
+  static int getEBCoarsening();
 
   void InitialRedistribution(
     const amrex::Real time,
@@ -591,7 +604,7 @@ public:
   static pele::physics::turbinflow::TurbInflow turb_inflow;
 
   // A set of runtime diagnostics from PelePhysics lib
-  static amrex::Vector<std::unique_ptr<DiagBase>> m_diagnostics;
+  amrex::Vector<std::unique_ptr<DiagBase>> m_diagnostics;
   static amrex::Vector<std::string> m_diagVars;
 
 #ifdef PELEC_USE_SOOT
@@ -640,6 +653,13 @@ protected:
 
   PeleC& getLevel(int lev);
 
+  void update_flux_registers(
+    const amrex::Real dt,
+    const amrex::MFIter& mfi,
+    const amrex::FabType& typ,
+    const std::array<amrex::FArrayBox const*, AMREX_SPACEDIM>& flux,
+    const amrex::FArrayBox& dm_as_fine);
+
   void reflux();
 
   static amrex::Real clean_state(const amrex::MultiFab& S);
@@ -680,12 +700,6 @@ protected:
 
   // for keeping track of mass changes from negative density resets
   static amrex::Real frac_change;
-
-  // For keeping track of fluid quantities lost at physical grid boundaries.
-  // This should persist through restarts, but right now only on level 0.
-  static const int n_lost = 8;
-  amrex::Real material_lost_through_boundary_cumulative[n_lost];
-  amrex::Real material_lost_through_boundary_temp[n_lost];
 
   // for keeping track of the amount of CPU time used -- this will persist
   // after restarts
@@ -795,8 +809,24 @@ int
 PeleC::numGrow()
 {
   int ng = 4;
-  if ((eb_in_domain) && (redistribution_type == "StateRedist")) {
-    ng += 1;
+  if (eb_in_domain) {
+    // IF MOL     + FRD then 5
+    // IF Godunov + FRD then 6
+    // IF MOL     + SRD then 6
+    // IF Godunov + SRD then 7
+    if (do_mol) {
+      if (redistribution_type == "FluxRedist") {
+        ng += 1;
+      } else if (redistribution_type == "StateRedist") {
+        ng += 2;
+      }
+    } else {
+      if (redistribution_type == "FluxRedist") {
+        ng += 2;
+      } else if (redistribution_type == "StateRedist") {
+        ng += 3;
+      }
+    }
   }
   return ng;
 }

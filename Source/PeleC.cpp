@@ -102,7 +102,6 @@ pele::physics::transport::TransportParams<
   PeleC::trans_parms;
 
 pele::physics::turbinflow::TurbInflow PeleC::turb_inflow;
-amrex::Vector<std::unique_ptr<DiagBase>> PeleC::m_diagnostics;
 amrex::Vector<std::string> PeleC::m_diagVars;
 
 amrex::Vector<int> PeleC::src_list;
@@ -160,6 +159,19 @@ PeleC::getEBMaxLevel()
   ppeb.query("max_level_generation", max_eb_level);
 
   return max_eb_level;
+}
+
+int
+PeleC::getEBCoarsening()
+{
+  amrex::ParmParse ppa("amr");
+  std::string restart_file;
+  ppa.query("restart", restart_file);
+
+  if (restart_file.empty() and !(init_pltfile.empty())) {
+    return init_pltfile_coarse_levels;
+  }
+  return 0;
 }
 
 void
@@ -250,32 +262,62 @@ PeleC::read_params()
   // Check, periodic means interior in those directions.
   for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
     if (amrex::DefaultGeometry().isPeriodic(dir)) {
-      if (lo_bc[dir] != Interior && amrex::ParallelDescriptor::IOProcessor()) {
+      if (
+        lo_bc[dir] != PCPhysBCType::interior &&
+        amrex::ParallelDescriptor::IOProcessor()) {
         std::cerr << "PeleC::read_params:periodic in direction " << dir
                   << " but low BC is not Interior\n";
         amrex::Error();
       }
-      if (hi_bc[dir] != Interior && amrex::ParallelDescriptor::IOProcessor()) {
+      if (
+        hi_bc[dir] != PCPhysBCType::interior &&
+        amrex::ParallelDescriptor::IOProcessor()) {
         std::cerr << "PeleC::read_params:periodic in direction " << dir
                   << " but high BC is not Interior\n";
         amrex::Error();
       }
     } else {
       // If not periodic, should not be interior.
-      if (lo_bc[dir] == Interior && amrex::ParallelDescriptor::IOProcessor()) {
+      if (
+        lo_bc[dir] == PCPhysBCType::interior &&
+        amrex::ParallelDescriptor::IOProcessor()) {
         std::cerr << "PeleC::read_params:interior bc in direction " << dir
                   << " but not periodic\n";
         amrex::Error();
       }
-      if (hi_bc[dir] == Interior && amrex::ParallelDescriptor::IOProcessor()) {
+      if (
+        hi_bc[dir] == PCPhysBCType::interior &&
+        amrex::ParallelDescriptor::IOProcessor()) {
         std::cerr << "PeleC::read_params:interior bc in direction " << dir
                   << " but not periodic\n";
         amrex::Error();
       }
     }
   }
+  if (do_isothermal_walls) {
+    for (int dir = 0; dir < AMREX_SPACEDIM; ++dir) {
+      if (
+        domlo_isothermal_temp[dir] > 0.0 and
+        !(lo_bc[dir] == PCPhysBCType::slip_wall ||
+          lo_bc[dir] == PCPhysBCType::no_slip_wall ||
+          lo_bc[dir] == PCPhysBCType::user_bc ||
+          lo_bc[dir] == PCPhysBCType::inflow)) {
+        amrex::Abort("Cannot have isothermal wall on a BC that isn't a wall or "
+                     "user defined BC");
+      }
+      if (
+        domhi_isothermal_temp[dir] > 0.0 and
+        !(hi_bc[dir] == PCPhysBCType::slip_wall ||
+          hi_bc[dir] == PCPhysBCType::no_slip_wall ||
+          hi_bc[dir] == PCPhysBCType::user_bc ||
+          hi_bc[dir] == PCPhysBCType::inflow)) {
+        amrex::Abort("Cannot have isothermal wall on a BC that isn't a wall or "
+                     "user defined BC");
+      }
+    }
+  }
 
-  if (amrex::DefaultGeometry().IsRZ() && (lo_bc[0] != Symmetry)) {
+  if (amrex::DefaultGeometry().IsRZ() && (lo_bc[0] != PCPhysBCType::symmetry)) {
     amrex::Error("PeleC::read_params: must set r=0 boundary condition to "
                  "Symmetry for r-z");
   }
@@ -324,6 +366,18 @@ PeleC::read_params()
     amrex::Error("PeleC::ppm_type must be 1 (PPM) to use WENO method");
   }
 
+  if (do_hydro) {
+    if (do_mol) {
+      if ((mol_iorder != 1) && (mol_iorder != 2)) {
+        amrex::Error("PeleC::mol_iorder must be 1, or 2.");
+      }
+    } else if (ppm_type == 0) {
+      if ((plm_iorder != 1) && (plm_iorder != 2) && (plm_iorder != 4)) {
+        amrex::Error("PeleC::plm_iorder must be 1, 2, or 4");
+      }
+    }
+  }
+
   // for the moment, ppm_type = 0 does not support ppm_trace_sources --
   // we need to add the momentum sources to the states (and not
   // add it in trans_3d
@@ -363,6 +417,15 @@ PeleC::read_params()
   // whether to gather data
   ppa.query("loadbalance_with_workestimates", do_mol_load_balance);
   ppa.query("loadbalance_with_workestimates", do_react_load_balance);
+
+  if (eb_in_domain) {
+    int local_bf;
+    if (static_cast<bool>(ppa.query("blocking_factor", local_bf))) {
+      if (local_bf < 8) {
+        amrex::Error("Blocking factor must be at least 8 for EB");
+      }
+    }
+  }
 }
 
 PeleC::PeleC()
@@ -374,11 +437,6 @@ PeleC::PeleC()
 #endif
 {
   nGrowF = 0;
-  // Is this relevant for PeleC?
-  for (int i = 0; i < n_lost; i++) {
-    material_lost_through_boundary_cumulative[i] = 0.0;
-    material_lost_through_boundary_temp[i] = 0.0;
-  }
 }
 
 PeleC::PeleC(
@@ -402,12 +460,12 @@ PeleC::PeleC(
 
   const amrex::MultiFab& S_new = get_new_data(State_Type);
 
-  for (int n = 0; n < src_list.size(); ++n) {
+  for (int src : src_list) {
     int oldGrow = numGrow();
     int newGrow = S_new.nGrow();
-    old_sources[src_list[n]] = std::make_unique<amrex::MultiFab>(
+    old_sources[src] = std::make_unique<amrex::MultiFab>(
       grids, dmap, NVAR, oldGrow, amrex::MFInfo(), Factory());
-    new_sources[src_list[n]] = std::make_unique<amrex::MultiFab>(
+    new_sources[src] = std::make_unique<amrex::MultiFab>(
       grids, dmap, NVAR, newGrow, amrex::MFInfo(), Factory());
   }
 
@@ -442,12 +500,6 @@ PeleC::PeleC(
     }
   } else {
     Sborder.define(grids, dmap, NVAR, nGrowS, amrex::MFInfo(), Factory());
-  }
-
-  // Is this relevant for PeleC?
-  for (int i = 0; i < n_lost; i++) {
-    material_lost_through_boundary_cumulative[i] = 0.0;
-    material_lost_through_boundary_temp[i] = 0.0;
   }
 
   if (do_reflux && level > 0) {
@@ -488,6 +540,24 @@ PeleC::PeleC(
   nGrowF = 0;
   if (use_explicit_filter) {
     init_filters();
+  }
+
+  // initialize diagnostics (only level 0 calls them)
+  if (lev == 0) {
+    const std::string pele_prefix = "pelec";
+    amrex::ParmParse pp(pele_prefix);
+    const int n_diags = pp.countval("diagnostics");
+    amrex::Vector<std::string> diags(n_diags);
+    for (int n = 0; n < n_diags; ++n) {
+      pp.get("diagnostics", diags[n], n);
+      const std::string diag_prefix = pele_prefix + "." + diags[n];
+      amrex::ParmParse ppd(diag_prefix);
+      std::string diag_type;
+      ppd.get("type", diag_type);
+      m_diagnostics.emplace_back(DiagBase::create(diag_type));
+      m_diagnostics[n]->init(diag_prefix, diags[n]);
+      m_diagnostics[n]->addVars(m_diagVars);
+    }
   }
 }
 
@@ -553,10 +623,11 @@ PeleC::buildMetrics()
   amrex::MultiFab::Copy(vfrac, ebfactory.getVolFrac(), 0, 0, 1, numGrow());
 
   level_mask.clear();
-  level_mask.define(grids, dmap, 1, 1);
+  level_mask.define(grids, dmap, 1, 3);
   level_mask.BuildMask(
-    geom.Domain(), geom.periodicity(), levmsk_covered, levmsk_notcovered,
-    levmsk_physbnd, levmsk_interior);
+    geom.Domain(), geom.periodicity(), constants::level_mask_covered(),
+    constants::level_mask_notcovered(), constants::level_mask_physbnd(),
+    constants::level_mask_interior());
 
   if (level == 0) {
     setGridInfo();
@@ -572,7 +643,7 @@ PeleC::setTimeLevel(amrex::Real time, amrex::Real dt_old, amrex::Real dt_new)
 void
 PeleC::setGridInfo()
 {
-  // Send refinement data to Fortran. We do it here
+  // Send refinement data. We do it here
   // because now the grids have been initialized and
   // we need this data for setting up the problem.
   // Note that this routine will always get called
@@ -614,9 +685,6 @@ PeleC::setGridInfo()
         domhi_level[3 * lev + dir] = domlo_level[3 * lev + dir] + ncell - 1;
       }
     }
-
-    // Old fortran call
-    // set_grid_info(max_level, dx_level, domlo_level, domhi_level);
   }
 }
 
@@ -813,7 +881,6 @@ PeleC::estTimeStep(amrex::Real /*dt_old*/)
       dynamic_cast<amrex::EBFArrayBoxFactory const&>(stateMF.Factory());
     auto const& flags = fact.getMultiEBCellFlagFab();
 
-    prefetchToDevice(stateMF); // This should accelerate the below operations.
     amrex::Real AMREX_D_DECL(dx1 = dx[0], dx2 = dx[1], dx3 = dx[2]);
 
     if (do_hydro) {
@@ -1039,17 +1106,13 @@ PeleC::post_timestep(int iteration)
 
   if (do_reflux && level < finest_level) {
     reflux();
+  }
 
+  if (level < finest_level) {
     // We need to do this before anything else because refluxing changes the
     // values of coarse cells underneath fine grids with the assumption they'll
     // be over-written by averaging down
-    if (level < finest_level) {
-      avgDown();
-    }
-
-    // Clean up any aberrant state data generated by the reflux by
-    // calling clean_state on the new data here. We don't do this
-    // anymore.
+    avgDown();
 
     // fillpatcher on level+1 needs to be reset because data on this
     // level have changed.
@@ -1060,6 +1123,7 @@ PeleC::post_timestep(int iteration)
   amrex::MultiFab& S_new = get_new_data(State_Type);
   int ng_pts = 0;
   computeTemp(S_new, ng_pts);
+  set_body_state(S_new);
 
 #ifdef PELEC_USE_SOOT
   clipSootMoments(S_new, ng_pts);
@@ -1109,8 +1173,8 @@ PeleC::post_timestep(int iteration)
     amrex::Real cumtime = parent->cumTime() + dtlev;
 
     bool do_diags = false;
-    for (int n = 0; n < m_diagnostics.size(); ++n) {
-      do_diags = do_diags || m_diagnostics[n]->doDiag(cumtime, nstep);
+    for (const auto& m_diagnostic : m_diagnostics) {
+      do_diags = do_diags || m_diagnostic->doDiag(cumtime, nstep);
     }
 
     if (do_diags) {
@@ -1125,8 +1189,8 @@ PeleC::post_timestep(int iteration)
         gridAll[lev] = amrlevel.boxArray();
         dmapAll[lev] = amrlevel.DistributionMap();
       }
-      for (int n = 0; n < m_diagnostics.size(); ++n) {
-        m_diagnostics[n]->prepare(
+      for (const auto& m_diagnostic : m_diagnostics) {
+        m_diagnostic->prepare(
           finest_level + 1, geomAll, gridAll, dmapAll, m_diagVars);
       }
 
@@ -1179,9 +1243,9 @@ PeleC::post_timestep(int iteration)
         }
       }
 
-      for (int n = 0; n < m_diagnostics.size(); ++n) {
-        if (m_diagnostics[n]->doDiag(cumtime, nstep)) {
-          m_diagnostics[n]->processDiag(
+      for (const auto& m_diagnostic : m_diagnostics) {
+        if (m_diagnostic->doDiag(cumtime, nstep)) {
+          m_diagnostic->processDiag(
             nstep, cumtime, amrex::GetVecOfConstPtrs(diagMFVec), m_diagVars);
         }
       }
@@ -1344,7 +1408,75 @@ PeleC::okToContinue()
                    << std::endl;
   }
 
+  if (
+    get_new_data(State_Type).contains_nan() ||
+    get_new_data(State_Type).contains_inf()) {
+    test = 0;
+    amrex::Print() << " Signalling a stop because NaNs detected in the Solution"
+                   << std::endl;
+  }
+
   return test;
+}
+
+void
+PeleC::update_flux_registers(
+  const amrex::Real dt,
+  const amrex::MFIter& mfi,
+  const amrex::FabType& typ,
+  const std::array<amrex::FArrayBox const*, AMREX_SPACEDIM>& flux,
+  const amrex::FArrayBox& dm_as_fine)
+{
+  BL_PROFILE("PeleC::update_flux_registers()");
+
+  if (!amrex::DefaultGeometry().IsCartesian()) {
+    amrex::Abort("Flux registers not r-z compatible yet");
+  }
+
+  if (!do_reflux) {
+    return;
+  }
+
+  amrex::EBFluxRegister* fr_as_crse =
+    (level < parent->finestLevel()) ? &getFluxReg(level + 1) : nullptr;
+  amrex::EBFluxRegister* fr_as_fine =
+    (level > 0) ? &getFluxReg(level) : nullptr;
+
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx = geom.CellSizeArray();
+  const amrex::Real dx1 = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dxD = {
+    {AMREX_D_DECL(dx1, dx1, dx1)}};
+
+  if (typ == amrex::FabType::singlevalued) {
+    if (fr_as_crse != nullptr) {
+      fr_as_crse->CrseAdd(
+        mfi, flux, dxD.data(), dt, vfrac[mfi],
+        {AMREX_D_DECL(
+          &((*areafrac[0])[mfi]), &((*areafrac[1])[mfi]),
+          &((*areafrac[2])[mfi]))},
+        amrex::RunOn::Device);
+    }
+
+    if (fr_as_fine != nullptr) {
+      fr_as_fine->FineAdd(
+        mfi, flux, dxD.data(), dt, vfrac[mfi],
+        {AMREX_D_DECL(
+          &((*areafrac[0])[mfi]), &((*areafrac[1])[mfi]),
+          &((*areafrac[2])[mfi]))},
+        dm_as_fine, amrex::RunOn::Device);
+    }
+
+  } else if (typ == amrex::FabType::regular) {
+    if ((level < parent->finestLevel()) && (fr_as_crse != nullptr)) {
+      fr_as_crse->CrseAdd(mfi, flux, dxD.data(), dt, amrex::RunOn::Device);
+    }
+
+    if ((level > 0) && (fr_as_fine != nullptr)) {
+      fr_as_fine->FineAdd(mfi, flux, dxD.data(), dt, amrex::RunOn::Device);
+    }
+  } else if (typ == amrex::FabType::multivalued) {
+    amrex::Abort("multi-valued EB flux register update to be implemented");
+  }
 }
 
 void
@@ -1492,6 +1624,10 @@ PeleC::errorEst(
     }
   }
 
+  auto const& fact =
+    dynamic_cast<amrex::EBFArrayBoxFactory const&>(S_data.Factory());
+  auto const& flags = fact.getMultiEBCellFlagFab();
+
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -1509,26 +1645,31 @@ PeleC::errorEst(
       const int ncp = S_derData.nComp();
       const int* bc = bcs[0].data();
 
+      const auto& flag_arr = flags.const_array(mfi);
+
       // Tagging density
       if (level < tagging_parm->max_denerr_lev) {
         const amrex::Real captured_denerr = tagging_parm->denerr;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_error(i, j, k, tag_arr, Sfab, captured_denerr, tagval);
+            tag_error(
+              i, j, k, flag_arr, tag_arr, Sfab, captured_denerr, tagval);
           });
       }
       if (level < tagging_parm->max_dengrad_lev) {
         const amrex::Real captured_dengrad = tagging_parm->dengrad;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_graderror(i, j, k, tag_arr, Sfab, captured_dengrad, tagval);
+            tag_graderror(
+              i, j, k, flag_arr, tag_arr, Sfab, captured_dengrad, tagval);
           });
       }
       if (level < tagging_parm->max_denratio_lev) {
         const amrex::Real captured_denratio = tagging_parm->denratio;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_ratioerror(i, j, k, tag_arr, Sfab, captured_denratio, tagval);
+            tag_ratioerror(
+              i, j, k, flag_arr, tag_arr, Sfab, captured_denratio, tagval);
           });
       }
 
@@ -1541,7 +1682,8 @@ PeleC::errorEst(
         const amrex::Real captured_presserr = tagging_parm->presserr;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_error(i, j, k, tag_arr, S_derarr, captured_presserr, tagval);
+            tag_error(
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_presserr, tagval);
           });
       }
       if (level < tagging_parm->max_pressgrad_lev) {
@@ -1549,7 +1691,7 @@ PeleC::errorEst(
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
             tag_graderror(
-              i, j, k, tag_arr, S_derarr, captured_pressgrad, tagval);
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_pressgrad, tagval);
           });
       }
 
@@ -1562,14 +1704,16 @@ PeleC::errorEst(
         const amrex::Real captured_velerr = tagging_parm->velerr;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_abserror(i, j, k, tag_arr, S_derarr, captured_velerr, tagval);
+            tag_abserror(
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_velerr, tagval);
           });
       }
       if (level < tagging_parm->max_velgrad_lev) {
         const amrex::Real captured_velgrad = tagging_parm->velgrad;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_graderror(i, j, k, tag_arr, S_derarr, captured_velgrad, tagval);
+            tag_graderror(
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_velgrad, tagval);
           });
       }
 
@@ -1582,14 +1726,16 @@ PeleC::errorEst(
         const amrex::Real captured_velerr = tagging_parm->velerr;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_abserror(i, j, k, tag_arr, S_derarr, captured_velerr, tagval);
+            tag_abserror(
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_velerr, tagval);
           });
       }
       if (level < tagging_parm->max_velgrad_lev) {
         const amrex::Real captured_velgrad = tagging_parm->velgrad;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_graderror(i, j, k, tag_arr, S_derarr, captured_velgrad, tagval);
+            tag_graderror(
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_velgrad, tagval);
           });
       }
 
@@ -1602,14 +1748,16 @@ PeleC::errorEst(
         const amrex::Real captured_velerr = tagging_parm->velerr;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_abserror(i, j, k, tag_arr, S_derarr, captured_velerr, tagval);
+            tag_abserror(
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_velerr, tagval);
           });
       }
       if (level < tagging_parm->max_velgrad_lev) {
         const amrex::Real captured_velgrad = tagging_parm->velgrad;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_graderror(i, j, k, tag_arr, S_derarr, captured_velgrad, tagval);
+            tag_graderror(
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_velgrad, tagval);
           });
       }
 
@@ -1623,7 +1771,7 @@ PeleC::errorEst(
           tagging_parm->vorterr * std::pow(2.0, level);
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_abserror(i, j, k, tag_arr, S_derarr, vorterr, tagval);
+            tag_abserror(i, j, k, flag_arr, tag_arr, S_derarr, vorterr, tagval);
           });
       }
 
@@ -1636,14 +1784,16 @@ PeleC::errorEst(
         const amrex::Real captured_temperr = tagging_parm->temperr;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_error(i, j, k, tag_arr, S_derarr, captured_temperr, tagval);
+            tag_error(
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_temperr, tagval);
           });
       }
       if (level < tagging_parm->max_lotemperr_lev) {
         const amrex::Real captured_lotemperr = tagging_parm->lotemperr;
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-            tag_loerror(i, j, k, tag_arr, S_derarr, captured_lotemperr, tagval);
+            tag_loerror(
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_lotemperr, tagval);
           });
       }
       if (level < tagging_parm->max_tempgrad_lev) {
@@ -1651,7 +1801,7 @@ PeleC::errorEst(
         amrex::ParallelFor(
           tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
             tag_graderror(
-              i, j, k, tag_arr, S_derarr, captured_tempgrad, tagval);
+              i, j, k, flag_arr, tag_arr, S_derarr, captured_tempgrad, tagval);
           });
       }
 
@@ -1670,7 +1820,8 @@ PeleC::errorEst(
             amrex::ParallelFor(
               tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 tag_error(
-                  i, j, k, tag_arr, S_derarr, captured_ftracerr, tagval);
+                  i, j, k, flag_arr, tag_arr, S_derarr, captured_ftracerr,
+                  tagval);
               });
           }
           if (level < tagging_parm->max_ftracgrad_lev) {
@@ -1678,7 +1829,8 @@ PeleC::errorEst(
             amrex::ParallelFor(
               tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 tag_graderror(
-                  i, j, k, tag_arr, S_derarr, captured_ftracgrad, tagval);
+                  i, j, k, flag_arr, tag_arr, S_derarr, captured_ftracgrad,
+                  tagval);
               });
           }
 
@@ -1692,7 +1844,8 @@ PeleC::errorEst(
         if (level < tagging_parm->max_vfracerr_lev) {
           amrex::ParallelFor(
             tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-              tag_error_bounds(i, j, k, tag_arr, vfrac_arr, 0.0, 1.0, tagval);
+              tag_error_bounds(
+                i, j, k, flag_arr, tag_arr, vfrac_arr, 0.0, 1.0, tagval);
             });
 
           const int local_i = mfi.LocalIndex();
@@ -1710,14 +1863,12 @@ PeleC::errorEst(
   }
 
   // amrex tagging utils
-  for (int n = 0; n < tagging_parm->err_tags.size(); ++n) {
+  for (const auto& err_tag : tagging_parm->err_tags) {
     std::unique_ptr<amrex::MultiFab> mf;
-    if (!tagging_parm->err_tags[n].Field().empty()) {
-      mf = derive(
-        tagging_parm->err_tags[n].Field(), time,
-        tagging_parm->err_tags[n].NGrow());
+    if (!err_tag.Field().empty()) {
+      mf = derive(err_tag.Field(), time, err_tag.NGrow());
     }
-    tagging_parm->err_tags[n](
+    err_tag(
       tags, mf.get(), amrex::TagBox::CLEAR, amrex::TagBox::SET, time, level,
       geom);
   }
@@ -1731,6 +1882,7 @@ PeleC::errorEst(
       const amrex::Box& tilebox = mfi.tilebox();
       const auto Sfab = S_data.array(mfi);
       auto tag_arr = tags.array(mfi);
+      const auto& flag_arr = flags.const_array(mfi);
 
       // Problem specific tagging
       const ProbParmDevice* lprobparm = d_prob_parm_device;
@@ -1742,8 +1894,8 @@ PeleC::errorEst(
       amrex::ParallelFor(
         tilebox, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
           set_problem_tags<ProblemTags>(
-            i, j, k, tag_arr, Sfab, tagval, dx, prob_lo, time, captured_level,
-            *lprobparm);
+            i, j, k, flag_arr, tag_arr, Sfab, tagval, dx, prob_lo, time,
+            captured_level, *lprobparm);
         });
     }
   }
@@ -1789,29 +1941,21 @@ PeleC::errorEst(
 std::unique_ptr<amrex::MultiFab>
 PeleC::derive(const std::string& name, amrex::Real time, int ngrow)
 {
-  if ((do_les) && (name == "C_s2")) {
+  if ((do_les) && ((name == "C_s2") || (name == "C_I") || (name == "Pr_T"))) {
+    AMREX_ASSERT(ngrow <= LES_Coeffs.nGrow());
     std::unique_ptr<amrex::MultiFab> derive_dat(
-      new amrex::MultiFab(grids, dmap, 1, 0));
-    amrex::MultiFab::Copy(*derive_dat, LES_Coeffs, comp_Cs2, 0, 1, 0);
-    return derive_dat;
-  }
-  if ((do_les) && (name == "C_I")) {
-    std::unique_ptr<amrex::MultiFab> derive_dat(
-      new amrex::MultiFab(grids, dmap, 1, 0));
-    amrex::MultiFab::Copy(*derive_dat, LES_Coeffs, comp_CI, 0, 1, 0);
-    return derive_dat;
-  }
-  if ((do_les) && (les_model != 1) && (name == "Pr_T")) {
-    std::unique_ptr<amrex::MultiFab> derive_dat(
-      new amrex::MultiFab(grids, dmap, 1, 0));
-    amrex::MultiFab::Copy(*derive_dat, LES_Coeffs, comp_PrT, 0, 1, 0);
-    return derive_dat;
-  }
-  if ((do_les) && (les_model == 1) && (name == "Pr_T")) {
-    std::unique_ptr<amrex::MultiFab> derive_dat(
-      new amrex::MultiFab(grids, dmap, 1, 0));
-    amrex::MultiFab::Copy(*derive_dat, LES_Coeffs, comp_Cs2ovPrT, 0, 1, 0);
-    amrex::MultiFab::Divide(*derive_dat, LES_Coeffs, comp_Cs2, 0, 1, 0);
+      new amrex::MultiFab(grids, dmap, 1, ngrow));
+    if (name == "C_s2") {
+      amrex::MultiFab::Copy(*derive_dat, LES_Coeffs, comp_Cs2, 0, 1, ngrow);
+    } else if (name == "C_I") {
+      amrex::MultiFab::Copy(*derive_dat, LES_Coeffs, comp_CI, 0, 1, ngrow);
+    } else if ((les_model != 1) && (name == "Pr_T")) {
+      amrex::MultiFab::Copy(*derive_dat, LES_Coeffs, comp_PrT, 0, 1, ngrow);
+    } else { // Pr_T, les_model==1
+      amrex::MultiFab::Copy(
+        *derive_dat, LES_Coeffs, comp_Cs2ovPrT, 0, 1, ngrow);
+      amrex::MultiFab::Divide(*derive_dat, LES_Coeffs, comp_Cs2, 0, 1, ngrow);
+    }
     return derive_dat;
   }
 
@@ -1823,6 +1967,24 @@ PeleC::derive(const std::string& name, amrex::Real time, int ngrow)
     }
     amrex::MultiFab::Copy(*mf, vfrac, 0, 0, 1, 0);
     return mf;
+  }
+
+  // Can't use the AmrLevel derive for state variables with ghost cells:
+  // That will fillpatch them individually, but we require the full state
+  // for physBCs. Therefore, instead fillpatch the full state and then grab
+  // the component we need.
+  int index, scomp;
+  if (isStateVariable(name, index, scomp) && (ngrow > 0)) {
+    amrex::MultiFab S_data(
+      get_new_data(State_Type).boxArray(),
+      get_new_data(State_Type).DistributionMap(), NVAR, ngrow, amrex::MFInfo(),
+      Factory());
+    FillPatch(
+      *this, S_data, S_data.nGrow(), time, State_Type, Density, NVAR, 0);
+    std::unique_ptr<amrex::MultiFab> derive_dat(
+      new amrex::MultiFab(grids, dmap, 1, ngrow, amrex::MFInfo(), Factory()));
+    amrex::MultiFab::Copy(*derive_dat, S_data, scomp, 0, 1, ngrow);
+    return derive_dat;
   }
 
   // For those using GrowBoxByOne we need this
@@ -2093,9 +2255,9 @@ PeleC::build_fine_mask()
 const amrex::iMultiFab*
 PeleC::build_interior_boundary_mask(int ng)
 {
-  for (int i = 0; i < ib_mask.size(); ++i) {
-    if (ib_mask[i]->nGrow() == ng) {
-      return ib_mask[i].get();
+  for (const auto& ibm : ib_mask) {
+    if (ibm->nGrow() == ng) {
+      return ibm.get();
     }
   }
 

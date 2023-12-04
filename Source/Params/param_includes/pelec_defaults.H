@@ -3,10 +3,6 @@
 // or add runtime parameters, please edit _cpp_parameters and then run
 // mk_params.sh
 
-int PeleC::levmsk_interior = 0;
-int PeleC::levmsk_covered = 1;
-int PeleC::levmsk_notcovered = 2;
-int PeleC::levmsk_physbnd = 3;
 int PeleC::state_interp_order = 1;
 int PeleC::lin_limit_state_interp = 1;
 int PeleC::state_nghost = 0;
@@ -14,6 +10,7 @@ bool PeleC::do_reflux = true;
 bool PeleC::do_avg_down = true;
 std::string PeleC::init_pltfile;
 amrex::Real PeleC::init_pltfile_massfrac_tol = 1e-8;
+int PeleC::init_pltfile_coarse_levels = 0;
 bool PeleC::dump_old = false;
 amrex::Real PeleC::difmag = 0.1;
 amrex::Real PeleC::small_pres = 1.e-200;
@@ -32,7 +29,8 @@ amrex::Real PeleC::forcing_w0 = 0.0;
 amrex::Real PeleC::forcing_force = 0.0;
 int PeleC::ppm_type = 0;
 bool PeleC::ppm_trace_sources = false;
-int PeleC::plm_iorder = 2;
+int PeleC::plm_iorder = 4;
+int PeleC::mol_iorder = 2;
 bool PeleC::use_laxf_flux = false;
 bool PeleC::use_flattening = true;
 bool PeleC::dual_energy_update_E_from_e = true;
@@ -50,6 +48,11 @@ bool PeleC::diffuse_enth = false;
 bool PeleC::diffuse_spec = false;
 bool PeleC::diffuse_vel = false;
 bool PeleC::transport_harmonic_mean = true;
+bool PeleC::do_isothermal_walls = false;
+amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> PeleC::domlo_isothermal_temp = {
+  -1.0};
+amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> PeleC::domhi_isothermal_temp = {
+  -1.0};
 bool PeleC::do_les = false;
 bool PeleC::use_explicit_filter = false;
 amrex::Real PeleC::Cs = 0.0;
@@ -61,7 +64,9 @@ bool PeleC::eb_noslip = true;
 std::string PeleC::redistribution_type = "StateRedist";
 bool PeleC::eb_clean_massfrac = true;
 amrex::Real PeleC::eb_clean_massfrac_threshold = 0.0;
-int PeleC::eb_srd_max_order = 2;
+int PeleC::eb_srd_max_order = 0;
+int PeleC::eb_weights_type = 2;
+bool PeleC::eb_zero_body_state = false;
 bool PeleC::do_mms = false;
 std::string PeleC::masa_solution_name = "ad_cns_3d_les";
 amrex::Real PeleC::fixed_dt = -1.0;
@@ -81,7 +86,6 @@ bool PeleC::print_energy_diagnostics = true;
 #else
 bool PeleC::print_energy_diagnostics = false;
 #endif
-bool PeleC::track_grid_losses = false;
 int PeleC::sum_interval = -1;
 bool PeleC::track_extrema = true;
 std::string PeleC::extrema_spec_name;

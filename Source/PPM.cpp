@@ -12,7 +12,7 @@ trace_ppm(
   amrex::Array4<amrex::Real> const& qp,
   const amrex::Box& vbx,
   const amrex::Real dt,
-  const amrex::Real* dx,
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx,
   const bool use_flattening,
   const bool use_hybrid_weno,
   const int weno_scheme)
@@ -56,7 +56,7 @@ trace_ppm(
   // The choice of reference state is designed to minimize the
   // effects of the characteristic projection.  We subtract the I's
   // off of the reference state, project the quantity such that it is
-  // in terms of the characteristic varaibles, and then add all the
+  // in terms of the characteristic variables, and then add all the
   // jumps that are moving toward the interface to the reference
   // state to get the full state on that interface.
 

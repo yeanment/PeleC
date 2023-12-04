@@ -28,7 +28,8 @@ bcnormal(
   const int /*sgn*/,
   const amrex::Real /*time*/,
   amrex::GeometryData const& /*geomdata*/,
-  ProbParmDevice const& /*prob_parm*/)
+  ProbParmDevice const& /*prob_parm*/,
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& /*turb_fluc*/)
 {
 }
 
@@ -40,6 +41,7 @@ struct MyProbTagStruct
     const int /*i*/,
     const int /*j*/,
     const int /*k*/,
+    amrex::Array4<amrex::EBCellFlag const> const& /*flags*/,
     amrex::Array4<char> const& /*tag*/,
     amrex::Array4<amrex::Real const> const& /*field*/,
     char /*tagval*/,

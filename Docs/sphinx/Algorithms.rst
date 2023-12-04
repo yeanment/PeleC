@@ -2,9 +2,6 @@
  .. role:: cpp(code)
     :language: c++
 
- .. role:: f(code)
-    :language: fortran
-
  
 .. _Algorithms:
 
@@ -67,6 +64,13 @@ chosen through the ``ppm_type`` flag:
 * ``ppm_type = 0`` (default) uses a piecewise linear interpolation to reconstruct values at face. This is denoted PLM in the source code.
 * ``ppm_type = 1`` is the original PPM method presented in Colella and Woodward [JCP 1984].
 
+
+For ``ppm_type = 0``, one can control the order of the construction of the slopes with the ``plm_iorder`` flag:
+
+* ``plm_iorder = 1`` sets the slopes to zero;
+* ``plm_iorder = 2`` uses the :math:`i-1`, :math:`i`, and :math:`i+1` cells to form a slope;
+* ``plm_iorder = 4`` (default) uses the :math:`i-2`, :math:`i-1`, :math:`i`, :math:`i+1`, and :math:`i+2` cells to form a slope.
+
 .. note::
 
    The following description of PPM implementations are only available
@@ -79,7 +83,7 @@ chosen through the ``ppm_type`` flag:
 * ``ppm_type = 0`` uses a piecewise linear interpolation to reconstruct values at face.
 * ``ppm_type = 1`` is the original PPM method presented in Colella and Woodward [JCP 1984].
 * ``ppm_type = 2`` is the "extrema preserving" variant of the PPM method.
-* ``ppm_type = 3`` is a new hybrid PPM/WENO method developped by Motheau and Wakefield [CAMCOS 2020], that replace the interpolation and slope limiting procedures by a WENO reconstruction.
+* ``ppm_type = 3`` is a new hybrid PPM/WENO method developed by Motheau and Wakefield [CAMCOS 2020], that replace the interpolation and slope limiting procedures by a WENO reconstruction.
 
 In the remainder of this section, the extrema preserving PPM method, i.e ``ppm_type = 2``, is presented. Note that the implementation
 in PeleC is a recollection of different extension of the PPM method published in Miller and Colella [JCP 2002] and Colella and Sekora [JCP 2008].
@@ -362,26 +366,7 @@ Method of Lines with Characteristic Extrapolation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. _MOL: 
 
-An alternative formulation well suited to Embedded Boundary geometry treatment and also available for regular grids is available and based on a method of lines approach. The advective (hyperbolic) fluxes computation is driven by the routine pc_hyp_mol_flux found in the file Hyp_pele_MOL_3d.F90, with call signature:
-
-.. code-block:: fortran
-
-    :p q: Input state
-    :p qaux: Augmented state
-    :p Ax: Apertures for X edges
-    :p flux1: Flux in X direction on X edges
-    :p Ay: Apertures for Y edges
-    :p flux2: Flux in Y direction on Y edges
-    :p Az: Apertures for Z edges
-    :p flux3: Flux in Z direction on Z edges
-    :p flatn: Flattening parameter (not used; passed to slope routines)
-    :p V: Cell volumes
-    :p D: Divergence (hyperbolic fluxes added to input divergence on output)
-    :p flag: Cell type flag
-    :p ebflux: Flux across EB face
-    :p h: Grid spacing
-
-Within this routine, for each direction, characteristic extrapolation is used to compute left and right states at the cell faces:
+An alternative formulation well suited to Embedded Boundary geometry treatment and also available for regular grids is available and based on a method of lines approach. For each direction, characteristic extrapolation is used to compute left and right states at the cell faces:
 
 .. math::
   {u^l_\perp} = u^- + \frac{1}{2\rho^-}\left( \alpha^-_2 - \alpha^-_1\right)
@@ -435,18 +420,7 @@ and, as noted the right state is identical except for:
 
 Once the left and right states are computed, a Riemann solver (in this case one preserving the physical constraints on the intermediate state) is used to compute fluxes that are assembled into a conservative and non-conservative update for the regular and cut cells.
 
-The characteristic extrapolation requires (slope limited) fluxes; these are found in the file slope_mol_3d_EB.f90. The call signature for the slope computation is:
-
-
-.. code-block:: fortran
-
-    :p q: Input state
-    :p flatn: Flattening coefficient (not used)
-    :p qaux: Augmented state (used for sound speed)
-    :p flag: Cell type flag
-
-      
-Which computes the slope routines compute (limited) slopes as:
+The characteristic extrapolation requires (slope limited) fluxes, which computes the slope routines compute (limited) slopes as:
 
 .. math::
   \Delta_1^- = 0.5\frac{1}{c}\left(p-p^-\right) - 0.5 \rho \left( u - u^-\right)  
@@ -485,7 +459,11 @@ where:
 .. math::
   \Delta^{lim} = \left\{ \begin{aligned} {} 2 \min\left\{ |\Delta^-|,|\Delta^+|\right\} \quad& \mathrm{if} \Delta^- \cdot \Delta^+ \ge 0 \\ 0 & \quad \mathrm{otherwise}\end{aligned}\right.
 
-The formulation of the y- and z-directions is analogous to the x-direction. 
+The formulation of the y- and z-directions is analogous to the x-direction. One can control the order of the construction of the slopes with the ``mol_iorder`` flag:
+
+* ``mol_iorder = 1`` sets the slopes to zero;
+* ``mol_iorder = 2`` uses the procedure described above.
+
 
 Comparison of PPM and MOL for the decay of homogeneous isotropic turbulence
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

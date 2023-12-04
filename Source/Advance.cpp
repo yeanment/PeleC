@@ -96,18 +96,16 @@ PeleC::do_mol_advance(
 #endif
 
   FillPatcherFill(Sborder, 0, NVAR, nGrow_FP_border, time, State_Type, 0);
-  amrex::Real flux_factor = 0;
-  getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
+  amrex::Real reflux_factor = 0.5;
+  getMOLSrcTerm(Sborder, molSrc, time, dt, reflux_factor);
 
   // Build other (non-diffusion) sources at t_old
-  for (int n = 0; n < src_list.size(); ++n) {
-    if (src_list[n] != diff_src) {
-      construct_old_source(
-        src_list[n], time, dt, amr_iteration, amr_ncycle, 0, 0);
+  for (int src : src_list) {
+    if (src != diff_src) {
+      construct_old_source(src, time, dt, amr_iteration, amr_ncycle, 0, 0);
 
       // add sources to molsrc
-      amrex::MultiFab::Saxpy(
-        molSrc, 1.0, *old_sources[src_list[n]], 0, 0, NVAR, 0);
+      amrex::MultiFab::Saxpy(molSrc, 1.0, *old_sources[src], 0, 0, NVAR, 0);
     }
   }
 
@@ -132,18 +130,16 @@ PeleC::do_mol_advance(
   }
 
   FillPatcherFill(Sborder, 0, NVAR, nGrow_FP_border, time + dt, State_Type, 0);
-  flux_factor = mol_iters > 1 ? 0 : 1;
-  getMOLSrcTerm(Sborder, molSrc, time, dt, flux_factor);
+  reflux_factor = mol_iters > 1 ? 0 : 0.5;
+  getMOLSrcTerm(Sborder, molSrc, time, dt, reflux_factor);
 
   // Build other (non-diffusion) sources at t_new
-  for (int n = 0; n < src_list.size(); ++n) {
-    if (src_list[n] != diff_src) {
-      construct_new_source(
-        src_list[n], time + dt, dt, amr_iteration, amr_ncycle, 0, 0);
+  for (int src : src_list) {
+    if (src != diff_src) {
+      construct_new_source(src, time + dt, dt, amr_iteration, amr_ncycle, 0, 0);
 
       // add sources to molsrc
-      amrex::MultiFab::Saxpy(
-        molSrc, 1.0, *new_sources[src_list[n]], 0, 0, NVAR, 0);
+      amrex::MultiFab::Saxpy(molSrc, 1.0, *new_sources[src], 0, 0, NVAR, 0);
     }
   }
 
@@ -180,8 +176,8 @@ PeleC::do_mol_advance(
 
       FillPatcherFill(
         Sborder, 0, NVAR, nGrow_FP_border, time + dt, State_Type, 0);
-      flux_factor = mol_iter == mol_iters ? 1 : 0;
-      getMOLSrcTerm(Sborder, molSrc_new, time, dt, flux_factor);
+      reflux_factor = mol_iter == mol_iters ? 0.5 : 0;
+      getMOLSrcTerm(Sborder, molSrc_new, time, dt, reflux_factor);
 
       // F_{AD} = (1/2)(molSrc_old + molSrc_new)
       amrex::MultiFab::LinComb(
@@ -282,11 +278,10 @@ PeleC::do_sdc_iteration(
   if (sub_iteration == 0) {
 
     // Build other (non-diffusion) sources at t_old
-    for (int n = 0; n < src_list.size(); ++n) {
-      if (src_list[n] != diff_src) {
+    for (int n : src_list) {
+      if (n != diff_src) {
         construct_old_source(
-          src_list[n], time, dt, amr_iteration, amr_ncycle, sub_iteration,
-          sub_ncycle);
+          n, time, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle);
       }
     }
 
@@ -298,15 +293,16 @@ PeleC::do_sdc_iteration(
       }
       AMREX_ASSERT(
         !do_mol); // Currently this combo only managed through MOL integrator
-      amrex::Real flux_factor_old = 0.5;
+      amrex::Real reflux_factor_old = 0.5;
 
-      getMOLSrcTerm(Sborder, *old_sources[diff_src], time, dt, flux_factor_old);
+      getMOLSrcTerm(
+        Sborder, *old_sources[diff_src], time, dt, reflux_factor_old);
     }
 
     // Initialize sources at t_new by copying from t_old
-    for (int n = 0; n < src_list.size(); ++n) {
+    for (int src : src_list) {
       amrex::MultiFab::Copy(
-        *new_sources[src_list[n]], *old_sources[src_list[n]], 0, 0, NVAR, 0);
+        *new_sources[src], *old_sources[src], 0, 0, NVAR, 0);
     }
   }
 
@@ -336,16 +332,15 @@ PeleC::do_sdc_iteration(
       amrex::Print() << "... Computing diffusion terms at t^(n+1,"
                      << sub_iteration + 1 << ")" << std::endl;
     }
-    amrex::Real flux_factor_new = sub_iteration == sub_ncycle - 1 ? 0.5 : 0;
-    getMOLSrcTerm(Sborder, *new_sources[diff_src], time, dt, flux_factor_new);
+    amrex::Real reflux_factor_new = sub_iteration == sub_ncycle - 1 ? 0.5 : 0;
+    getMOLSrcTerm(Sborder, *new_sources[diff_src], time, dt, reflux_factor_new);
   }
 
   // Build other (non-diffusion) sources at t_new
-  for (int n = 0; n < src_list.size(); ++n) {
-    if (src_list[n] != diff_src) {
+  for (int n : src_list) {
+    if (n != diff_src) {
       construct_new_source(
-        src_list[n], time + dt, dt, amr_iteration, amr_ncycle, sub_iteration,
-        sub_ncycle);
+        n, time + dt, dt, amr_iteration, amr_ncycle, sub_iteration, sub_ncycle);
     }
   }
 
@@ -372,11 +367,9 @@ PeleC::construct_Snew(
   int ng = 0;
 
   amrex::MultiFab::Copy(S_new, S_old, 0, 0, NVAR, ng);
-  for (int n = 0; n < src_list.size(); ++n) {
-    amrex::MultiFab::Saxpy(
-      S_new, 0.5 * dt, *new_sources[src_list[n]], 0, 0, NVAR, ng);
-    amrex::MultiFab::Saxpy(
-      S_new, 0.5 * dt, *old_sources[src_list[n]], 0, 0, NVAR, ng);
+  for (int src : src_list) {
+    amrex::MultiFab::Saxpy(S_new, 0.5 * dt, *new_sources[src], 0, 0, NVAR, ng);
+    amrex::MultiFab::Saxpy(S_new, 0.5 * dt, *old_sources[src], 0, 0, NVAR, ng);
   }
   if (do_hydro) {
     amrex::MultiFab::Saxpy(S_new, dt, hydro_source, 0, 0, NVAR, ng);
@@ -402,13 +395,6 @@ PeleC::initialize_sdc_iteration(
 
   // Reset the change from density resets
   frac_change = 1;
-
-  // Reset the grid loss tracking.
-  if (track_grid_losses) {
-    for (amrex::Real& i : material_lost_through_boundary_temp) {
-      i = 0.0;
-    }
-  }
 }
 
 void
@@ -454,15 +440,4 @@ PeleC::finalize_sdc_advance(
   int /*amr_ncycle*/)
 {
   BL_PROFILE("PeleC::finalize_sdc_advance()");
-
-  // Add the material lost in this timestep to the cumulative losses.
-  if (track_grid_losses) {
-    amrex::ParallelDescriptor::ReduceRealSum(
-      material_lost_through_boundary_temp, n_lost);
-
-    for (int i = 0; i < n_lost; i++) {
-      material_lost_through_boundary_cumulative[i] +=
-        material_lost_through_boundary_temp[i];
-    }
-  }
 }

@@ -119,12 +119,12 @@ PeleC::restart(amrex::Amr& papa, std::istream& is, bool bReadSpecial)
 
   const amrex::MultiFab& S_new = get_new_data(State_Type);
 
-  for (int n = 0; n < src_list.size(); ++n) {
+  for (int src : src_list) {
     int oldGrow = numGrow();
     int newGrow = S_new.nGrow();
-    old_sources[src_list[n]] = std::make_unique<amrex::MultiFab>(
+    old_sources[src] = std::make_unique<amrex::MultiFab>(
       grids, dmap, NVAR, oldGrow, amrex::MFInfo(), Factory());
-    new_sources[src_list[n]] = std::make_unique<amrex::MultiFab>(
+    new_sources[src] = std::make_unique<amrex::MultiFab>(
       grids, dmap, NVAR, newGrow, amrex::MFInfo(), Factory());
   }
 
@@ -159,21 +159,6 @@ PeleC::restart(amrex::Amr& papa, std::istream& is, bool bReadSpecial)
     CPUFile.close();
 
     amrex::Print() << "read CPU time: " << previousCPUTimeUsed << "\n";
-  }
-
-  if (track_grid_losses && level == 0) {
-
-    // get the current value of the diagnostic quantities
-    std::ifstream DiagFile;
-    std::string FullPathDiagFile = parent->theRestartFile();
-    FullPathDiagFile += "/Diagnostics";
-    DiagFile.open(FullPathDiagFile.c_str(), std::ios::in);
-
-    for (amrex::Real& i : material_lost_through_boundary_cumulative) {
-      DiagFile >> i;
-    }
-
-    DiagFile.close();
   }
 
   if (level > 0 && do_reflux) {
@@ -294,20 +279,6 @@ PeleC::checkPoint(
       EBLevelFile << eb_max_lvl_gen;
       EBLevelFile.close();
     }
-
-    if (track_grid_losses) {
-      // store diagnostic quantities
-      std::ofstream DiagFile;
-      std::string FullPathDiagFile = dir;
-      FullPathDiagFile += "/Diagnostics";
-      DiagFile.open(FullPathDiagFile.c_str(), std::ios::out);
-
-      for (amrex::Real i : material_lost_through_boundary_cumulative) {
-        DiagFile << std::setprecision(15) << i << std::endl;
-      }
-
-      DiagFile.close();
-    }
   }
 
   if (current_version > 0) {
@@ -384,7 +355,7 @@ PeleC::setPlotVariables()
   int plot_reactions = 1;
   pp.query("plot_reactions", plot_reactions);
   if (plot_reactions == 0) {
-    for (int i = 0; i < NUM_SPECIES + 1; i++) {
+    for (int i = 0; i < NUM_SPECIES + 2; i++) {
       amrex::Amr::deleteStatePlotVar(desc_lst[Reactions_Type].name(i));
     }
   }

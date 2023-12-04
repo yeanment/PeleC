@@ -17,22 +17,23 @@ PeleC::construct_hydro_source(
     }
     hydro_source.setVal(0);
   } else {
-    BL_PROFILE("PeleC::advance_hydro_pc_umdrv()");
+    BL_PROFILE("PeleC::construct_hydro_source()");
 
     if ((verbose != 0) && amrex::ParallelDescriptor::IOProcessor()) {
       amrex::Print() << "... Computing hydro advance" << std::endl;
     }
 
     AMREX_ASSERT(S.nGrow() >= numGrow() + nGrowF);
+
+    const int ng = 0;
     sources_for_hydro.setVal(0.0);
-    int ng = 0; // TODO: This is currently the largest ngrow of the source
-                // data...maybe this needs fixing?
-    for (int n = 0; n < src_list.size(); ++n) {
+    for (int src : src_list) {
       amrex::MultiFab::Saxpy(
-        sources_for_hydro, 0.5, *new_sources[src_list[n]], 0, 0, NVAR, ng);
+        sources_for_hydro, 0.5, *new_sources[src], 0, 0, NVAR, ng);
       amrex::MultiFab::Saxpy(
-        sources_for_hydro, 0.5, *old_sources[src_list[n]], 0, 0, NVAR, ng);
+        sources_for_hydro, 0.5, *old_sources[src], 0, 0, NVAR, ng);
     }
+
     // Add I_R terms to advective forcing
     if (do_react) {
       amrex::MultiFab::Add(
@@ -45,54 +46,31 @@ PeleC::construct_hydro_source(
     sources_for_hydro.FillBoundary(geom.periodicity());
     hydro_source.setVal(0);
 
-    int finest_level = parent->finestLevel();
-
-    const amrex::Real* dx = geom.CellSize();
-
-    amrex::Real dx1 = dx[0];
-    for (int dir = 1; dir < AMREX_SPACEDIM; ++dir) {
-      dx1 *= dx[dir];
-    }
-
-    std::array<amrex::Real, AMREX_SPACEDIM> dxD = {
-      {AMREX_D_DECL(dx1, dx1, dx1)}};
-    const amrex::Real* dxDp = dxD.data();
+    const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx =
+      geom.CellSizeArray();
 
     amrex::Real courno = std::numeric_limits<amrex::Real>::lowest();
 
     const amrex::MultiFab& S_new = get_new_data(State_Type);
 
-    // note: the radiation consup currently does not fill these
-    amrex::Real E_added_flux = 0.;
-    amrex::Real mass_added_flux = 0.;
-    amrex::Real xmom_added_flux = 0.;
-    amrex::Real ymom_added_flux = 0.;
-    amrex::Real zmom_added_flux = 0.;
-    amrex::Real mass_lost = 0.;
-    amrex::Real xmom_lost = 0.;
-    amrex::Real ymom_lost = 0.;
-    amrex::Real zmom_lost = 0.;
-    amrex::Real eden_lost = 0.;
-    amrex::Real xang_lost = 0.;
-    amrex::Real yang_lost = 0.;
-    amrex::Real zang_lost = 0.;
+    auto const& fact =
+      dynamic_cast<amrex::EBFArrayBoxFactory const&>(S.Factory());
+    auto const& flags = fact.getMultiEBCellFlagFab();
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())               \
-    reduction(+:E_added_flux,mass_added_flux)                           \
-    reduction(+:xmom_added_flux,ymom_added_flux,zmom_added_flux)	\
-    reduction(+:mass_lost,xmom_lost,ymom_lost,zmom_lost)		\
-    reduction(+:eden_lost,xang_lost,yang_lost,zang_lost) 		\
-    reduction(max:courno)
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())          \
+  reduction(+ : E_added_flux, mass_added_flux)                     \
+  reduction(+ : xmom_added_flux, ymom_added_flux, zmom_added_flux) \
+  reduction(+ : mass_lost, xmom_lost, ymom_lost, zmom_lost)        \
+  reduction(+ : eden_lost, xang_lost, yang_lost, zang_lost)        \
+  reduction(max : courno)
 #endif
     {
       amrex::Real cflLoc = std::numeric_limits<amrex::Real>::lowest();
-      int is_finest_level = (level == finest_level) ? 1 : 0;
 
       const int* domain_lo = geom.Domain().loVect();
       const int* domain_hi = geom.Domain().hiVect();
 
-      // Temporary Fabs needed for Hydro Computation
       for (amrex::MFIter mfi(S_new, amrex::TilingIfNotGPU()); mfi.isValid();
            ++mfi) {
 
@@ -100,19 +78,28 @@ PeleC::construct_hydro_source(
         const amrex::Box& qbx = amrex::grow(bx, numGrow() + nGrowF);
         const amrex::Box& fbx = amrex::grow(bx, nGrowF);
 
+        const auto& flag_fab = flags[mfi];
+        const amrex::Array4<amrex::EBCellFlag const>& flag_arr =
+          flag_fab.const_array();
+        if (flag_fab.getType(bx) == amrex::FabType::covered) {
+          continue;
+        }
+
         amrex::GpuArray<amrex::FArrayBox, AMREX_SPACEDIM> flux;
         for (int dir = 0; dir < AMREX_SPACEDIM; ++dir) {
           const amrex::Box& efbx = surroundingNodes(fbx, dir);
           flux[dir].resize(efbx, NVAR, amrex::The_Async_Arena());
+          flux[dir].setVal<amrex::RunOn::Device>(0.0);
         }
 
-        auto const& s = S.array(mfi);
+        auto const& sarr = S.array(mfi);
         auto const& hyd_src = hydro_source.array(mfi);
 
-        // Resize Temporary Fabs
+        // Temporary Fabs
         amrex::FArrayBox q(qbx, QVAR, amrex::The_Async_Arena());
         amrex::FArrayBox qaux(qbx, NQAUX, amrex::The_Async_Arena());
         amrex::FArrayBox src_q(qbx, QVAR, amrex::The_Async_Arena());
+
         // Get Arrays to pass to the gpu.
         auto const& qarr = q.array();
         auto const& qauxar = qaux.array();
@@ -122,7 +109,13 @@ PeleC::construct_hydro_source(
           BL_PROFILE("PeleC::ctoprim()");
           amrex::ParallelFor(
             qbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-              pc_ctoprim(i, j, k, s, qarr, qauxar);
+              if (!flag_arr(i, j, k).isCovered()) {
+                pc_ctoprim(i, j, k, sarr, qarr, qauxar);
+              } else {
+                for (int n = 0; n < QVAR; n++) {
+                  qarr(i, j, k, n) = 0.0;
+                }
+              }
             });
         }
 
@@ -148,7 +141,7 @@ PeleC::construct_hydro_source(
                 bcMask[dir].setVal(0);
               }
 
-              // Becase bcMask is read in the Riemann solver in any case,
+              // Because bcMask is read in the Riemann solver in any case,
               // here we put physbc values in the appropriate faces for the
            non-nscbc case set_bc_mask(lo, hi, domain_lo, domain_hi,
                           AMREX_D_DECL(AMREX_TO_FORTRAN(bcMask[0]),
@@ -173,31 +166,89 @@ PeleC::construct_hydro_source(
           const auto& src_in = sources_for_hydro.array(mfi);
           amrex::ParallelFor(
             qbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-              pc_srctoprim(i, j, k, qarr, qauxar, src_in, srcqarr);
+              if (!flag_arr(i, j, k).isCovered()) {
+                pc_srctoprim(i, j, k, qarr, qauxar, src_in, srcqarr);
+              } else {
+                for (int n = 0; n < QVAR; n++) {
+                  srcqarr(i, j, k, n) = 0.0;
+                }
+              }
             });
         }
-
-        amrex::FArrayBox pradial(
-          amrex::Box::TheUnitBox(), 1, amrex::The_Async_Arena());
-        if (!amrex::DefaultGeometry().IsCartesian()) {
-          pradial.resize(
-            amrex::surroundingNodes(bx, 0), 1, amrex::The_Async_Arena());
-        }
-
         const amrex::GpuArray<const amrex::Array4<amrex::Real>, AMREX_SPACEDIM>
           flx_arr{
             {AMREX_D_DECL(flux[0].array(), flux[1].array(), flux[2].array())}};
         const amrex::GpuArray<
           const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM>
           a{{AMREX_D_DECL(
-            area[0].array(mfi), area[1].array(mfi), area[2].array(mfi))}};
-        {
+            area[0].const_array(mfi), area[1].const_array(mfi),
+            area[2].const_array(mfi))}};
+
+        const int ngrow_bx = (redistribution_type == "StateRedist") ? 3 : 2;
+        const amrex::Box& fbxg_i = grow(fbx, ngrow_bx);
+        if (flag_fab.getType(fbxg_i) == amrex::FabType::singlevalued) {
+
+          auto const& vfrac_arr = vfrac.const_array(mfi);
+
+          amrex::EBFluxRegister* fr_as_crse =
+            (do_reflux && (level < parent->finestLevel()))
+              ? &getFluxReg(level + 1)
+              : nullptr;
+          amrex::EBFluxRegister* fr_as_fine =
+            (do_reflux && (level > 0)) ? &getFluxReg(level) : nullptr;
+
+          const int as_crse = static_cast<int>(fr_as_crse != nullptr);
+          const int as_fine = static_cast<int>(fr_as_fine != nullptr);
+
+          amrex::FArrayBox dm_as_fine(
+            amrex::Box::TheUnitBox(), hydro_source.nComp(),
+            amrex::The_Async_Arena());
+          amrex::FArrayBox fab_drho_as_crse(
+            amrex::Box::TheUnitBox(), hydro_source.nComp(),
+            amrex::The_Async_Arena());
+          amrex::IArrayBox fab_rrflag_as_crse(
+            amrex::Box::TheUnitBox(), 1, amrex::The_Async_Arena());
+
+          auto* p_drho_as_crse = (fr_as_crse != nullptr)
+                                   ? fr_as_crse->getCrseData(mfi)
+                                   : &fab_drho_as_crse;
+          const auto* p_rrflag_as_crse = (fr_as_crse != nullptr)
+                                           ? fr_as_crse->getCrseFlag(mfi)
+                                           : &fab_rrflag_as_crse;
+
+          if (fr_as_fine != nullptr) {
+            const amrex::Box dbox1 = geom.growPeriodicDomain(1);
+            const amrex::Box bx_for_dm(amrex::grow(fbx, 1) & dbox1);
+            dm_as_fine.resize(bx_for_dm, hydro_source.nComp());
+            dm_as_fine.setVal<amrex::RunOn::Device>(0.0);
+          }
+
+          const amrex::StateDescriptor* desc = state[State_Type].descriptor();
+          const auto& bcs = desc->getBCs();
+          amrex::Gpu::DeviceVector<amrex::BCRec> bcs_d(desc->nComp());
+          amrex::Gpu::copy(
+            amrex::Gpu::hostToDevice, bcs.begin(), bcs.end(), bcs_d.begin());
+
+          const auto& dxInv = geom.InvCellSizeArray();
+
+          pc_umdrv_eb(
+            fbx, fbxg_i, mfi, geom, &fact, phys_bc.lo(), phys_bc.hi(), sarr,
+            hyd_src, qarr, qauxar, srcqarr, vfrac_arr, flag_arr, dx, dxInv,
+            flx_arr, as_crse, p_drho_as_crse->array(),
+            p_rrflag_as_crse->array(), as_fine, dm_as_fine.array(),
+            level_mask.const_array(mfi), dt, ppm_type, plm_iorder,
+            use_flattening, difmag, bcs_d.data(), redistribution_type,
+            eb_weights_type, cflLoc);
+
+        } else if (flag_fab.getType(fbxg_i) == amrex::FabType::regular) {
           BL_PROFILE("PeleC::umdrv()");
           pc_umdrv(
-            is_finest_level, time, fbx, domain_lo, domain_hi, phys_bc.lo(),
-            phys_bc.hi(), s, hyd_src, qarr, qauxar, srcqarr, dx, dt, ppm_type,
+            time, fbx, domain_lo, domain_hi, phys_bc.lo(), phys_bc.hi(), sarr,
+            hyd_src, qarr, qauxar, srcqarr, dx, dt, ppm_type, plm_iorder,
             use_flattening, use_hybrid_weno, weno_scheme, difmag, flx_arr, a,
             volume.array(mfi), cflLoc);
+        } else if (flag_fab.getType(fbxg_i) == amrex::FabType::multivalued) {
+          amrex::Abort("multi-valued cells are not supported");
         }
 
         courno = amrex::max<amrex::Real>(courno, cflLoc);
@@ -227,69 +278,17 @@ PeleC::construct_hydro_source(
             bx, hyd_src.nComp(), filtered_source_out.array(), hyd_src);
         }
 
+        // Refluxing
         if (do_reflux && sub_iteration == sub_ncycle - 1) {
-          BL_PROFILE("PeleC::reflux()");
-          if (level < finest_level) {
-            getFluxReg(level + 1).CrseAdd(
-              mfi, {{AMREX_D_DECL(flux.data(), &(flux[1]), &(flux[2]))}}, dxDp,
-              dt, amrex::RunOn::Device);
-
-            if (!amrex::DefaultGeometry().IsCartesian()) {
-              amrex::Abort("Flux registers not r-z compatible yet");
-            }
-          }
-
-          if (level > 0) {
-            getFluxReg(level).FineAdd(
-              mfi, {{AMREX_D_DECL(flux.data(), &(flux[1]), &(flux[2]))}}, dxDp,
-              dt, amrex::RunOn::Device);
-
-            if (!amrex::DefaultGeometry().IsCartesian()) {
-              amrex::Abort("Flux registers not r-z compatible yet");
-            }
-          }
+          const amrex::FabType gtyp = flag_fab.getType(amrex::grow(bx, 1));
+          amrex::FArrayBox dm_as_fine(
+            amrex::Box::TheUnitBox(), hyd_src.nComp(),
+            amrex::The_Async_Arena());
+          update_flux_registers(
+            dt, mfi, gtyp,
+            {{AMREX_D_DECL(flux.data(), &(flux[1]), &(flux[2]))}}, dm_as_fine);
         }
       }
-    }
-
-    if (track_grid_losses) {
-      material_lost_through_boundary_temp[0] += mass_lost;
-      material_lost_through_boundary_temp[1] += xmom_lost;
-      material_lost_through_boundary_temp[2] += ymom_lost;
-      material_lost_through_boundary_temp[3] += zmom_lost;
-      material_lost_through_boundary_temp[4] += eden_lost;
-      material_lost_through_boundary_temp[5] += xang_lost;
-      material_lost_through_boundary_temp[6] += yang_lost;
-      material_lost_through_boundary_temp[7] += zang_lost;
-    }
-
-    if (print_energy_diagnostics) {
-      amrex::Real foo[5] = {
-        E_added_flux, xmom_added_flux, ymom_added_flux, zmom_added_flux,
-        mass_added_flux};
-
-      amrex::ParallelDescriptor::ReduceRealSum(
-        foo, 5, amrex::ParallelDescriptor::IOProcessorNumber());
-
-#ifdef AMREX_DEBUG
-      if (amrex::ParallelDescriptor::IOProcessor()) {
-        E_added_flux = foo[0];
-        xmom_added_flux = foo[1];
-        ymom_added_flux = foo[2];
-        zmom_added_flux = foo[3];
-        mass_added_flux = foo[4];
-        amrex::Print() << "mass added from fluxes                      : "
-                       << mass_added_flux << std::endl;
-        amrex::Print() << "xmom added from fluxes                      : "
-                       << xmom_added_flux << std::endl;
-        amrex::Print() << "ymom added from fluxes                      : "
-                       << ymom_added_flux << std::endl;
-        amrex::Print() << "zmom added from fluxes                      : "
-                       << zmom_added_flux << std::endl;
-        amrex::Print() << "(rho E) added from fluxes                   : "
-                       << E_added_flux << std::endl;
-      }
-#endif
     }
 
     if (courno > 1.0) {
@@ -305,7 +304,6 @@ PeleC::construct_hydro_source(
 
 void
 pc_umdrv(
-  const int /*is_finest_level*/,
   const amrex::Real /*time*/,
   amrex::Box const& bx,
   const int* domlo,
@@ -318,9 +316,10 @@ pc_umdrv(
   amrex::Array4<const amrex::Real> const& qaux,
   amrex::Array4<const amrex::Real> const&
     src_q, // amrex::IArrayBox const& bcMask,
-  const amrex::Real* dx,
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx,
   const amrex::Real dt,
   const int ppm_type,
+  const int plm_iorder,
   const bool use_flattening,
   const bool use_hybrid_weno,
   const int weno_scheme,
@@ -338,7 +337,7 @@ pc_umdrv(
     const amrex::Box eboxes = amrex::surroundingNodes(bxg2, dir);
     qec[dir].resize(eboxes, NGDNV, amrex::The_Async_Arena());
   }
-  amrex::GpuArray<amrex::Array4<amrex::Real>, AMREX_SPACEDIM> qec_arr{
+  amrex::GpuArray<const amrex::Array4<amrex::Real>, AMREX_SPACEDIM> qec_arr{
     {AMREX_D_DECL(qec[0].array(), qec[1].array(), qec[2].array())}};
 
   // Temporary FArrayBoxes
@@ -356,44 +355,40 @@ pc_umdrv(
     //  flx[0], qec_arr[0], a[0], pdivuarr, vol, dx, dt);
 #elif AMREX_SPACEDIM == 2
     pc_umeth_2D(
-      bx, bclo, bchi, domlo, domhi, q, qaux, src_q, // bcMask,
-      flx[0], flx[1], qec_arr[0], qec_arr[1], a[0], a[1], pdivuarr, vol, dx, dt,
-      ppm_type, use_flattening, use_hybrid_weno, weno_scheme);
+      bx, bclo, bchi, domlo, domhi, q, qaux, src_q, flx, qec_arr, a, pdivuarr,
+      vol, dx, dt, ppm_type, plm_iorder, use_flattening, use_hybrid_weno,
+      weno_scheme);
 #elif AMREX_SPACEDIM == 3
     pc_umeth_3D(
-      bx, bclo, bchi, domlo, domhi, q, qaux, src_q, // bcMask,
-      flx[0], flx[1], flx[2], qec_arr[0], qec_arr[1], qec_arr[2], a[0], a[1],
-      a[2], pdivuarr, vol, dx, dt, ppm_type, use_flattening, use_hybrid_weno,
+      bx, bclo, bchi, domlo, domhi, q, qaux, src_q, flx, qec_arr, a, pdivuarr,
+      vol, dx, dt, ppm_type, plm_iorder, use_flattening, use_hybrid_weno,
       weno_scheme);
 #endif
   }
 
   // divu
-  AMREX_D_TERM(const amrex::Real dx0 = dx[0];, const amrex::Real dx1 = dx[1];
-               , const amrex::Real dx2 = dx[2];);
   amrex::ParallelFor(bxg2, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-    pc_divu(i, j, k, q, AMREX_D_DECL(dx0, dx1, dx2), divuarr);
+    pc_divu(i, j, k, q, AMREX_D_DECL(dx[0], dx[1], dx[2]), divuarr);
   });
 
+  pc_adjust_fluxes(bx, uin, flx, a, divuarr, dx, difmag);
+
   // consup
-  pc_consup(bx, uin, uout, flx, a, vol, divuarr, pdivuarr, dx, difmag);
+  pc_consup(bx, uout, flx, vol, pdivuarr);
 }
 
 void
-pc_consup(
-  amrex::Box const& bx,
-  amrex::Array4<const amrex::Real> const& u,
-  amrex::Array4<amrex::Real> const& update,
+pc_adjust_fluxes(
+  const amrex::Box& bx,
+  const amrex::Array4<const amrex::Real>& u,
   const amrex::GpuArray<const amrex::Array4<amrex::Real>, AMREX_SPACEDIM>& flx,
   const amrex::GpuArray<const amrex::Array4<const amrex::Real>, AMREX_SPACEDIM>&
     a,
-  amrex::Array4<const amrex::Real> const& vol,
-  amrex::Array4<const amrex::Real> const& divu,
-  amrex::Array4<const amrex::Real> const& pdivu,
-  amrex::Real const* del,
-  amrex::Real const difmag)
+  const amrex::Array4<const amrex::Real>& divu,
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& del,
+  const amrex::Real difmag)
 {
-  BL_PROFILE("PeleC::consup()");
+  BL_PROFILE("PeleC::pc_adjust_fluxes()");
   // Flux alterations
   for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
     amrex::Box const& fbx = surroundingNodes(bx, dir);
@@ -406,9 +401,58 @@ pc_consup(
       pc_ext_flx(i, j, k, flx[dir], a[dir]);
     });
   }
+}
 
+void
+pc_consup(
+  const amrex::Box& bx,
+  const amrex::Array4<amrex::Real>& update,
+  const amrex::GpuArray<const amrex::Array4<amrex::Real>, AMREX_SPACEDIM>& flx,
+  const amrex::Array4<const amrex::Real>& vol,
+  const amrex::Array4<const amrex::Real>& pdivu)
+{
+  BL_PROFILE("PeleC::pc_consup()");
   // Combine for Hydro Sources
   amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
     pc_update(i, j, k, update, flx, vol, pdivu);
   });
+}
+
+void
+pc_umdrv_eb(
+  const amrex::Box& /*bx*/,
+  const amrex::Box& /*bxg_i*/,
+  const amrex::MFIter& /*mfi*/,
+  const amrex::Geometry& /*geom*/,
+  const amrex::EBFArrayBoxFactory* /*fact*/,
+  const int* /*bclo*/,
+  const int* /*bchi*/,
+  const amrex::Array4<const amrex::Real>& /*uin*/,
+  const amrex::Array4<amrex::Real>& /*uout*/,
+  const amrex::Array4<const amrex::Real>& /*q*/,
+  const amrex::Array4<const amrex::Real>& /*qaux*/,
+  const amrex::Array4<const amrex::Real>& /*src_q*/,
+  const amrex::Array4<const amrex::Real>& /*vf*/,
+  const amrex::Array4<amrex::EBCellFlag const>& /*flag*/,
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& /*dx*/,
+  const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& /*dxInv*/,
+  const amrex::
+    GpuArray<const amrex::Array4<amrex::Real>, AMREX_SPACEDIM>& /*flx*/,
+  const int /*as_crse*/,
+  const amrex::Array4<amrex::Real>& /*drho_as_crse*/,
+  const amrex::Array4<int const>& /*rrflag_as_crse*/,
+  const int /*as_fine*/,
+  const amrex::Array4<amrex::Real>& /*dm_as_fine*/,
+  const amrex::Array4<int const>& /*lev_mask*/,
+  const amrex::Real /*dt*/,
+  const int /*ppm_type*/,
+  const int /*plm_iorder*/,
+  const bool /*use_flattening*/,
+  const amrex::Real /*difmag*/,
+  amrex::BCRec const* /*bcs_d_ptr*/,
+  const std::string& /*redistribution_type*/,
+  const int /*eb_weights_type*/,
+  amrex::Real /*cflLoc*/)
+{
+  amrex::Abort("EB Godunov not implemented yet");
 }
